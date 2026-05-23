@@ -23,3 +23,5 @@
 ## 注意
 
 插件不包含历史输出图片、临时项目、采集流程、额外图片生成工具、个人缓存或 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。
+
+各 skill 版本号见 `assets/skill-versions.json`。

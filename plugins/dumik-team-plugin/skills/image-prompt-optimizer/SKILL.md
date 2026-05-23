@@ -1,9 +1,10 @@
 ---
 name: image-prompt-optimizer
-description: Optimize strict, copy-pasteable Chinese image prompts for product visuals, scene-based product images, image edits, multi-reference image tasks, grid/card prompts, ratio matching, white-background refinement, style transfer, preserving product structure or angle, and correcting visible brand/logo-like text such as DUMIK.
+version: 0.1.0
+description: "为产品视觉、场景图、海报和改图任务优化严格可复制的中文图像提示词。适用于需要保留产品结构、角度、材质、品牌识别或按参考图生成高质量改图 brief 的场景。"
 ---
 
-# Image Prompt Optimizer
+# 图像提示词优化器
 
 Write copy-pasteable Chinese edit instructions for existing images. Treat this as image editing, not generic text-to-image generation.
 

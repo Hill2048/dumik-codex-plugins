@@ -1,5 +1,6 @@
 ---
 name: super-image-prompt
+version: 0.1.0
 description: "用于创建、改写或优化高级中文图像提示词，覆盖产品视觉、电商场景、图片改图、商业摄影、多参考图、材质光影优化、产品结构保真、视觉总监 brief，以及更高级、更自然、质感更好、氛围更强、去除贴图感、产品更清楚、产品不变等模糊视觉目标。"
 ---
 
@@ -43,7 +44,7 @@ When writing a final prompt, use this structure unless the user asks for a diffe
 3. Short edit or generation summary.
 4. Final prompt as a natural visual brief.
 
-For image-edit tasks, put the final prompt inside a fenced code block for easy copying.
+For Image-edit tasks, put the final prompt inside a fenced code block for easy copying.
 
 ## Ratio And Reference Control
 

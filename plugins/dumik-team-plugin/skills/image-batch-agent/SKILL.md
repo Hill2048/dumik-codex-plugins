@@ -1,5 +1,6 @@
 ---
 name: image-batch-agent
+version: 0.1.0
 description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词，先出 1 张确认图，确认后批量调用图片模型生成结果。"
 ---
 
@@ -90,7 +91,7 @@ When the user says the files are ready:
 
 1. Read `原图` and `参考`.
 2. Choose the first source image in a stable filename sort order as the confirmation sample.
-3. Load and follow `C:\Users\admin\.cc-switch\skills\image-prompt-optimizer\SKILL.md`.
+3. Load and follow `image-prompt-optimizer`.
 4. Generate one strict Chinese edit prompt for that one image.
 5. Save the prompt row to:
 
@@ -150,7 +151,7 @@ For every image item:
 - Identify the target image and every reference image role.
 - Default to locked mode.
 - Convert the user's edit goal into visible image language.
-- Keep the final Banana Pro Chinese edit instruction in the row's `final_instruction`.
+- Keep the final Chinese image-edit instruction in the row's `final_instruction`.
 - Do not rewrite an image-edit task as pure text-to-image generation.
 
 If multiple references exist, assign each one a specific role:

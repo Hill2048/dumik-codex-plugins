@@ -20,6 +20,8 @@
 
 公开版插件不内置 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。
 
+各 skill 版本号见 `plugins/dumik-team-plugin/assets/skill-versions.json`。
+
 ## 更新规则
 
 更新插件时同步修改 `plugins/dumik-team-plugin/.codex-plugin/plugin.json` 里的版本号，并重新提交到 `main`。

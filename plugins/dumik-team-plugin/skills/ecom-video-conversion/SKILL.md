@@ -1,9 +1,10 @@
 ---
 name: ecom-video-conversion
-description: Plan Chinese ecommerce video conversion logic before storyboarding. Use when the user asks for selling-point order, video structure, conversion chain, 30s to 60s video framework, what to say first, script reordering, or explicitly says to decide the logic before writing shots.
+version: 0.1.0
+description: "在写分镜前规划中文电商视频的转化逻辑。适用于用户要做商品短视频、投放视频、种草视频、详情页视频或电商脚本，需要先明确人群、痛点、卖点顺序、证据链和转化节奏时使用。"
 ---
 
-# Ecom Video Conversion
+# 电商视频转化策划
 
 Solve message order before camera language. Decide what the viewer must understand, believe, and remember first.
 
@@ -59,6 +60,13 @@ Answer these before proposing structure:
 - One module should usually do one job.
 - Prefer fewer stronger modules over many weak ones.
 - Delete or weaken selling points that do not change belief or action.
+
+## Dreamina Video Default
+
+When this plan is intended for Dreamina（即梦）video generation, assume the downstream model is `seedance2.0` by default.
+Plan the conversion rhythm, visual evidence, and shot complexity for `seedance2.0` quality rather than the fast preview path.
+Use `seedance2.0fast` only when the user explicitly asks for speed, fast draft, quick preview, or lower waiting time.
+If the final command or workflow does not support model selection, keep the plan model-neutral and do not invent a model parameter.
 
 ## Output
 

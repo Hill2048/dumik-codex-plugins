@@ -1,9 +1,10 @@
 ---
 name: sequential-storyboard-prompts
-description: Write Chinese sequential storyboard blocks and video-AI sequence prompts from one visual concept. Use when the user asks for storyboards, four-panel breakdowns, keyframe prompts, sequence prompts, continuous shot descriptions, or video AI order prompts that must stay visually consistent across frames.
+version: 0.1.0
+description: "从一个视觉概念写出中文连续分镜和视频 AI 序列提示词。适用于用户要求分镜、四格拆解、关键帧提示词、连续镜头描述或需要跨帧保持视觉一致的视频生成顺序提示词。"
 ---
 
-# Sequential Storyboard Prompts
+# 连续分镜提示词
 
 Turn one visual idea into a continuous, usable sequence of shots. Keep continuity stronger than novelty.
 
@@ -45,6 +46,13 @@ Each frame must include:
 ## Motion Rules
 
 Use restrained motion. One main movement plus one supporting change is usually enough.
+
+## Dreamina Video Default
+
+When writing prompts for Dreamina（即梦）video generation, target `seedance2.0` by default.
+Write the storyboard and final video-AI sequence with `seedance2.0` continuity and quality in mind: clear subject anchors, controlled camera motion, and stable materials across frames.
+Use `seedance2.0fast` only when the user explicitly asks for speed, fast draft, quick preview, or lower waiting time.
+If the target video tool cannot choose a model, do not mention a forced model parameter; keep the prompt usable for that tool.
 
 Common verbs:
 
