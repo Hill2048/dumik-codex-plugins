@@ -12,3 +12,10 @@
 1. 先使用 `ecom-video-conversion` 判断转化逻辑。
 2. 再使用 `sequential-storyboard-prompts` 输出连续镜头和提示词。
 3. 不调用额外图片生成工具。
+
+当用户提出批量改图、批量图片修改、先出确认图、项目制批量出图等任务时：
+
+1. 使用 `image-batch-agent`。
+2. 先确认项目名、输出路径、改图目标和每图数量。
+3. 先出 1 张确认图，用户确认后再批量生成。
+4. 公开版插件不内置 API Key，需要使用环境变量 `OPENAI_API_KEY` 或运行时传 `--api-key`。

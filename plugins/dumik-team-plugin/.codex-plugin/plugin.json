@@ -1,24 +1,25 @@
 {
   "name": "dumik-team-plugin",
   "version": "0.1.0",
-  "description": "DUMIK 团队图片提示词与视频写作核心流程插件。",
+  "description": "DUMIK 团队图片提示词、批量改图与视频写作核心流程插件。",
   "author": {
     "name": "DUMIK Team"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "DUMIK Team Plugin",
-    "shortDescription": "图片提示词、改图指令和视频分镜写作。",
-    "longDescription": "面向 DUMIK 团队的视觉工作流插件。保留四个核心能力：改图提示词优化、高级图像提示词、电商视频转化策划、连续分镜提示词。",
+    "shortDescription": "图片提示词、批量改图和视频分镜写作。",
+    "longDescription": "面向 DUMIK 团队的视觉工作流插件。保留五个核心能力：改图提示词优化、高级图像提示词、项目制批量改图、电商视频转化策划、连续分镜提示词。",
     "developerName": "DUMIK Team",
     "category": "创意工具",
     "capabilities": [
       "改图指令",
       "视觉提示词",
+      "批量改图",
       "视频策划",
       "连续分镜"
     ],
-    "defaultPrompt": "按 DUMIK 团队流程帮我处理图片提示词、改图指令或视频分镜。",
+    "defaultPrompt": "按 DUMIK 团队流程帮我处理图片提示词、批量改图或视频分镜。",
     "brandColor": "#2F4534",
     "composerIcon": "./assets/logo.svg",
     "logo": "./assets/logo.svg"

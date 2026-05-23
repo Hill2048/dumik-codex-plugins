@@ -12,6 +12,12 @@
 
 适合：把模糊需求转成可执行的美术指导语言，补齐场景母体、主角关系、材质、光线和真实质感。
 
+## 批量改图
+
+入口：`image-batch-agent`。
+
+适合：项目制批量图片修改，先建项目文件夹、逐图写提示词、先出确认图，确认后再批量生成。
+
 ## 视频写作
 
 入口：`ecom-video-conversion`、`sequential-storyboard-prompts`。
