@@ -1,0 +1,20 @@
+{
+  "name": "dumik-team",
+  "interface": {
+    "displayName": "DUMIK 团队"
+  },
+  "plugins": [
+    {
+      "name": "dumik-team-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/dumik-team-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "创意工具"
+    }
+  ]
+}

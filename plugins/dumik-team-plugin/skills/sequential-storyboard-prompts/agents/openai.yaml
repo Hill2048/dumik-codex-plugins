@@ -1,0 +1,3 @@
+interface:
+  display_name: "分镜提示词编排"
+  short_description: "产出连续分镜结构与镜头提示词"

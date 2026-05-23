@@ -1,0 +1,3 @@
+interface:
+  display_name: "改图提示词优化"
+  short_description: "用美术指导思路整理中文改图提示词，把约束转成可见画面语言"
