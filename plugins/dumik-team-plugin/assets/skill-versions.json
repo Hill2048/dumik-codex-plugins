@@ -2,10 +2,10 @@
     "plugin":  "dumik-team-plugin",
     "pluginVersion":  "0.1.0",
     "skills":  {
-                   "ecom-video-conversion":  "0.1.0",
-                   "image-batch-agent":  "0.1.0",
-                   "image-prompt-optimizer":  "0.1.0",
-                   "sequential-storyboard-prompts":  "0.1.0",
-                   "super-image-prompt":  "0.1.0"
+                   "ecom-video-conversion":  "0.1.1",
+                   "image-batch-agent":  "0.1.1",
+                   "image-prompt-optimizer":  "0.1.1",
+                   "sequential-storyboard-prompts":  "0.1.1",
+                   "super-image-prompt":  "0.1.1"
                }
 }

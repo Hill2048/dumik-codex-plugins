@@ -1,13 +1,19 @@
 ---
 name: super-image-prompt
-version: 0.1.0
-description: "用于创建、改写或优化高级中文图像提示词，覆盖产品视觉、电商场景、图片改图、商业摄影、多参考图、材质光影优化、产品结构保真、视觉总监 brief，以及更高级、更自然、质感更好、氛围更强、去除贴图感、产品更清楚、产品不变等模糊视觉目标。"
+version: 0.1.1
+description: "用于创建、改写或优化高级中文图像提示词，覆盖产品视觉、电商场景、图片改图、商业摄影、多参考图、材质光影优化、产品结构保真和视觉总监 brief。默认只写提示词或 brief，不调用生图、改图接口或图片工具。"
 ---
 
 # 高级图像提示词
 
-Use this skill to turn image-generation or image-editing requests into clear art-director briefs. Treat image work as visual direction, not a pile of adjectives or restrictions.
+Use this skill to turn visual prompt and image-editing requests into clear art-director briefs. Treat image work as visual direction, not a pile of adjectives or restrictions.
 Match the user's language by default; for Chinese ecommerce and image-edit tasks, write the final prompt in Chinese unless the user asks otherwise.
+
+## 执行边界
+
+默认只输出文字：提示词、视觉 brief、改图指令或美术指导语言。不直接生成图片，不调用 `imagegen`、图片 API、批量生成脚本或其他图片工具。
+
+只有用户明确说“生图 / 出图 / 生成图片 / 调用接口 / 直接生成”等实际生成意图时，才进入图片生成；如果用户只是要“提示词 / prompt / brief / 改图指令 / 优化一下”，必须停在文字交付。
 
 ## Core Rule
 

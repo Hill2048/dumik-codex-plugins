@@ -1,12 +1,18 @@
 ---
 name: sequential-storyboard-prompts
-version: 0.1.0
-description: "从一个视觉概念写出中文连续分镜和视频 AI 序列提示词。适用于用户要求分镜、四格拆解、关键帧提示词、连续镜头描述或需要跨帧保持视觉一致的视频生成顺序提示词。"
+version: 0.1.1
+description: "从一个视觉概念写出中文连续分镜和视频 AI 序列提示词。适用于用户要求分镜、四格拆解、关键帧提示词、连续镜头描述或需要跨帧保持视觉一致的视频提示词；默认只写文字，不调用视频生成工具。"
 ---
 
 # 连续分镜提示词
 
 Turn one visual idea into a continuous, usable sequence of shots. Keep continuity stronger than novelty.
+
+## 执行边界
+
+默认只输出连续分镜、关键帧提示词和视频 AI 序列提示词，不调用即梦、视频生成接口或任何实际生成工具。
+
+只有用户明确说“生成视频 / 调用即梦 / 提交生成 / 跑视频任务 / 直接出片”等实际生成意图时，才进入视频生成执行；如果用户只是要“分镜 / 关键帧 / 视频提示词 / sequence prompt”，必须停在文字交付。
 
 ## Default Flow
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "批量图片修改"
-  short_description: "项目制批量改图，先出确认图再批量生成"
-  default_prompt: "Use $image-batch-agent to set up a batch image editing project, write per-image prompts, generate one confirmation image, then batch generate after approval."
+  short_description: "项目制批量写改图提示词，明确要求时才出图"
+  default_prompt: "Use $image-batch-agent to set up a batch image editing project and write per-image prompts only unless I explicitly ask to generate images."

@@ -6,22 +6,26 @@
 
 - `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
-- `image-batch-agent`：项目制批量修改图片，先出确认图，确认后再批量生成。
+- `image-batch-agent`：项目制批量写改图提示词；只有明确要求生图时才先出确认图、再批量生成。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
 
 ## 团队使用建议
 
-优先把任务说成真实工作目标，例如“这张锅图保留结构，改成天猫主图风格”“根据这些参考图写改图指令”“批量给这组图片先出一张确认图”“把这个卖点写成 30 秒视频分镜”。
+优先把任务说成真实工作目标，例如“这张锅图保留结构，改成天猫主图风格”“根据这些参考图写改图指令”“批量给这组图片写提示词”“把这个卖点写成 30 秒视频分镜”。
 
 图片改图默认遵守本项目规则：先判断图片角色，锁定产品结构和品牌区域，明确比例和目标图，最终给可直接复制的中文改图指令。
 
+所有图片和视频 skills 默认只交付文字提示词、brief、脚本或分镜，不自动生图、不自动生视频、不调用生成接口。只有明确要求“生图 / 出图 / 生成图片 / 调用接口 / 生成视频 / 调用即梦”时才进入实际生成。
+
 ## 钩子
 
-`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`；视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`。
+`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`，但默认只写提示词；视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`。
 
 ## 注意
 
 插件不包含历史输出图片、临时项目、采集流程、额外图片生成工具、个人缓存或 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。
+
+默认不自动生图。只有明确要求“生图 / 出图 / 生成图片 / 调用接口 / 批量生成”时才调用图片接口。
 
 各 skill 版本号见 `assets/skill-versions.json`。

@@ -1,12 +1,18 @@
 ---
 name: ecom-video-conversion
-version: 0.1.0
+version: 0.1.1
 description: "在写分镜前规划中文电商视频的转化逻辑。适用于用户要做商品短视频、投放视频、种草视频、详情页视频或电商脚本，需要先明确人群、痛点、卖点顺序、证据链和转化节奏时使用。"
 ---
 
 # 电商视频转化策划
 
 Solve message order before camera language. Decide what the viewer must understand, believe, and remember first.
+
+## 执行边界
+
+默认只输出视频策划、脚本结构、卖点顺序和分镜前置逻辑，不调用即梦、视频生成接口或任何实际生成工具。
+
+只有用户明确说“生成视频 / 调用即梦 / 提交生成 / 跑视频任务 / 直接出片”等实际生成意图时，才进入视频生成执行；如果用户只是要“写脚本 / 写分镜 / 梳理视频 / 写提示词”，必须停在文字交付。
 
 ## Priority
 

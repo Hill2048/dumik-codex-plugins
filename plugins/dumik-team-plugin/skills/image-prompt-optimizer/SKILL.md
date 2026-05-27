@@ -1,12 +1,18 @@
 ---
 name: image-prompt-optimizer
-version: 0.1.0
-description: "为产品视觉、场景图、海报和改图任务优化严格可复制的中文图像提示词。适用于需要保留产品结构、角度、材质、品牌识别或按参考图生成高质量改图 brief 的场景。"
+version: 0.1.1
+description: "为产品视觉、场景图、海报和改图任务优化严格可复制的中文图像提示词。默认只输出文字提示词或改图 brief，不调用生图、改图接口或图片工具；只有用户明确要求生图、出图、生成图片、调用接口时才进入实际生成。"
 ---
 
 # 图像提示词优化器
 
 Write copy-pasteable Chinese edit instructions for existing images. Treat this as image editing, not generic text-to-image generation.
+
+## 执行边界
+
+默认只写可复制的中文提示词、改图指令或视觉 brief，不直接生成图片，不调用 `imagegen`、图片 API、批量生成脚本或其他图片工具。
+
+只有用户明确说“生图 / 出图 / 生成图片 / 调用接口 / 帮我生成这张图”等实际生成意图时，才进入图片生成或改图执行；如果用户只是说“写提示词 / 优化提示词 / 改图指令 / prompt / brief”，必须停在文字交付。
 
 ## Workflow
 
