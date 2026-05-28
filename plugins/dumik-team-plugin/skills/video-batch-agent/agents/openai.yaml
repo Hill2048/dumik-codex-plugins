@@ -1,0 +1,4 @@
+interface:
+  display_name: "批量视频生成"
+  short_description: "项目制批量生视频，先出确认片，再用即梦批量提交任务"
+  default_prompt: "Use $video-batch-agent to set up a batch video project, generate one confirmation clip, then batch submit with Dreamina after approval."

@@ -11,5 +11,6 @@
 - 批量改图任务前：用 `image-batch-agent` 建项目、写逐图提示词；只有用户明确要求生图/出图/调用接口时才先出确认图。
 - 产品 Image2 故事板任务前：用 `product-storyboard-video-prompts` 输出产品身份板、故事板生图提示词和逐镜生视频提示词。
 - 视频写作任务前：先用 `ecom-video-conversion` 梳理卖点顺序，再用 `sequential-storyboard-prompts` 写镜头和序列提示词。
+- 批量生视频任务前：用 `video-batch-agent` 建项目、写逐条视频提示词、先出确认片，确认后再批量提交。
 - 最终交付改图指令时：仍以 `image-prompt-optimizer` 的格式为准。
 - 所有图片和视频流程默认停在文字交付；只有用户明确要求实际生成时才调用生成工具。

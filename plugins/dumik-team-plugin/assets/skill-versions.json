@@ -8,6 +8,7 @@
                    "image-prompt-optimizer":  "0.1.1",
                    "product-storyboard-video-prompts":  "0.4.0",
                    "sequential-storyboard-prompts":  "0.1.1",
-                   "super-image-prompt":  "0.1.1"
+                   "super-image-prompt":  "0.1.1",
+                   "video-batch-agent":  "0.1.0"
                }
 }

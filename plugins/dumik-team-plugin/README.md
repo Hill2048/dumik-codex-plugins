@@ -1,6 +1,6 @@
 # DUMIK 团队插件
 
-这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、明确要求时的图像生成、批量改图、产品故事板和视频写作流程。
+这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、明确要求时的图像生成、批量改图、产品故事板、视频写作和批量生视频流程。
 
 ## 已收纳流程
 
@@ -11,6 +11,7 @@
 - `product-storyboard-video-prompts`：把产品资料整理成 Image2 产品身份板、产品故事板生图提示词和逐镜生视频提示词。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
+- `video-batch-agent`：项目制批量生视频，先建项目、写逐条视频提示词，先出确认片，确认后用 Dreamina CLI 批量提交。
 
 ## 团队使用建议
 
@@ -22,11 +23,11 @@
 
 ## 钩子
 
-`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`，但默认只写提示词；产品 Image2 故事板走 `product-storyboard-video-prompts`；普通视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`。
+`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`，但默认只写提示词；产品 Image2 故事板走 `product-storyboard-video-prompts`；普通视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`；批量生视频走 `video-batch-agent`。
 
 ## 注意
 
-插件不包含历史输出图片、临时项目、采集流程、个人缓存或 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。使用 `imagegen` 直接生成或编辑图片时，请在本机设置 `JUAIHUB_API_KEY`。
+插件不包含历史输出图片、临时项目、采集流程、个人缓存或 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。使用 `imagegen` 直接生成或编辑图片时，请在本机设置 `JUAIHUB_API_KEY`。批量生视频需要本机已登录并可用的 `dreamina` CLI。
 
 默认不自动生图。只有明确要求“生图 / 出图 / 生成图片 / 调用接口 / 批量生成”时才调用图片接口。
 

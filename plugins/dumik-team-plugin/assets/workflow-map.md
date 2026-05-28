@@ -35,3 +35,9 @@
 入口：`product-storyboard-video-prompts`。
 
 适合：用户明确要求产品故事板、Image2 故事板、产品身份板、产品故事板生图提示词或逐镜生视频提示词时使用。普通视频转化链路仍先用 `ecom-video-conversion`，普通连续分镜仍用 `sequential-storyboard-prompts`。
+
+## 批量生视频
+
+入口：`video-batch-agent`。
+
+适合：项目制批量生视频，先确认需求和输出路径，创建中文项目文件夹，让用户放首帧/分镜图/参考素材；先出 1 条确认片，确认后用 Dreamina CLI 批量提交。

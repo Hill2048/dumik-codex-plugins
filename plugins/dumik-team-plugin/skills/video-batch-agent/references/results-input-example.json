@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "id": "shot-001",
+      "file": "F:/AI HOME/CODEX/video/outputs/批量视频项目/demo/原图/1.png",
+      "task": "高压锅开盖展示内胆结构",
+      "count": 1,
+      "output_name": "shot-001",
+      "ratio": "3:4",
+      "duration": 5,
+      "mode": "multimodal2video",
+      "model_version": "seedance2.0fast_vip",
+      "video_resolution": "720p",
+      "reference_images": [
+        "F:/AI HOME/CODEX/video/outputs/批量视频项目/demo/参考/ref-01.png"
+      ],
+      "reference_videos": [],
+      "reference_audios": [],
+      "final_instruction": "使用全能参考模式生成高压锅开盖过程，首帧保持锅盖与旋钮结构一致，动作克制清晰，镜头轻微推进，最后停在内胆结构清楚可见的画面。不要字幕、不要水印、不要多余装饰。"
+    }
+  ]
+}
