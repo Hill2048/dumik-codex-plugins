@@ -1,6 +1,6 @@
 # DUMIK 团队插件
 
-这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、明确要求时的图像生成、批量改图和视频写作流程。
+这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、明确要求时的图像生成、批量改图、产品故事板和视频写作流程。
 
 ## 已收纳流程
 
@@ -8,6 +8,7 @@
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
 - `imagegen`：明确要求生图、出图、生成图片、编辑图片或调用接口时，通过 JuAIHub 生成或编辑图片。
 - `image-batch-agent`：项目制批量写改图提示词；只有明确要求生图时才先出确认图、再批量生成，支持输出尺寸和并发控制。
+- `product-storyboard-video-prompts`：把产品资料整理成 Image2 产品身份板、产品故事板生图提示词和逐镜生视频提示词。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
 
@@ -21,7 +22,7 @@
 
 ## 钩子
 
-`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`，但默认只写提示词；视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`。
+`hooks/` 里放了团队默认触发规则：单张图片任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；批量改图走 `image-batch-agent`，但默认只写提示词；产品 Image2 故事板走 `product-storyboard-video-prompts`；普通视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`。
 
 ## 注意
 

@@ -29,3 +29,9 @@
 入口：`ecom-video-conversion`、`sequential-storyboard-prompts`。
 
 适合：电商视频卖点顺序、30 秒到 60 秒视频结构、连续分镜、关键帧和视频 AI 序列提示词。默认只写脚本和提示词，不调用视频生成工具。
+
+## 产品 Image2 故事板
+
+入口：`product-storyboard-video-prompts`。
+
+适合：用户明确要求产品故事板、Image2 故事板、产品身份板、产品故事板生图提示词或逐镜生视频提示词时使用。普通视频转化链路仍先用 `ecom-video-conversion`，普通连续分镜仍用 `sequential-storyboard-prompts`。
