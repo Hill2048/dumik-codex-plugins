@@ -3,10 +3,10 @@
     "pluginVersion":  "0.1.0",
     "skills":  {
                    "ecom-video-conversion":  "0.1.1",
-                   "image-batch-agent":  "0.1.2",
+                   "image-batch-agent":  "0.2.0",
                    "imagegen":  "0.1.2",
                    "image-prompt-optimizer":  "0.1.1",
-                   "product-storyboard-video-prompts":  "0.4.0",
+                   "product-storyboard-video-prompts":  "0.6.0",
                    "sequential-storyboard-prompts":  "0.1.1",
                    "super-image-prompt":  "0.1.1",
                    "video-batch-agent":  "0.1.0"

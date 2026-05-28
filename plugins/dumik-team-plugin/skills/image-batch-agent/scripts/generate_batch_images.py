@@ -30,7 +30,12 @@ from PIL import Image
 DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
-DEFAULT_STORYBOARD_SIZE = (2880, 3840)
+DEFAULT_STORYBOARD_RATIO = "3:4"
+DEFAULT_STORYBOARD_SIZES = {
+    "16:9": (3840, 2160),
+    "3:4": (2880, 3840),
+    "9:16": (2160, 3840),
+}
 DEFAULT_BATCH_LONG_EDGE = 2048
 DEFAULT_CONCURRENCY = 3
 
@@ -112,8 +117,14 @@ def parse_output_size(value: str | None) -> tuple[int, int] | None:
         return None
     normalized = value.lower().replace("×", "x").strip()
     presets = {
-        "4k": DEFAULT_STORYBOARD_SIZE,
-        "storyboard-4k": DEFAULT_STORYBOARD_SIZE,
+        "4k": DEFAULT_STORYBOARD_SIZES[DEFAULT_STORYBOARD_RATIO],
+        "storyboard-4k": DEFAULT_STORYBOARD_SIZES[DEFAULT_STORYBOARD_RATIO],
+        "16:9-storyboard": DEFAULT_STORYBOARD_SIZES["16:9"],
+        "storyboard-16:9": DEFAULT_STORYBOARD_SIZES["16:9"],
+        "3:4-storyboard": DEFAULT_STORYBOARD_SIZES["3:4"],
+        "storyboard-3:4": DEFAULT_STORYBOARD_SIZES["3:4"],
+        "9:16-storyboard": DEFAULT_STORYBOARD_SIZES["9:16"],
+        "storyboard-9:16": DEFAULT_STORYBOARD_SIZES["9:16"],
         "2k": (DEFAULT_BATCH_LONG_EDGE, DEFAULT_BATCH_LONG_EDGE),
     }
     if normalized in presets:
@@ -133,7 +144,7 @@ def target_size_for_item(item: PromptItem) -> tuple[int, int] | None:
     if explicit:
         return explicit
     if is_storyboard_item(item):
-        return DEFAULT_STORYBOARD_SIZE
+        return DEFAULT_STORYBOARD_SIZES[DEFAULT_STORYBOARD_RATIO]
     return None
 
 
@@ -338,7 +349,11 @@ def run_prompt_item(
             "count": item.count,
             "output_name": item.output_name,
             "output_size": item.output_size
-            or ("4K storyboard 3:4 2880x3840" if is_storyboard_item(item) else "2K long edge 2048"),
+            or (
+                "4K storyboard 3:4 2880x3840"
+                if is_storyboard_item(item)
+                else "2K long edge 2048"
+            ),
             "actual_output_sizes": output_sizes,
             "final_instruction": item.final_instruction,
             "generated_files": images,

@@ -1,7 +1,7 @@
 ---
 name: image-batch-agent
-version: 0.1.2
-description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。支持明确出图后的输出尺寸和并发控制。"
+version: 0.2.0
+description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。支持明确出图后的输出尺寸、并发控制和连续故事板接力。"
 ---
 
 # 批量图片修改 Agent
@@ -26,6 +26,7 @@ Default to prompt-only work. Do not call the image API for requests like "写提
 - 每张原图单独分析、单独写提示词，不合并成一个总提示词；只有明确出图时才生成结果。
 - 默认锁定产品结构、角度、品牌区、把手、盖子、五金、轮廓和 SKU 比例。
 - 参考图只控制它该控制的内容，例如材质、风格、构图、产品结构或局部细节。
+- 连续故事板如果提示词写“继承上一张 / 承接上一段 / 接上一张第 12 格”，生成输入里必须真的包含上一张已选故事板图，并把它标成 `@PREV_STORYBOARD_REF`；只写文字但不传图不算接力。
 
 ## Image API
 
@@ -42,8 +43,10 @@ Do not store API keys in this public plugin package.
 Only apply these settings when the user explicitly asks for actual image generation:
 
 - 故事板类任务默认标准化输出为 `4K 3:4 2880x3840`。
+- 故事板类任务支持三种标准输出比例：`16:9 -> 3840x2160`、`3:4 -> 2880x3840`、`9:16 -> 2160x3840`。
+- 用户没指定时，电商产品故事板默认优先 `3:4 2880x3840`。
 - 其他批量出图默认标准化输出为 `2K`，即长边 `2048`，保持原图比例。
-- 单条 prompt row 可用 `output_size` 覆盖默认值，例如 `2880x3840`、`2048x2048`、`4K`、`2K`。
+- 单条 prompt row 可用 `output_size` 覆盖默认值，例如 `3840x2160`、`2880x3840`、`2160x3840`、`16:9-storyboard`、`3:4-storyboard`、`9:16-storyboard`、`4K`、`2K`。
 - 批量生成脚本支持 `--concurrency 1-8`，默认 `3`。
 
 ## Step 1: Confirm The Job
@@ -53,7 +56,9 @@ Ask the user for the minimum information needed to start:
 - 本次项目名。
 - 本次要改什么。
 - 输出路径。
+- 故事板类任务使用哪种比例：`16:9`、`3:4`、`9:16`。
 - 是否有参考图，以及参考图分别控制什么。
+- 如果是连续故事板：上一张已选故事板图是哪一张，作为 `@PREV_STORYBOARD_REF`。
 - 是否只写提示词，还是需要实际出图。默认按只写提示词处理。
 - 每张图生成几张，默认 `2`。仅在用户明确要求实际出图时询问。
 - 使用哪个图片模型/API，如果当前环境没有默认配置。仅在用户明确要求实际出图时询问。
@@ -167,7 +172,9 @@ python scripts\generate_batch_images.py `
 For every image item:
 
 - State the image ratio and ratio basis first.
+- 如果是故事板，明确写清整个故事板的输出比例，只允许 `16:9`、`3:4`、`9:16` 三种标准比例，不能模糊写“竖版”或“横版”。
 - Identify the target image and every reference image role.
+- 如果故事板依赖上一张结尾，必须把上一张已选故事板图作为一条真实输入图写进 row 的 `file` 或可用的参考图字段，并在 `final_instruction` 里写 `@PREV_STORYBOARD_REF` 的角色；不能只在提示词里写“继承上一张”。
 - Default to locked mode.
 - Convert the user's edit goal into visible image language.
 - Keep the final Chinese image-edit instruction in the row's `final_instruction`.
@@ -180,6 +187,7 @@ If multiple references exist, assign each one a specific role:
 - 构图参考
 - 产品结构参考
 - 局部细节参考
+- 上一张故事板参考：`@PREV_STORYBOARD_REF`，只控制第 01 格的主体位置、光线方向、焦点、场景延续和上一张结尾状态
 
 Do not say only "参考上传图片".
 
@@ -213,3 +221,4 @@ Read [references/results-input-example.json](references/results-input-example.js
 - Do not generate prompts without `image-prompt-optimizer`.
 - Do not silently change SKU, structure, angle, handle, lid, hardware, brand zone, or outline.
 - If the API only supports text-to-image and cannot accept source images, tell the user before running.
+- If a continuous storyboard needs `@PREV_STORYBOARD_REF` but that previous storyboard image is missing, stop and ask for it or generate/select the previous storyboard first.
