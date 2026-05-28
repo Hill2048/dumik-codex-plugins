@@ -1,6 +1,6 @@
 ---
 name: image-batch-agent
-version: 0.2.0
+version: 0.2.1
 description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。支持明确出图后的输出尺寸、并发控制和连续故事板接力。"
 ---
 
@@ -30,13 +30,16 @@ Default to prompt-only work. Do not call the image API for requests like "写提
 
 ## Image API
 
-The generation script uses OpenAI-compatible image API settings passed by the user or environment:
+The generation script uses OpenAI-compatible image API settings in this order:
 
-- Base URL: `https://api.juaihub.cn`
+- 命令行显式参数：`--base-url`、`--api-key`
+- 本机缓存：先运行插件根目录 `scripts/init_api_cache.py`，写入 `CODEX_HOME/dumik-team-plugin/api_settings.py`
+- Codex 配置：`CODEX_HOME/config.toml`、`CODEX_HOME/auth.json`
+- 环境变量：`JUAIHUB_BASE_URL`、`OPENAI_BASE_URL`、`JUAIHUB_API_KEY`、`OPENAI_API_KEY`
+- 安全默认 URL：`https://api.juaihub.cn`
 - Image model: `gpt-image-2`
-- API key: pass `--api-key` or set `OPENAI_API_KEY`
 
-Do not store API keys in this public plugin package.
+Do not store API keys in this public plugin package. Do not print keys or tokens.
 
 ## Output Size And Concurrency
 

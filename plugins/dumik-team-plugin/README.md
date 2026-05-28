@@ -27,7 +27,9 @@
 
 ## 注意
 
-插件不包含历史输出图片、临时项目、采集流程、个人缓存或 API Key。批量出图时请在本机设置 `OPENAI_API_KEY`，或运行脚本时传入 `--api-key`。使用 `imagegen` 直接生成或编辑图片时，请在本机设置 `JUAIHUB_API_KEY`。批量生视频需要本机已登录并可用的 `dreamina` CLI。
+插件不包含历史输出图片、临时项目、采集流程、个人缓存或 API Key。图片接口优先读取本机缓存：先运行 `scripts/init_api_cache.py`，它会从 `CODEX_HOME/config.toml` 和 `CODEX_HOME/auth.json` 读取可用 URL + key，写入本机 `CODEX_HOME/dumik-team-plugin/api_settings.py`。日常调用先读这个缓存；命令行显式参数可覆盖；没有缓存时再读 Codex 配置、环境变量，最后才用安全默认 URL。批量生视频需要本机已登录并可用的 `dreamina` CLI。
+
+本机缓存只留在用户电脑，不进公开插件包；任何脚本都不能打印 key 或 token。
 
 默认不自动生图。只有明确要求“生图 / 出图 / 生成图片 / 调用接口 / 批量生成”时才调用图片接口。
 

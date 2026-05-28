@@ -5,6 +5,8 @@ This guidance is intentionally isolated from `SKILL.md` because it can vary by e
 ## Why am I asked to approve every image generation call?
 Image generation uses the JuAIHub OpenAI-compatible Image API at `https://api.juaihub.cn/v1`, so the CLI needs outbound network access. In many Codex setups, network access is disabled by default (especially under stricter sandbox modes), and/or the approval policy may require confirmation before networked commands run.
 
+API URL 和 key 的默认读取顺序：本机缓存 `CODEX_HOME/dumik-team-plugin/api_settings.py`、Codex `config.toml/auth.json`、环境变量、安全默认 URL。缓存由插件根目录 `scripts/init_api_cache.py` 生成，key 不写进公开插件文件。
+
 ## How do I reduce repeated approval prompts (network)?
 If you trust the repo and want fewer prompts, enable network access for the relevant sandbox mode and relax the approval policy.
 

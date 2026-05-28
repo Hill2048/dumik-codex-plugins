@@ -7,7 +7,7 @@ This file contains the “command catalog” for the bundled image generation CL
 - `edit`: edit an existing image (optionally with a mask) — inpainting / background replacement / “change only X”
 - `generate-batch`: run many jobs from a JSONL file (one job per line)
 
-Real API calls require **network access** + JuAIHub credentials. The CLI reads `JUAIHUB_API_KEY`. `--dry-run` does not make a network call.
+Real API calls require **network access** + credentials. Run the plugin root `scripts/init_api_cache.py` once to write the local cache under `CODEX_HOME/dumik-team-plugin/api_settings.py`. After that, the CLI reads this cache first and does not scan Codex config on every run. `--dry-run` does not make a network call.
 
 ## Quick start (works from any repo)
 Set a stable path to the skill CLI (default `CODEX_HOME` is `~/.codex`):
@@ -39,7 +39,7 @@ python "$IMAGE_GEN" generate --prompt "A cozy alpine cabin at dawn" --size 1024x
 - Use `python "$IMAGE_GEN" ...` (or equivalent full path) for generations/edits/batch work.
 - Do **not** create one-off runners (e.g. `gen_images.py`) unless the user explicitly asks for a custom wrapper.
 - **Never modify** `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
-- Do **not** route this skill to the official OpenAI endpoint. It is locked to JuAIHub: `https://api.juaihub.cn/v1`.
+- Public plugin files must not contain keys. Keep secrets in the local cache or Codex config only.
 
 ## Defaults (unless overridden by flags)
 - Model: `gpt-image-2` only

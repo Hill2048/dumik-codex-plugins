@@ -7,6 +7,7 @@ Defaults to gpt-image-2 through JuAIHub and a structured prompt augmentation wor
 from __future__ import annotations
 
 import argparse
+import ast
 import asyncio
 import base64
 import json
@@ -15,6 +16,7 @@ from pathlib import Path
 import re
 import sys
 import time
+from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from io import BytesIO
@@ -44,8 +46,142 @@ def _warn(message: str) -> None:
     print(f"Warning: {message}", file=sys.stderr)
 
 
+def _codex_home() -> Path:
+    return Path(os.getenv("CODEX_HOME") or (Path.home() / ".codex"))
+
+
+def _read_local_api_cache() -> Tuple[str, str]:
+    cache_path = _codex_home() / "dumik-team-plugin" / "api_settings.py"
+    if not cache_path.exists():
+        return "", ""
+    text = cache_path.read_text(encoding="utf-8", errors="ignore")
+
+    def read_constant(name: str) -> str:
+        match = re.search(rf"^{name}\s*=\s*(.+)$", text, re.MULTILINE)
+        if not match:
+            return ""
+        try:
+            value = ast.literal_eval(match.group(1).strip())
+        except (SyntaxError, ValueError):
+            return ""
+        return value.strip() if isinstance(value, str) else ""
+
+    return read_constant("API_BASE_URL"), read_constant("API_KEY")
+
+
+def _clean_config_value(value: str) -> str:
+    value = value.strip().strip(",")
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        return value[1:-1]
+    return value
+
+
+def _read_codex_model_provider() -> Dict[str, str]:
+    config_path = _codex_home() / "config.toml"
+    if not config_path.exists():
+        return {}
+
+    current_provider: Optional[str] = None
+    default_provider: Optional[str] = None
+    providers: Dict[str, Dict[str, str]] = {}
+
+    for raw_line in config_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+
+        section_match = re.match(r'^\[model_providers\.([^\]]+)\]$', line)
+        if section_match:
+            current_provider = section_match.group(1)
+            providers.setdefault(current_provider, {})
+            continue
+        if line.startswith("["):
+            current_provider = None
+            continue
+
+        if "=" not in line:
+            continue
+        key, value = [part.strip() for part in line.split("=", 1)]
+        value = _clean_config_value(value)
+
+        if current_provider:
+            if key in {"base_url", "experimental_bearer_token", "api_key"}:
+                providers[current_provider][key] = value
+        elif key == "model_provider":
+            default_provider = value
+
+    candidates: List[Dict[str, str]] = []
+    candidates.extend(
+        provider for provider in providers.values() if "juaihub.cn" in provider.get("base_url", "")
+    )
+    if default_provider and default_provider in providers:
+        candidates.append(providers[default_provider])
+    candidates.extend(providers.values())
+
+    for provider in candidates:
+        base_url = provider.get("base_url", "").strip()
+        token = (
+            provider.get("experimental_bearer_token", "").strip()
+            or provider.get("api_key", "").strip()
+        )
+        if base_url or token:
+            return {"base_url": base_url, "api_key": token}
+    return {}
+
+
+def _find_json_value(value: Any, keys: set[str]) -> str:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and isinstance(item, str) and item.strip():
+                return item.strip()
+        for item in value.values():
+            found = _find_json_value(item, keys)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _find_json_value(item, keys)
+            if found:
+                return found
+    return ""
+
+
+def _read_codex_auth_api_key() -> str:
+    auth_path = _codex_home() / "auth.json"
+    if not auth_path.exists():
+        return ""
+    try:
+        auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ""
+    return _find_json_value(auth, {"JUAIHUB_API_KEY", "OPENAI_API_KEY", "api_key"})
+
+
+@lru_cache(maxsize=1)
+def _codex_api_defaults() -> Tuple[str, str]:
+    cache_base_url, cache_api_key = _read_local_api_cache()
+    if cache_base_url and cache_api_key:
+        return cache_base_url, cache_api_key
+
+    provider = _read_codex_model_provider()
+    base_url = cache_base_url or provider.get("base_url", "")
+    api_key = cache_api_key or provider.get("api_key", "") or _read_codex_auth_api_key()
+    return base_url, api_key
+
+
+def _api_base_url() -> str:
+    codex_base_url, _ = _codex_api_defaults()
+    return (
+        codex_base_url
+        or os.getenv("JUAIHUB_BASE_URL")
+        or os.getenv("OPENAI_BASE_URL")
+        or JUAIHUB_BASE_URL
+    )
+
+
 def _juaihub_api_key() -> str:
-    return os.getenv("JUAIHUB_API_KEY") or ""
+    _, codex_api_key = _codex_api_defaults()
+    return codex_api_key or os.getenv("JUAIHUB_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
 
 
 def _ensure_api_key(dry_run: bool) -> None:
@@ -55,7 +191,10 @@ def _ensure_api_key(dry_run: bool) -> None:
     if dry_run:
         _warn("JuAIHub API key is not configured; dry-run only.")
         return
-    _die("JuAIHub API key is not configured. Set JUAIHUB_API_KEY before running.")
+    _die(
+        "JuAIHub API key is not configured. Run scripts/init_api_cache.py, "
+        "configure CODEX_HOME/config.toml or auth.json, or set JUAIHUB_API_KEY."
+    )
 
 
 def _read_prompt(prompt: Optional[str], prompt_file: Optional[str]) -> str:
@@ -318,7 +457,7 @@ def _create_client():
         from openai import OpenAI
     except ImportError as exc:
         _die("openai SDK not installed. Install with `uv pip install openai`.")
-    return OpenAI(api_key=_juaihub_api_key(), base_url=JUAIHUB_BASE_URL)
+    return OpenAI(api_key=_juaihub_api_key(), base_url=_api_base_url())
 
 
 def _create_async_client():
@@ -332,7 +471,7 @@ def _create_async_client():
         _die(
             "AsyncOpenAI not available in this openai SDK version. Upgrade with `uv pip install -U openai`."
         )
-    return AsyncOpenAI(api_key=_juaihub_api_key(), base_url=JUAIHUB_BASE_URL)
+    return AsyncOpenAI(api_key=_juaihub_api_key(), base_url=_api_base_url())
 
 
 def _slugify(value: str) -> str:
@@ -535,8 +674,8 @@ async def _run_generate_batch(args: argparse.Namespace) -> int:
                 ]
             _print_request(
                 {
-                    "base_url": JUAIHUB_BASE_URL,
-                    "endpoint": "/v1/images/generations",
+                    "base_url": _api_base_url(),
+                    "endpoint": "/images/generations",
                     "job": i,
                     "outputs": [str(p) for p in outputs],
                     "outputs_downscaled": downscaled,
@@ -650,7 +789,7 @@ def _generate(args: argparse.Namespace) -> None:
     output_paths = _build_output_paths(args.out, output_format, args.n, args.out_dir)
 
     if args.dry_run:
-        _print_request({"base_url": JUAIHUB_BASE_URL, "endpoint": "/v1/images/generations", **payload})
+        _print_request({"base_url": _api_base_url(), "endpoint": "/images/generations", **payload})
         return
 
     print(
@@ -713,7 +852,7 @@ def _edit(args: argparse.Namespace) -> None:
         payload_preview["image"] = [str(p) for p in image_paths]
         if mask_path:
             payload_preview["mask"] = str(mask_path)
-        _print_request({"base_url": JUAIHUB_BASE_URL, "endpoint": "/v1/images/edits", **payload_preview})
+        _print_request({"base_url": _api_base_url(), "endpoint": "/images/edits", **payload_preview})
         return
 
     print(

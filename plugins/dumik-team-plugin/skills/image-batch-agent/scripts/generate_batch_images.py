@@ -13,10 +13,12 @@ Generate images in batch from a JSON file that already contains finished prompts
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -42,6 +44,135 @@ DEFAULT_CONCURRENCY = 3
 
 class BatchImageError(Exception):
     pass
+
+
+def codex_home() -> Path:
+    return Path(os.getenv("CODEX_HOME") or (Path.home() / ".codex"))
+
+
+def read_local_api_cache() -> tuple[str, str]:
+    cache_path = codex_home() / "dumik-team-plugin" / "api_settings.py"
+    if not cache_path.exists():
+        return "", ""
+    text = cache_path.read_text(encoding="utf-8", errors="ignore")
+
+    def read_constant(name: str) -> str:
+        match = re.search(rf"^{name}\s*=\s*(.+)$", text, re.MULTILINE)
+        if not match:
+            return ""
+        try:
+            value = ast.literal_eval(match.group(1).strip())
+        except (SyntaxError, ValueError):
+            return ""
+        return value.strip() if isinstance(value, str) else ""
+
+    return read_constant("API_BASE_URL"), read_constant("API_KEY")
+
+
+def clean_config_value(value: str) -> str:
+    value = value.strip().strip(",")
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        return value[1:-1]
+    return value
+
+
+def read_codex_model_provider() -> dict[str, str]:
+    config_path = codex_home() / "config.toml"
+    if not config_path.exists():
+        return {}
+
+    current_provider: str | None = None
+    default_provider: str | None = None
+    providers: dict[str, dict[str, str]] = {}
+
+    for raw_line in config_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+
+        section_match = re.match(r'^\[model_providers\.([^\]]+)\]$', line)
+        if section_match:
+            current_provider = section_match.group(1)
+            providers.setdefault(current_provider, {})
+            continue
+        if line.startswith("["):
+            current_provider = None
+            continue
+
+        if "=" not in line:
+            continue
+        key, value = [part.strip() for part in line.split("=", 1)]
+        value = clean_config_value(value)
+
+        if current_provider:
+            if key in {"base_url", "experimental_bearer_token", "api_key"}:
+                providers[current_provider][key] = value
+        elif key == "model_provider":
+            default_provider = value
+
+    candidates: list[dict[str, str]] = []
+    candidates.extend(
+        provider for provider in providers.values() if "juaihub.cn" in provider.get("base_url", "")
+    )
+    if default_provider and default_provider in providers:
+        candidates.append(providers[default_provider])
+    candidates.extend(providers.values())
+
+    for provider in candidates:
+        base_url = provider.get("base_url", "").strip()
+        token = (
+            provider.get("experimental_bearer_token", "").strip()
+            or provider.get("api_key", "").strip()
+        )
+        if base_url or token:
+            return {"base_url": base_url, "api_key": token}
+    return {}
+
+
+def find_json_value(value: Any, keys: set[str]) -> str:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and isinstance(item, str) and item.strip():
+                return item.strip()
+        for item in value.values():
+            found = find_json_value(item, keys)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = find_json_value(item, keys)
+            if found:
+                return found
+    return ""
+
+
+def read_codex_auth_api_key() -> str:
+    auth_path = codex_home() / "auth.json"
+    if not auth_path.exists():
+        return ""
+    try:
+        auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ""
+    return find_json_value(auth, {"JUAIHUB_API_KEY", "OPENAI_API_KEY", "api_key"})
+
+
+def codex_api_defaults() -> tuple[str, str]:
+    cache_base_url, cache_api_key = read_local_api_cache()
+    if cache_base_url and cache_api_key:
+        return cache_base_url, cache_api_key
+
+    provider = read_codex_model_provider()
+    base_url = cache_base_url or provider.get("base_url", "")
+    api_key = cache_api_key or provider.get("api_key", "") or read_codex_auth_api_key()
+    return base_url, api_key
+
+
+def image_api_endpoint(base_url: str, endpoint: str) -> str:
+    clean = base_url.rstrip("/")
+    if clean.endswith("/v1"):
+        return clean + endpoint
+    return clean + "/v1" + endpoint
 
 
 @dataclass
@@ -241,7 +372,7 @@ def generate_images(
         if not image_path.exists():
             raise BatchImageError(f"Source image not found: {source_file}")
 
-        url = base_url.rstrip("/") + "/v1/images/edits"
+        url = image_api_endpoint(base_url, "/images/edits")
         with image_path.open("rb") as image_file:
             response = requests.post(
                 url,
@@ -256,7 +387,7 @@ def generate_images(
                 timeout=600,
             )
     else:
-        url = base_url.rstrip("/") + "/v1/images/generations"
+        url = image_api_endpoint(base_url, "/images/generations")
         response = requests.post(
             url,
             headers=headers,
@@ -378,8 +509,7 @@ def main() -> None:
     parser.add_argument("--results-input", required=True, help="JSON file with final_instruction rows.")
     parser.add_argument(
         "--base-url",
-        default=DEFAULT_BASE_URL,
-        help="OpenAI-compatible API base URL.",
+        help="OpenAI-compatible API base URL. Overrides local Codex cache.",
     )
     parser.add_argument(
         "--image-model",
@@ -388,7 +518,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--api-key",
-        help="API key. Falls back to OPENAI_API_KEY.",
+        help="API key. Overrides local Codex cache.",
     )
     parser.add_argument(
         "--output-dir",
@@ -405,9 +535,25 @@ def main() -> None:
     if args.concurrency < 1 or args.concurrency > 8:
         die("--concurrency must be between 1 and 8.")
 
-    api_key = args.api_key or os.getenv("OPENAI_API_KEY")
+    codex_base_url, codex_api_key = codex_api_defaults()
+    base_url = (
+        args.base_url
+        or codex_base_url
+        or os.getenv("JUAIHUB_BASE_URL")
+        or os.getenv("OPENAI_BASE_URL")
+        or DEFAULT_BASE_URL
+    )
+    api_key = (
+        args.api_key
+        or codex_api_key
+        or os.getenv("JUAIHUB_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+    )
     if not api_key:
-        die("Missing API key. Pass --api-key or set OPENAI_API_KEY.")
+        die(
+            "Missing API key. Run scripts/init_api_cache.py, pass --api-key, "
+            "configure CODEX_HOME/config.toml or auth.json, or set JUAIHUB_API_KEY/OPENAI_API_KEY."
+        )
 
     try:
         prompt_items = load_prompt_items(Path(args.results_input).resolve())
@@ -426,7 +572,7 @@ def main() -> None:
                 run_prompt_item,
                 item=item,
                 output_dir=output_dir,
-                base_url=args.base_url,
+                base_url=base_url,
                 api_key=api_key,
                 image_model=args.image_model,
             )
