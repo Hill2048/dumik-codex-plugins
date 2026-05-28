@@ -4,6 +4,7 @@
     "skills":  {
                    "ecom-video-conversion":  "0.1.1",
                    "image-batch-agent":  "0.1.2",
+                   "imagegen":  "0.1.2",
                    "image-prompt-optimizer":  "0.1.1",
                    "sequential-storyboard-prompts":  "0.1.1",
                    "super-image-prompt":  "0.1.1"

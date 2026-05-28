@@ -1,0 +1,6 @@
+interface:
+  display_name: "图像生成编辑"
+  short_description: "明确要求时生成或编辑图片"
+  icon_small: "./assets/imagegen-small.svg"
+  icon_large: "./assets/imagegen.png"
+  default_prompt: "Only use $imagegen when I explicitly ask to generate or edit images through JuAIHub; otherwise keep the work prompt-only."
