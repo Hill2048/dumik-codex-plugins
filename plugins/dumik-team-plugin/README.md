@@ -6,7 +6,7 @@
 
 - `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
-- `image-batch-agent`：项目制批量写改图提示词；只有明确要求生图时才先出确认图、再批量生成。
+- `image-batch-agent`：项目制批量写改图提示词；只有明确要求生图时才先出确认图、再批量生成，支持输出尺寸和并发控制。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
 

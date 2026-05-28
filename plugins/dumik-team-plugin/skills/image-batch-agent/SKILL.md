@@ -1,7 +1,7 @@
 ---
 name: image-batch-agent
-version: 0.1.1
-description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。"
+version: 0.1.2
+description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。支持明确出图后的输出尺寸和并发控制。"
 ---
 
 # 批量图片修改 Agent
@@ -36,6 +36,15 @@ The generation script uses OpenAI-compatible image API settings passed by the us
 - API key: pass `--api-key` or set `OPENAI_API_KEY`
 
 Do not store API keys in this public plugin package.
+
+## Output Size And Concurrency
+
+Only apply these settings when the user explicitly asks for actual image generation:
+
+- 故事板类任务默认标准化输出为 `4K 3:4 2880x3840`。
+- 其他批量出图默认标准化输出为 `2K`，即长边 `2048`，保持原图比例。
+- 单条 prompt row 可用 `output_size` 覆盖默认值，例如 `2880x3840`、`2048x2048`、`4K`、`2K`。
+- 批量生成脚本支持 `--concurrency 1-8`，默认 `3`。
 
 ## Step 1: Confirm The Job
 
@@ -111,6 +120,7 @@ Use this row shape:
   "task": "本次改图目标",
   "count": 1,
   "output_name": "img-001.png",
+  "output_size": "2K",
   "final_instruction": "按 image-prompt-optimizer 规则写出的完整中文改图提示词"
 }
 ```
@@ -125,6 +135,7 @@ Only when the user explicitly says they want actual image generation, such as "�
 python scripts\generate_batch_images.py `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认图" `
+  --concurrency 1 `
   --api-key "<图片接口 Key>"
 ```
 
@@ -147,6 +158,7 @@ Run pattern:
 python scripts\generate_batch_images.py `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出" `
+  --concurrency 3 `
   --api-key "<图片接口 Key>"
 ```
 
@@ -184,6 +196,7 @@ The generation script accepts either an array or an object with `items`:
       "task": "保持产品结构不变，内胆改成雾面微暖黑",
       "count": 2,
       "output_name": "img-001.png",
+      "output_size": "2K",
       "final_instruction": "完整中文改图提示词"
     }
   ]
