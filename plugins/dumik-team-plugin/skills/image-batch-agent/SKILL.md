@@ -1,7 +1,7 @@
 ---
 name: image-batch-agent
-version: 0.7.1
-description: "图片生成、单图改图和项目制批量改图统一入口。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。提示词类请求仍默认只输出文字。"
+version: 0.7.4
+description: "图片生成、单图改图和项目制批量改图执行入口。只负责把已经准备好的提示词、原图、参考图提交给图片接口并保存结果；不负责写提示词、优化提示词或判断画面文案。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。生图前先选择模型，支持 gpt-image-2 和 banana2。"
 ---
 
 # 图片生成与批量修改 Agent
@@ -11,21 +11,20 @@ Use this skill as the only team entry for actual image generation and image edit
 - 单图模式：默认模式。用于用户明确要求生图、出图、生成图片、编辑这张图、调用图片接口，但没有明确说批量。
 - 批量模式：只有用户明确说批量、项目制批量、批量生成、多张图成组处理、先出确认图再批量时才启用。
 
-Default to prompt-only work for requests like "写提示词", "整理提示词", "给我改图指令", "批量写提示词", or "生成提示词". Do not call the image API unless the user explicitly asks for actual generation or editing.
+Do not call the image API unless the user explicitly asks for actual generation or editing.
 
 ## Hard Rules
 
 - 单图模式是默认；不要因为用户说“生图/出图”就自动走批量项目流程。
 - 批量模式必须有明确批量意图；没有“批量/多张/整组/项目制/批量生成”等表达时，按单图处理。
-- 提示词类请求默认只写提示词，不生图、不出确认图、不调用图片接口。
+- 提示词类请求不属于本 skill；转交 `image-prompt-optimizer`、`product-storyboard-video-prompts`、`super-image-prompt` 等提示词 skill。
+- 本 skill 不写提示词、不优化提示词、不判断提示词质量，只校验是否有可提交的 `prompt` / `prompt-file` / `final_instruction`。
 - 单图实际出图默认生成 `1` 张；批量实际出图每张默认生成 `2` 张。
+- 实际生图前必须选择模型：`gpt-image-2` 或 `banana2`。`banana2` 是 `gemini-3.1-flash-image` 的别名。
 - 批量模式开始前必须确认输出路径；不能静默使用默认路径继续。
 - 批量项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
-- 批量创建文件夹后必须暂停，让用户把原图放进 `原图`，参考图放进 `参考`。
-- 提示词必须使用 `image-prompt-optimizer` 的判断和输出规则。
-- 每张原图单独分析、单独写提示词，不合并成一个总提示词；只有明确出图时才生成结果。
-- 默认锁定产品结构、角度、品牌区、把手、盖子、五金、轮廓和 SKU 比例。
-- 参考图只控制它该控制的内容，例如材质、风格、构图、产品结构或局部细节。
+- 批量创建文件夹后必须暂停，让用户或上游提示词 skill 准备原图、参考图和任务 JSON。
+- `final_instruction` 由上游提示词 skill 提供；本 skill 只把它原样提交给 API，不擅自改写。
 
 ## Image API
 
@@ -36,7 +35,7 @@ The generation script uses OpenAI-compatible image API settings in this order:
 - Codex 配置：`CODEX_HOME/config.toml`、`CODEX_HOME/auth.json`
 - 环境变量：`JUAIHUB_BASE_URL`、`OPENAI_BASE_URL`、`JUAIHUB_API_KEY`、`OPENAI_API_KEY`
 - 安全默认 URL：`https://api.juaihub.cn`
-- Image model: `gpt-image-2`
+- Image model: `gpt-image-2` or `banana2` (`gemini-3.1-flash-image`)
 
 Do not store API keys in this public plugin package. Do not print keys or tokens.
 
@@ -61,16 +60,18 @@ Use this mode by default when the user clearly asks to generate or edit one imag
 
 Minimum inputs:
 
-- 可执行提示词或已经确认的改图指令。
+- 已经准备好的可执行提示词或改图指令。
 - 如果是改图：目标图路径。
 - 输出位置；用户没指定时可使用当前项目的 `输出` 目录。
 - 输出尺寸；没指定时按接口默认或任务类型判断。
+- 生图模型：`gpt-image-2` 或 `banana2`。
 
 Run pattern:
 
 ```powershell
 python scripts\generate_batch_images.py `
   --prompt "<可执行中文提示词>" `
+  --image-model banana2 `
   --out "<输出图片路径>"
 ```
 
@@ -80,6 +81,7 @@ Single image edit:
 python scripts\generate_batch_images.py `
   --image "<目标图路径>" `
   --prompt "<可执行中文改图指令>" `
+  --image-model banana2 `
   --out "<输出图片路径>"
 ```
 
@@ -90,13 +92,12 @@ Single mode does not require creating a batch project folder.
 Only enter this flow when the user explicitly asks for batch mode. Ask for the minimum information needed to start:
 
 - 本次项目名。
-- 本次要改什么。
+- 本次要生成 / 修改什么。
 - 输出路径。
 - 故事板类任务使用哪种整张比例：`16:9`、`9:16`；默认每格分镜比例为 `3:4`。
 - 是否有参考图，以及参考图分别控制什么。
-- 是否只写提示词，还是需要实际出图。默认按只写提示词处理。
 - 每张图生成几张，默认 `2`。仅在用户明确要求实际出图时询问。
-- 使用哪个图片模型/API，如果当前环境没有默认配置。仅在用户明确要求实际出图时询问。
+- 使用哪个图片模型：`gpt-image-2` 或 `banana2`。仅在用户明确要求实际出图时询问。
 
 Default output path suggestion:
 
@@ -133,25 +134,16 @@ After creating the folders, stop and tell the user:
 
 - 把待处理图片放进 `原图`。
 - 把参考图放进 `参考`。
-- 放好后让你继续。
+- 把上游提示词 skill 生成的任务 JSON 或提示词文件放进 `输出`，或直接告诉你路径。
+- 放好后让你继续提交。
 
 Do not scan or generate until the user says the files are ready.
 
-## Batch Mode Step 3: Prompt Writing
+## Batch Mode Step 3: Input Rows
 
-When the user says the files are ready:
+When the user says the files are ready, this skill only accepts already prepared prompt rows. It does not create or optimize prompts.
 
-1. Read `原图` and `参考`.
-2. Sort source images by stable filename order.
-3. Load and follow `image-prompt-optimizer`.
-4. Generate one strict Chinese edit prompt for each image.
-5. Save the prompt rows to:
-
-```text
-输出\提示词记录.json
-```
-
-Use this row shape:
+Input rows use this shape:
 
 ```json
 {
@@ -161,11 +153,11 @@ Use this row shape:
   "count": 1,
   "output_name": "img-001.png",
   "output_size": "2K",
-  "final_instruction": "按 image-prompt-optimizer 规则写出的完整中文改图提示词"
+  "final_instruction": "上游提示词 skill 已经确认的完整生图或改图提示词"
 }
 ```
 
-Stop here by default. Return `输出\提示词记录.json` and tell the user that no image has been generated yet.
+If the user only has loose requirements and no ready prompt rows, stop and route them to the appropriate prompt skill first.
 
 ## Batch Mode Step 4: Confirmation Image Only When Explicitly Requested
 
@@ -176,6 +168,7 @@ python scripts\generate_batch_images.py `
   --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认图" `
+  --image-model banana2 `
   --concurrency 1 `
   --api-key "<图片接口 Key>"
 ```
@@ -186,12 +179,10 @@ Show the confirmation image path to the user and stop. Wait for approval or revi
 
 Only after the user approves the confirmation image:
 
-1. Use `image-prompt-optimizer` for every source image in `原图`.
-2. Review or update one prompt row per image.
-3. Use the confirmed per-image count, defaulting to `2`.
-4. Save all rows to `输出\提示词记录.json`.
-5. Run the generation script with output dir `输出`.
-6. Save run records in `输出\运行记录.json` and `输出\运行记录.md`.
+1. Use the already approved prompt rows.
+2. Use the confirmed per-image count, defaulting to `2`.
+3. Run the generation script with output dir `输出`.
+4. Save run records in `输出\运行记录.json` and `输出\运行记录.md`.
 
 Run pattern:
 
@@ -200,32 +191,10 @@ python scripts\generate_batch_images.py `
   --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出" `
+  --image-model banana2 `
   --concurrency 3 `
   --api-key "<图片接口 Key>"
 ```
-
-## Prompt Writing Rules
-
-For every image item:
-
-- State the image ratio and ratio basis first.
-- 如果是故事板，明确写清整个故事板的输出比例，只允许 `16:9`、`9:16` 两种标准比例，不能模糊写“竖版”或“横版”；同时写清每个分镜小格默认按 `3:4` 构图。
-- 如果是故事板，必须写清画面标注规范：红色实线箭头表示运动方向，箭头长度表示速度，长箭头代表快，短箭头代表慢；蓝色虚线方框标注位置 / 区域，并标注中心点坐标，例如“方框 1 中心 (x:300,y:400)”；白色粗体数字标注时序，例如“1→2→3”，或标注角色 ID，例如“角色 A=1，角色 B=2”。
-- Identify the target image and every reference image role.
-- Default to locked mode.
-- Convert the user's edit goal into visible image language.
-- Keep the final Chinese image-edit instruction in the row's `final_instruction`.
-- Do not rewrite an image-edit task as pure text-to-image generation.
-
-If multiple references exist, assign each one a specific role:
-
-- 材质参考
-- 风格参考
-- 构图参考
-- 产品结构参考
-- 局部细节参考
-
-Do not say only "参考上传图片".
 
 ## Generation Input Shape
 
@@ -254,6 +223,8 @@ Read [references/results-input-example.json](references/results-input-example.js
 
 - Do not create extra project subfolders beyond `原图`、`参考`、`输出`.
 - Do not begin full batch generation from an unapproved confirmation image.
-- Do not generate prompts without `image-prompt-optimizer`.
+- Do not generate, optimize, shorten, expand, or rewrite prompts.
+- Do not call `image-prompt-optimizer`; prompt writing belongs to prompt skills.
+- Do not invent reference roles; use the rows supplied by the upstream prompt skill or user.
 - Do not silently change SKU, structure, angle, handle, lid, hardware, brand zone, or outline.
 - If the API only supports text-to-image and cannot accept source images, tell the user before running.

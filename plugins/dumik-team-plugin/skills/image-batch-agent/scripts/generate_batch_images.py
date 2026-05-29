@@ -33,6 +33,12 @@ from PIL import Image
 DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
+BANANA2_IMAGE_MODEL = "gemini-3.1-flash-image"
+IMAGE_MODEL_ALIASES = {
+    "gpt-image-2": "gpt-image-2",
+    "banana2": BANANA2_IMAGE_MODEL,
+    "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
+}
 DEFAULT_STORYBOARD_RATIO = "9:16"
 DEFAULT_STORYBOARD_SIZES = {
     "16:9": (3840, 2160),
@@ -196,6 +202,15 @@ class PromptItem:
 def die(message: str, code: int = 1) -> None:
     print(f"Error: {message}", file=sys.stderr)
     raise SystemExit(code)
+
+
+def normalize_image_model(value: str) -> str:
+    key = (value or DEFAULT_IMAGE_MODEL).strip().lower()
+    model = IMAGE_MODEL_ALIASES.get(key)
+    if not model:
+        choices = ", ".join(IMAGE_MODEL_ALIASES)
+        raise BatchImageError(f"Unsupported image model: {value}. Use one of: {choices}.")
+    return model
 
 
 def read_prompt(prompt: str | None, prompt_file: str | None) -> str:
@@ -371,6 +386,16 @@ def image2_quality_for_size(size: str) -> str:
     return "high" if pixels >= IMAGE2_2K_PIXELS else "medium"
 
 
+def image_model_payload_options(image_model: str, size: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "size": size,
+        "response_format": "b64_json",
+    }
+    if image_model == DEFAULT_IMAGE_MODEL:
+        payload["quality"] = image2_quality_for_size(size)
+    return payload
+
+
 def standardize_image_size(path: Path, item: PromptItem) -> str:
     with Image.open(path) as image:
         target = target_size_for_item(item)
@@ -463,7 +488,8 @@ def generate_images(
     output_paths: list[Path],
 ) -> list[str]:
     headers = {"Authorization": f"Bearer {api_key}"}
-    quality = image2_quality_for_size(size)
+    image_model = normalize_image_model(image_model)
+    model_options = image_model_payload_options(image_model, size)
     image_inputs = [source_file] if source_file else []
     image_inputs.extend(reference_files)
     last_error = ""
@@ -490,9 +516,7 @@ def generate_images(
                         "model": image_model,
                         "prompt": prompt,
                         "n": str(count),
-                        "size": size,
-                        "quality": quality,
-                        "response_format": "b64_json",
+                        **model_options,
                     },
                     files=files,
                     timeout=900,
@@ -509,9 +533,7 @@ def generate_images(
                     "model": image_model,
                     "prompt": prompt,
                     "n": count,
-                    "size": size,
-                    "quality": quality,
-                    "response_format": "b64_json",
+                    **model_options,
                 },
                 timeout=900,
             )
@@ -605,6 +627,7 @@ def run_prompt_item(
             "task": item.task,
             "count": item.count,
             "output_name": item.output_name,
+            "image_model": normalize_image_model(image_model),
             "output_size": item.output_size
             or (
                 "4K storyboard 9:16 2160x3840, 3:4 panels"
@@ -623,6 +646,7 @@ def run_prompt_item(
             "task": item.task,
             "count": item.count,
             "output_name": item.output_name,
+            "image_model": normalize_image_model(image_model),
             "final_instruction": item.final_instruction,
             "error": str(exc),
             "generated_files": [],
@@ -715,6 +739,7 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str) -> None:
                     "task": item.task,
                     "count": item.count,
                     "output_name": item.output_name,
+                    "image_model": normalize_image_model(args.image_model),
                     "final_instruction": item.final_instruction,
                     "error": str(exc),
                     "generated_files": [],
@@ -754,7 +779,7 @@ def main() -> None:
     parser.add_argument(
         "--image-model",
         default=DEFAULT_IMAGE_MODEL,
-        help="Image model name.",
+        help="Image model name: gpt-image-2, banana2, or gemini-3.1-flash-image.",
     )
     parser.add_argument(
         "--api-key",
@@ -772,6 +797,10 @@ def main() -> None:
         help="Number of prompt rows to generate concurrently in batch mode.",
     )
     args = parser.parse_args()
+    try:
+        args.image_model = normalize_image_model(args.image_model)
+    except BatchImageError as exc:
+        die(str(exc))
     base_url, api_key = resolve_api_settings(args)
     if args.batch:
         run_batch(args, base_url, api_key)

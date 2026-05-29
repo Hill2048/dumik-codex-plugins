@@ -6,7 +6,7 @@
 
 - `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
-- `image-batch-agent`：统一承接实际生图和改图。默认单图模式；只有明确说批量、项目制批量或批量生成时才进入批量模式，支持输出尺寸和并发控制。
+- `image-batch-agent`：统一承接实际生图和改图。默认单图模式；只有明确说批量、项目制批量或批量生成时才进入批量模式；生图前可选 `gpt-image-2` 或 `banana2`。
 - `product-storyboard-video-prompts`：把产品资料整理成 Image2 产品身份板、产品故事板生图提示词和逐镜生视频提示词。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
@@ -31,5 +31,7 @@
 本机缓存只留在用户电脑，不进公开插件包；任何脚本都不能打印 key 或 token。
 
 默认不自动生图。只有明确要求“生图 / 出图 / 生成图片 / 调用接口”时才调用图片接口；没有明确说批量时，默认按单图处理。
+
+生图前先选模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image`。
 
 各 skill 版本号见 `assets/skill-versions.json`。

@@ -11,9 +11,10 @@
 
 1. 使用 `image-batch-agent` 的单图模式。
 2. 生成前确认已经有可执行提示词、输入图和输出位置。
-3. 公开版插件不内置 API Key。优先运行 `scripts/init_api_cache.py` 写入本机缓存；没有缓存时再读 `CODEX_HOME/config.toml`、`CODEX_HOME/auth.json` 和环境变量。
-4. 如果用户只是要提示词、brief 或改图指令，不调用图片接口。
-5. 只有用户明确说“批量 / 多张 / 整组 / 项目制 / 批量生成”时，才切到 `image-batch-agent` 批量模式。
+3. 生图前选择模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image`。
+4. 公开版插件不内置 API Key。优先运行 `scripts/init_api_cache.py` 写入本机缓存；没有缓存时再读 `CODEX_HOME/config.toml`、`CODEX_HOME/auth.json` 和环境变量。
+5. 如果用户只是要提示词、brief 或改图指令，不调用图片接口。
+6. 只有用户明确说“批量 / 多张 / 整组 / 项目制 / 批量生成”时，才切到 `image-batch-agent` 批量模式。
 
 当用户提出视频脚本、卖点顺序、分镜、关键帧、视频 AI 序列提示词等任务时：
 
@@ -42,4 +43,5 @@
 3. 默认只写逐图改图提示词，不生图、不出确认图、不调用图片接口。
 4. 只有用户明确说“生图 / 出图 / 生成图片 / 调用接口 / 先出确认图 / 批量生成”时，才在批量模式里先出 1 张确认图，用户确认后再批量生成。
 5. 公开版插件不内置 API Key。优先使用本机缓存；运行时 `--api-key` 和 `--base-url` 可临时覆盖；不能打印 key 或 token。
-6. 明确出图后，可使用 `output_size` 控制单条输出尺寸，使用 `--concurrency 1-8` 控制并发。
+6. 明确出图前先选择模型：`gpt-image-2` 或 `banana2`。
+7. 明确出图后，可使用 `output_size` 控制单条输出尺寸，使用 `--concurrency 1-8` 控制并发。
