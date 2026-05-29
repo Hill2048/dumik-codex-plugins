@@ -1,27 +1,27 @@
 ---
 name: image-batch-agent
-version: 0.2.1
-description: "项目制批量修改图片。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入原图/参考图，再用 image-prompt-optimizer 为每张图生成独立中文改图提示词。默认只写提示词；只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才调用图片模型。支持明确出图后的输出尺寸、并发控制和连续故事板接力。"
+version: 0.7.0
+description: "图片生成、单图改图和项目制批量改图统一入口。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。提示词类请求仍默认只输出文字。"
 ---
 
-# 批量图片修改 Agent
+# 图片生成与批量修改 Agent
 
-Use this skill for project-based batch image editing. The workflow is fixed:
+Use this skill as the only team entry for actual image generation and image editing. It has two modes:
 
-1. 确认需求。
-2. 创建中文项目文件夹，让用户放图。
-3. 用 `image-prompt-optimizer` 逐图生成提示词。
-4. 只有用户明确要求生图、出图、生成图片、调用接口或批量生成时，才先出 1 张确认图，用户确认后再批量生图。
+- 单图模式：默认模式。用于用户明确要求生图、出图、生成图片、编辑这张图、调用图片接口，但没有明确说批量。
+- 批量模式：只有用户明确说批量、项目制批量、批量生成、多张图成组处理、先出确认图再批量时才启用。
 
-Default to prompt-only work. Do not call the image API for requests like "写提示词", "整理提示词", "给我改图指令", "批量写提示词", or "生成提示词". Do not skip the confirmation image when the user explicitly asks for actual image generation. Do not start full batch generation before the user approves the confirmation result.
+Default to prompt-only work for requests like "写提示词", "整理提示词", "给我改图指令", "批量写提示词", or "生成提示词". Do not call the image API unless the user explicitly asks for actual generation or editing.
 
 ## Hard Rules
 
-- 开始前必须确认输出路径；不能静默使用默认路径继续。
-- 默认只写提示词，不生图、不出确认图、不调用图片接口。
-- 每张图默认生成 `2` 张只适用于用户明确要求实际出图时；只写提示词时不要询问生成数量。
-- 项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
-- 创建文件夹后必须暂停，让用户把原图放进 `原图`，参考图放进 `参考`。
+- 单图模式是默认；不要因为用户说“生图/出图”就自动走批量项目流程。
+- 批量模式必须有明确批量意图；没有“批量/多张/整组/项目制/批量生成”等表达时，按单图处理。
+- 提示词类请求默认只写提示词，不生图、不出确认图、不调用图片接口。
+- 单图实际出图默认生成 `1` 张；批量实际出图每张默认生成 `2` 张。
+- 批量模式开始前必须确认输出路径；不能静默使用默认路径继续。
+- 批量项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
+- 批量创建文件夹后必须暂停，让用户把原图放进 `原图`，参考图放进 `参考`。
 - 提示词必须使用 `image-prompt-optimizer` 的判断和输出规则。
 - 每张原图单独分析、单独写提示词，不合并成一个总提示词；只有明确出图时才生成结果。
 - 默认锁定产品结构、角度、品牌区、把手、盖子、五金、轮廓和 SKU 比例。
@@ -45,21 +45,55 @@ Do not store API keys in this public plugin package. Do not print keys or tokens
 
 Only apply these settings when the user explicitly asks for actual image generation:
 
-- 故事板类任务默认标准化输出为 `4K 3:4 2880x3840`。
-- 故事板类任务支持三种标准输出比例：`16:9 -> 3840x2160`、`3:4 -> 2880x3840`、`9:16 -> 2160x3840`。
-- 用户没指定时，电商产品故事板默认优先 `3:4 2880x3840`。
+- 故事板类任务默认标准化输出为整张 `4K 9:16 2160x3840`。
+- Image2 规范：请求尺寸必须在生成接口里原生指定，宽高都为 16 的倍数、单边不超过 4000、宽高比在 `1:3` 到 `3:1`、总像素在 `655360` 到 `8294400`；`9:16 4K` 固定请求 `2160x3840`。
+- 故事板必须在生成请求阶段直接使用目标比例和目标尺寸；不允许先生成其他比例再后期拉伸成 9:16。
+- 如果图片接口不支持目标尺寸，任务必须失败并更换支持该比例的生成通道，不能产出假比例文件。
+- 故事板类任务支持两种整张输出比例：`16:9 -> 3840x2160`、`9:16 -> 2160x3840`。
+- `3:4` 默认表示每个分镜小格的画面比例，不作为整张故事板默认输出比例。
+- 用户没指定时，电商产品故事板默认整张优先 `9:16 2160x3840`，每个分镜小格按 `3:4` 构图。
 - 其他批量出图默认标准化输出为 `2K`，即长边 `2048`，保持原图比例。
-- 单条 prompt row 可用 `output_size` 覆盖默认值，例如 `3840x2160`、`2880x3840`、`2160x3840`、`16:9-storyboard`、`3:4-storyboard`、`9:16-storyboard`、`4K`、`2K`。
+- 单条 prompt row 可用 `output_size` 覆盖默认值，例如 `3840x2160`、`2160x3840`、`16:9-storyboard`、`9:16-storyboard`、`4K`、`2K`；兼容旧写法 `3:4-storyboard` 时按“单格 3:4、整张 9:16”处理。
 - 批量生成脚本支持 `--concurrency 1-8`，默认 `3`。
 
-## Step 1: Confirm The Job
+## Single Image Mode
 
-Ask the user for the minimum information needed to start:
+Use this mode by default when the user clearly asks to generate or edit one image.
+
+Minimum inputs:
+
+- 可执行提示词或已经确认的改图指令。
+- 如果是改图：目标图路径。
+- 输出位置；用户没指定时可使用当前项目的 `输出` 目录。
+- 输出尺寸；没指定时按接口默认或任务类型判断。
+
+Run pattern:
+
+```powershell
+python scripts\generate_batch_images.py `
+  --prompt "<可执行中文提示词>" `
+  --out "<输出图片路径>"
+```
+
+Single image edit:
+
+```powershell
+python scripts\generate_batch_images.py `
+  --image "<目标图路径>" `
+  --prompt "<可执行中文改图指令>" `
+  --out "<输出图片路径>"
+```
+
+Single mode does not require creating a batch project folder.
+
+## Batch Mode Step 1: Confirm The Job
+
+Only enter this flow when the user explicitly asks for batch mode. Ask for the minimum information needed to start:
 
 - 本次项目名。
 - 本次要改什么。
 - 输出路径。
-- 故事板类任务使用哪种比例：`16:9`、`3:4`、`9:16`。
+- 故事板类任务使用哪种整张比例：`16:9`、`9:16`；默认每格分镜比例为 `3:4`。
 - 是否有参考图，以及参考图分别控制什么。
 - 如果是连续故事板：上一张已选故事板图是哪一张，作为 `@PREV_STORYBOARD_REF`。
 - 是否只写提示词，还是需要实际出图。默认按只写提示词处理。
@@ -74,7 +108,7 @@ F:\AI HOME\CODEX\image\outputs\批量改图项目\<项目名-时间戳>\
 
 If the user accepts the suggested path, treat it as confirmed.
 
-## Step 2: Create The Project Folder
+## Batch Mode Step 2: Create The Project Folder
 
 Use the bundled helper when creating the project folder:
 
@@ -105,7 +139,7 @@ After creating the folders, stop and tell the user:
 
 Do not scan or generate until the user says the files are ready.
 
-## Step 3: Prompt Writing
+## Batch Mode Step 3: Prompt Writing
 
 When the user says the files are ready:
 
@@ -135,12 +169,13 @@ Use this row shape:
 
 Stop here by default. Return `输出\提示词记录.json` and tell the user that no image has been generated yet.
 
-## Step 4: Confirmation Image Only When Explicitly Requested
+## Batch Mode Step 4: Confirmation Image Only When Explicitly Requested
 
 Only when the user explicitly says they want actual image generation, such as "生图", "出图", "生成图片", "调用接口", "先出确认图", or "批量生成", call the generation script with `count: 1` and output to `输出\确认图`.
 
 ```powershell
 python scripts\generate_batch_images.py `
+  --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认图" `
   --concurrency 1 `
@@ -149,7 +184,7 @@ python scripts\generate_batch_images.py `
 
 Show the confirmation image path to the user and stop. Wait for approval or revision instructions.
 
-## Step 5: Full Batch After Approval
+## Batch Mode Step 5: Full Batch After Approval
 
 Only after the user approves the confirmation image:
 
@@ -164,6 +199,7 @@ Run pattern:
 
 ```powershell
 python scripts\generate_batch_images.py `
+  --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出" `
   --concurrency 3 `
@@ -175,7 +211,8 @@ python scripts\generate_batch_images.py `
 For every image item:
 
 - State the image ratio and ratio basis first.
-- 如果是故事板，明确写清整个故事板的输出比例，只允许 `16:9`、`3:4`、`9:16` 三种标准比例，不能模糊写“竖版”或“横版”。
+- 如果是故事板，明确写清整个故事板的输出比例，只允许 `16:9`、`9:16` 两种标准比例，不能模糊写“竖版”或“横版”；同时写清每个分镜小格默认按 `3:4` 构图。
+- 如果是故事板，必须写清画面标注规范：红色实线箭头表示运动方向，箭头长度表示速度，长箭头代表快，短箭头代表慢；蓝色虚线方框标注位置 / 区域，并标注中心点坐标，例如“方框 1 中心 (x:300,y:400)”；白色粗体数字标注时序，例如“1→2→3”，或标注角色 ID，例如“角色 A=1，角色 B=2”。
 - Identify the target image and every reference image role.
 - 如果故事板依赖上一张结尾，必须把上一张已选故事板图作为一条真实输入图写进 row 的 `file` 或可用的参考图字段，并在 `final_instruction` 里写 `@PREV_STORYBOARD_REF` 的角色；不能只在提示词里写“继承上一张”。
 - Default to locked mode.

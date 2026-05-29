@@ -1,15 +1,15 @@
 {
   "name": "dumik-team-plugin",
   "version": "0.1.0",
-  "description": "DUMIK 团队图片提示词、图像生成、批量改图、产品故事板、视频写作与批量生视频核心流程插件。",
+  "description": "DUMIK 团队图片提示词、单图生图改图、明确批量时的批量改图、产品故事板、视频写作与批量生视频核心流程插件。",
   "author": {
     "name": "DUMIK Team"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "DUMIK Team Plugin",
-    "shortDescription": "图片提示词、图像生成、批量改图、产品故事板、视频分镜和批量生视频。",
-    "longDescription": "面向 DUMIK 团队的视觉工作流插件。保留核心能力：改图提示词优化、高级图像提示词、明确要求时的图像生成编辑、项目制批量改图、产品 Image2 故事板提示词、电商视频转化策划、连续分镜提示词和项目制批量生视频。",
+    "shortDescription": "图片提示词、单图生图改图、批量改图、产品故事板、视频分镜和批量生视频。",
+    "longDescription": "面向 DUMIK 团队的视觉工作流插件。保留核心能力：改图提示词优化、高级图像提示词、默认单图的图像生成编辑、明确批量时的项目制批量改图、产品 Image2 故事板提示词、电商视频转化策划、连续分镜提示词和项目制批量生视频。",
     "developerName": "DUMIK Team",
     "category": "创意工具",
     "capabilities": [
@@ -22,7 +22,7 @@
       "连续分镜",
       "批量生视频"
     ],
-    "defaultPrompt": "按 DUMIK 团队流程帮我处理图片提示词、明确要求时的图像生成、批量改图或视频分镜。",
+    "defaultPrompt": "按 DUMIK 团队流程帮我处理图片提示词、单图生图改图、明确批量时的批量改图或视频分镜。",
     "brandColor": "#2F4534",
     "composerIcon": "./assets/logo.svg",
     "logo": "./assets/logo.svg"
