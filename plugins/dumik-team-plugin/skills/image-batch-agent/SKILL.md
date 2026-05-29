@@ -1,6 +1,6 @@
 ---
 name: image-batch-agent
-version: 0.7.0
+version: 0.7.1
 description: "图片生成、单图改图和项目制批量改图统一入口。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。提示词类请求仍默认只输出文字。"
 ---
 
@@ -26,7 +26,6 @@ Default to prompt-only work for requests like "写提示词", "整理提示词",
 - 每张原图单独分析、单独写提示词，不合并成一个总提示词；只有明确出图时才生成结果。
 - 默认锁定产品结构、角度、品牌区、把手、盖子、五金、轮廓和 SKU 比例。
 - 参考图只控制它该控制的内容，例如材质、风格、构图、产品结构或局部细节。
-- 连续故事板如果提示词写“继承上一张 / 承接上一段 / 接上一张第 12 格”，生成输入里必须真的包含上一张已选故事板图，并把它标成 `@PREV_STORYBOARD_REF`；只写文字但不传图不算接力。
 
 ## Image API
 
@@ -95,7 +94,6 @@ Only enter this flow when the user explicitly asks for batch mode. Ask for the m
 - 输出路径。
 - 故事板类任务使用哪种整张比例：`16:9`、`9:16`；默认每格分镜比例为 `3:4`。
 - 是否有参考图，以及参考图分别控制什么。
-- 如果是连续故事板：上一张已选故事板图是哪一张，作为 `@PREV_STORYBOARD_REF`。
 - 是否只写提示词，还是需要实际出图。默认按只写提示词处理。
 - 每张图生成几张，默认 `2`。仅在用户明确要求实际出图时询问。
 - 使用哪个图片模型/API，如果当前环境没有默认配置。仅在用户明确要求实际出图时询问。
@@ -214,7 +212,6 @@ For every image item:
 - 如果是故事板，明确写清整个故事板的输出比例，只允许 `16:9`、`9:16` 两种标准比例，不能模糊写“竖版”或“横版”；同时写清每个分镜小格默认按 `3:4` 构图。
 - 如果是故事板，必须写清画面标注规范：红色实线箭头表示运动方向，箭头长度表示速度，长箭头代表快，短箭头代表慢；蓝色虚线方框标注位置 / 区域，并标注中心点坐标，例如“方框 1 中心 (x:300,y:400)”；白色粗体数字标注时序，例如“1→2→3”，或标注角色 ID，例如“角色 A=1，角色 B=2”。
 - Identify the target image and every reference image role.
-- 如果故事板依赖上一张结尾，必须把上一张已选故事板图作为一条真实输入图写进 row 的 `file` 或可用的参考图字段，并在 `final_instruction` 里写 `@PREV_STORYBOARD_REF` 的角色；不能只在提示词里写“继承上一张”。
 - Default to locked mode.
 - Convert the user's edit goal into visible image language.
 - Keep the final Chinese image-edit instruction in the row's `final_instruction`.
@@ -227,7 +224,6 @@ If multiple references exist, assign each one a specific role:
 - 构图参考
 - 产品结构参考
 - 局部细节参考
-- 上一张故事板参考：`@PREV_STORYBOARD_REF`，只控制第 01 格的主体位置、光线方向、焦点、场景延续和上一张结尾状态
 
 Do not say only "参考上传图片".
 
@@ -261,4 +257,3 @@ Read [references/results-input-example.json](references/results-input-example.js
 - Do not generate prompts without `image-prompt-optimizer`.
 - Do not silently change SKU, structure, angle, handle, lid, hardware, brand zone, or outline.
 - If the API only supports text-to-image and cannot accept source images, tell the user before running.
-- If a continuous storyboard needs `@PREV_STORYBOARD_REF` but that previous storyboard image is missing, stop and ask for it or generate/select the previous storyboard first.
