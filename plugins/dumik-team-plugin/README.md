@@ -32,6 +32,6 @@
 
 默认不自动生图。只有明确要求“生图 / 出图 / 生成图片 / 调用接口”时才调用图片接口；没有明确说批量时，默认按单图处理。
 
-生图前先选模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image`。
+生图前先选模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image-preview`。
 
 各 skill 版本号见 `assets/skill-versions.json`。

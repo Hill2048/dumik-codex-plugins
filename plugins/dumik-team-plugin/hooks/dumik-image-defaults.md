@@ -11,7 +11,7 @@
 
 1. 使用 `image-batch-agent` 的单图模式。
 2. 生成前确认已经有可执行提示词、输入图和输出位置。
-3. 生图前选择模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image`。
+3. 生图前选择模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `gemini-3.1-flash-image-preview`。
 4. 公开版插件不内置 API Key。优先运行 `scripts/init_api_cache.py` 写入本机缓存；没有缓存时再读 `CODEX_HOME/config.toml`、`CODEX_HOME/auth.json` 和环境变量。
 5. 如果用户只是要提示词、brief 或改图指令，不调用图片接口。
 6. 只有用户明确说“批量 / 多张 / 整组 / 项目制 / 批量生成”时，才切到 `image-batch-agent` 批量模式。

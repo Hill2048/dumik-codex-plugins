@@ -17,6 +17,7 @@ import ast
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import mimetypes
 import os
 import re
 import sys
@@ -34,10 +35,12 @@ DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
 BANANA2_IMAGE_MODEL = "gemini-3.1-flash-image"
+CHAT_IMAGE_MODELS = {"gemini-3.1-flash-image", "gemini-3.1-flash-image-preview"}
 IMAGE_MODEL_ALIASES = {
     "gpt-image-2": "gpt-image-2",
     "banana2": BANANA2_IMAGE_MODEL,
-    "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
+    "gemini-3.1-flash-image": "gemini-3.1-flash-image",
+    "gemini-3.1-flash-image-preview": "gemini-3.1-flash-image-preview",
 }
 DEFAULT_STORYBOARD_RATIO = "9:16"
 DEFAULT_STORYBOARD_SIZES = {
@@ -396,6 +399,148 @@ def image_model_payload_options(image_model: str, size: str) -> dict[str, Any]:
     return payload
 
 
+def aspect_ratio_for_size(size: str) -> str:
+    match = re.fullmatch(r"(\d+)x(\d+)", size)
+    if not match:
+        return "1:1"
+    width = int(match.group(1))
+    height = int(match.group(2))
+    ratio = width / height
+    known = {
+        "1:1": 1.0,
+        "16:9": 16 / 9,
+        "9:16": 9 / 16,
+        "4:3": 4 / 3,
+        "3:4": 3 / 4,
+    }
+    return min(known, key=lambda key: abs(known[key] - ratio))
+
+
+def image_size_label(size: str) -> str:
+    match = re.fullmatch(r"(\d+)x(\d+)", size)
+    if not match:
+        return "1K"
+    return "4K" if max(int(match.group(1)), int(match.group(2))) >= 2000 else "1K"
+
+
+def image_path_to_data_url(path: Path) -> str:
+    mime = mimetypes.guess_type(path.name)[0] or "image/png"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
+def image_path_to_inline_data(path: Path) -> dict[str, str]:
+    mime = mimetypes.guess_type(path.name)[0] or "image/png"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return {"mimeType": mime, "data": encoded}
+
+
+def collect_chat_images(value: Any) -> dict[str, list[str]]:
+    found = {"b64_json": [], "url": []}
+    if isinstance(value, str):
+        for match in re.finditer(r"data:image/[A-Za-z0-9.+-]+;base64,([A-Za-z0-9+/=\r\n]+)", value):
+            found["b64_json"].append(re.sub(r"\s+", "", match.group(1)))
+        for match in re.finditer(r"https?://[^\s)\"']+", value):
+            found["url"].append(match.group(0))
+    elif isinstance(value, dict):
+        if isinstance(value.get("b64_json"), str):
+            found["b64_json"].append(value["b64_json"])
+        inline_data = value.get("inlineData") or value.get("inline_data")
+        if isinstance(inline_data, dict) and isinstance(inline_data.get("data"), str):
+            found["b64_json"].append(inline_data["data"])
+        image_url = value.get("image_url")
+        if isinstance(image_url, dict) and isinstance(image_url.get("url"), str):
+            url = image_url["url"]
+            if url.startswith("data:image/"):
+                found["b64_json"].extend(collect_chat_images(url)["b64_json"])
+            else:
+                found["url"].append(url)
+        if isinstance(value.get("url"), str):
+            url = value["url"]
+            if url.startswith("data:image/"):
+                found["b64_json"].extend(collect_chat_images(url)["b64_json"])
+            else:
+                found["url"].append(url)
+        for item in value.values():
+            nested = collect_chat_images(item)
+            found["b64_json"].extend(nested["b64_json"])
+            found["url"].extend(nested["url"])
+    elif isinstance(value, list):
+        for item in value:
+            nested = collect_chat_images(item)
+            found["b64_json"].extend(nested["b64_json"])
+            found["url"].extend(nested["url"])
+    return found
+
+
+def save_chat_response_images(body: dict[str, Any], output_paths: list[Path]) -> list[str]:
+    images = collect_chat_images(body)
+    if images["b64_json"]:
+        return save_b64_images(images["b64_json"], output_paths)
+    if images["url"]:
+        return save_url_images(images["url"], output_paths)
+    snippet = json.dumps(body, ensure_ascii=False)[:1200]
+    raise BatchImageError(f"Chat image API returned no image data: {snippet}")
+
+
+def generate_chat_images(
+    *,
+    base_url: str,
+    api_key: str,
+    image_model: str,
+    source_file: str | None,
+    reference_files: list[str],
+    prompt: str,
+    count: int,
+    size: str,
+    output_paths: list[Path],
+) -> list[str]:
+    image_inputs = [source_file] if source_file else []
+    image_inputs.extend(reference_files)
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    if image_inputs:
+        for raw_path in image_inputs:
+            image_path = Path(raw_path)
+            if not image_path.exists():
+                raise BatchImageError(f"Source image not found: {image_path}")
+            parts.append({"inlineData": image_path_to_inline_data(image_path)})
+
+    encoded_images: list[str] = []
+    downloaded_urls: list[str] = []
+    root_url = base_url.split("/v1", 1)[0].rstrip("/")
+    url = f"{root_url}/v1beta/models/{image_model}:generateContent"
+    for _ in range(count):
+        response = requests.post(
+            url,
+            params={"key": api_key},
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": parts}],
+                "generationConfig": {
+                    "responseModalities": ["TEXT", "IMAGE"],
+                    "imageConfig": {
+                        "aspectRatio": aspect_ratio_for_size(size),
+                        "imageSize": image_size_label(size),
+                    }
+                },
+            },
+            timeout=900,
+        )
+        if response.status_code >= 400:
+            raise BatchImageError(
+                f"Gemini image API request failed ({response.status_code}): {response.text[:1200]}"
+            )
+        images = collect_chat_images(response.json())
+        encoded_images.extend(images["b64_json"])
+        downloaded_urls.extend(images["url"])
+
+    if encoded_images:
+        return save_b64_images(encoded_images, output_paths)
+    if downloaded_urls:
+        return save_url_images(downloaded_urls, output_paths)
+    raise BatchImageError("Gemini image API returned no image data.")
+
+
 def standardize_image_size(path: Path, item: PromptItem) -> str:
     with Image.open(path) as image:
         target = target_size_for_item(item)
@@ -489,6 +634,18 @@ def generate_images(
 ) -> list[str]:
     headers = {"Authorization": f"Bearer {api_key}"}
     image_model = normalize_image_model(image_model)
+    if image_model in CHAT_IMAGE_MODELS:
+        return generate_chat_images(
+            base_url=base_url,
+            api_key=api_key,
+            image_model=image_model,
+            source_file=source_file,
+            reference_files=reference_files,
+            prompt=prompt,
+            count=count,
+            size=size,
+            output_paths=output_paths,
+        )
     model_options = image_model_payload_options(image_model, size)
     image_inputs = [source_file] if source_file else []
     image_inputs.extend(reference_files)
