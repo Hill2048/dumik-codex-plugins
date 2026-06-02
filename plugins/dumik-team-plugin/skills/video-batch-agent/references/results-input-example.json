@@ -2,6 +2,7 @@
   "items": [
     {
       "id": "shot-001",
+      "provider": "dreamina",
       "file": "F:/AI HOME/CODEX/video/outputs/批量视频项目/demo/原图/1.png",
       "task": "高压锅开盖展示内胆结构",
       "count": 1,
@@ -17,6 +18,26 @@
       "reference_videos": [],
       "reference_audios": [],
       "final_instruction": "使用全能参考模式生成高压锅开盖过程，首帧保持锅盖与旋钮结构一致，动作克制清晰，镜头轻微推进，最后停在内胆结构清楚可见的画面。不要字幕、不要水印、不要多余装饰。"
+    },
+    {
+      "id": "veo-shot-001",
+      "provider": "veo",
+      "file": "F:/AI HOME/CODEX/video/outputs/批量视频项目/demo/原图/1.png",
+      "task": "高压锅主图短视频",
+      "count": 1,
+      "output_name": "veo-shot-001",
+      "ratio": "16:9",
+      "duration": 4,
+      "mode": "veo-fast",
+      "model_version": "gemini-veo-3.1-fast-generate-preview-4s",
+      "video_resolution": "720p",
+      "reference_images": [],
+      "reference_videos": [],
+      "reference_audios": [],
+      "images": [],
+      "generate_audio": true,
+      "negative_prompt": "字幕、水印、文字、变形",
+      "final_instruction": "让首帧产品产生轻微电影感镜头运动，主体保持真实结构和材质，镜头缓慢推进，光线轻微流动，结束时产品仍居中清晰。不要字幕、不要水印、不要多余装饰。"
     }
   ]
 }

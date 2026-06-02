@@ -16,6 +16,7 @@ import argparse
 import ast
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import importlib.util
 import json
 import mimetypes
 import os
@@ -34,13 +35,14 @@ from PIL import Image
 DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
-BANANA2_IMAGE_MODEL = "gemini-3.1-flash-image"
-CHAT_IMAGE_MODELS = {"gemini-3.1-flash-image", "gemini-3.1-flash-image-preview"}
+BANANA2_IMAGE_MODEL = "nano-banana-2"
+CHAT_IMAGE_MODELS = {"nano-banana-2"}
 IMAGE_MODEL_ALIASES = {
     "gpt-image-2": "gpt-image-2",
     "banana2": BANANA2_IMAGE_MODEL,
-    "gemini-3.1-flash-image": "gemini-3.1-flash-image",
-    "gemini-3.1-flash-image-preview": "gemini-3.1-flash-image-preview",
+    "nano-banana-2": BANANA2_IMAGE_MODEL,
+    "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
+    "gemini-3.1-flash-image-preview": BANANA2_IMAGE_MODEL,
 }
 DEFAULT_STORYBOARD_RATIO = "9:16"
 DEFAULT_STORYBOARD_SIZES = {
@@ -48,11 +50,12 @@ DEFAULT_STORYBOARD_SIZES = {
     "3:4": (2880, 3840),
     "9:16": (2160, 3840),
 }
+DEFAULT_2K_SIZE = (2048, 2048)
 DEFAULT_BATCH_LONG_EDGE = 2048
 DEFAULT_CONCURRENCY = 3
 IMAGE2_MIN_PIXELS = 655_360
 IMAGE2_MAX_PIXELS = 8_294_400
-IMAGE2_MAX_EDGE = 4000
+IMAGE2_MAX_EDGE = 3840
 IMAGE2_MAX_RATIO = 3.0
 IMAGE2_2K_PIXELS = 2_359_296
 
@@ -190,6 +193,13 @@ def image_api_endpoint(base_url: str, endpoint: str) -> str:
     return clean + "/v1" + endpoint
 
 
+def root_api_endpoint(base_url: str, endpoint: str) -> str:
+    clean = base_url.rstrip("/")
+    if clean.endswith("/v1"):
+        clean = clean[:-3]
+    return clean + endpoint
+
+
 @dataclass
 class PromptItem:
     id: str
@@ -229,6 +239,19 @@ def read_prompt(prompt: str | None, prompt_file: str | None) -> str:
     raise BatchImageError("Single-image mode requires --prompt or --prompt-file.")
 
 
+def is_remote_image_reference(value: str) -> bool:
+    return value.startswith(("http://", "https://", "data:image/"))
+
+
+def normalize_image_reference(value: str | None) -> str | None:
+    if not value:
+        return None
+    clean = value.strip()
+    if is_remote_image_reference(clean):
+        return clean
+    return str(Path(clean).resolve())
+
+
 def output_dir_and_name(output_dir: str, out: str | None) -> tuple[Path, str]:
     if out:
         out_path = Path(out).resolve()
@@ -241,8 +264,12 @@ def output_dir_and_name(output_dir: str, out: str | None) -> tuple[Path, str]:
 def single_prompt_item(args: argparse.Namespace) -> tuple[PromptItem, Path]:
     prompt = read_prompt(args.prompt, args.prompt_file)
     output_dir, output_name = output_dir_and_name(args.output_dir, args.out)
-    source_file = str(Path(args.image).resolve()) if args.image else None
-    reference_files = [str(Path(path).resolve()) for path in (args.reference or [])]
+    source_file = normalize_image_reference(args.image)
+    reference_files = [
+        normalized
+        for path in (args.reference or [])
+        if (normalized := normalize_image_reference(path))
+    ]
     count = int(args.count or 1)
     if count < 1 or count > 8:
         raise BatchImageError("--count must be between 1 and 8.")
@@ -354,7 +381,7 @@ def validate_image2_size(width: int, height: int, *, source: str) -> None:
     if width % 16 != 0 or height % 16 != 0:
         raise BatchImageError(f"Image2 size must use multiples of 16: {source}")
     if width > IMAGE2_MAX_EDGE or height > IMAGE2_MAX_EDGE:
-        raise BatchImageError(f"Image2 size edge must be <= 4000: {source}")
+        raise BatchImageError(f"Image2 size edge must be <= 3840: {source}")
     ratio = max(width / height, height / width)
     if ratio > IMAGE2_MAX_RATIO:
         raise BatchImageError(f"Image2 aspect ratio must stay within 1:3 to 3:1: {source}")
@@ -375,18 +402,14 @@ def target_size_for_item(item: PromptItem) -> tuple[int, int] | None:
 def api_size_for_item(item: PromptItem) -> str:
     target = target_size_for_item(item)
     if not target:
-        return "1024x1024"
+        target = DEFAULT_2K_SIZE
     width, height = target
     validate_image2_size(width, height, source=f"{width}x{height}")
     return f"{width}x{height}"
 
 
 def image2_quality_for_size(size: str) -> str:
-    match = re.fullmatch(r"(\d+)x(\d+)", size)
-    if not match:
-        return "medium"
-    pixels = int(match.group(1)) * int(match.group(2))
-    return "high" if pixels >= IMAGE2_2K_PIXELS else "medium"
+    return "high"
 
 
 def image_model_payload_options(image_model: str, size: str) -> dict[str, Any]:
@@ -419,8 +442,13 @@ def aspect_ratio_for_size(size: str) -> str:
 def image_size_label(size: str) -> str:
     match = re.fullmatch(r"(\d+)x(\d+)", size)
     if not match:
-        return "1K"
-    return "4K" if max(int(match.group(1)), int(match.group(2))) >= 2000 else "1K"
+        return "2K"
+    long_edge = max(int(match.group(1)), int(match.group(2)))
+    if long_edge >= 3000:
+        return "4K"
+    if long_edge >= 1500:
+        return "2K"
+    return "1K"
 
 
 def image_path_to_data_url(path: Path) -> str:
@@ -433,6 +461,57 @@ def image_path_to_inline_data(path: Path) -> dict[str, str]:
     mime = mimetypes.guess_type(path.name)[0] or "image/png"
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return {"mimeType": mime, "data": encoded}
+
+
+def image_reference_to_generate_value(value: str) -> str:
+    if value.startswith(("http://", "https://", "data:image/")):
+        return value
+    image_path = Path(value)
+    if not image_path.exists():
+        raise BatchImageError(f"Source image not found: {image_path}")
+    return image_path_to_data_url(image_path)
+
+
+def image_reference_to_banana2_url(value: str) -> str:
+    if value.startswith(("http://", "https://", "data:image/")):
+        return value
+
+    image_path = Path(value)
+    if not image_path.exists():
+        raise BatchImageError(f"Source image not found: {image_path}")
+
+    publisher = None
+    try:
+        publisher_path = Path(__file__).with_name("publish_nas_reference.py")
+        spec = importlib.util.spec_from_file_location("publish_nas_reference", publisher_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Cannot load {publisher_path}")
+        publisher = importlib.util.module_from_spec(spec)
+        sys.modules["publish_nas_reference"] = publisher
+        spec.loader.exec_module(publisher)
+
+        nas_root, public_base_url = publisher.resolve_settings(
+            argparse.Namespace(
+                nas_root=None,
+                public_base_url=None,
+                save_config=False,
+                no_verify=False,
+                json=False,
+            )
+        )
+        subdir = f"banana2-submit/{datetime.now().strftime('%Y%m%d')}"
+        result = publisher.publish_one(image_path, nas_root, public_base_url, subdir, verify=True)
+    except ImportError as exc:
+        raise BatchImageError(f"Banana2 NAS publisher is unavailable: {exc}") from exc
+    except Exception as exc:
+        if publisher is not None and isinstance(exc, publisher.NasPublishError):
+            raise BatchImageError(f"Banana2 NAS URL publish failed: {exc}") from exc
+        raise
+
+    if not result.verified:
+        detail = f"status={result.status_code}, content_type={result.content_type or 'unknown'}"
+        raise BatchImageError(f"Banana2 NAS URL verification failed: {result.url} ({detail})")
+    return result.url
 
 
 def collect_chat_images(value: Any) -> dict[str, list[str]]:
@@ -461,6 +540,11 @@ def collect_chat_images(value: Any) -> dict[str, list[str]]:
                 found["b64_json"].extend(collect_chat_images(url)["b64_json"])
             else:
                 found["url"].append(url)
+        results = value.get("results")
+        if isinstance(results, list):
+            for item in results:
+                if isinstance(item, dict) and isinstance(item.get("url"), str):
+                    found["url"].append(item["url"])
         for item in value.values():
             nested = collect_chat_images(item)
             found["b64_json"].extend(nested["b64_json"])
@@ -497,48 +581,41 @@ def generate_chat_images(
 ) -> list[str]:
     image_inputs = [source_file] if source_file else []
     image_inputs.extend(reference_files)
-    parts: list[dict[str, Any]] = [{"text": prompt}]
-    if image_inputs:
-        for raw_path in image_inputs:
-            image_path = Path(raw_path)
-            if not image_path.exists():
-                raise BatchImageError(f"Source image not found: {image_path}")
-            parts.append({"inlineData": image_path_to_inline_data(image_path)})
 
     encoded_images: list[str] = []
     downloaded_urls: list[str] = []
-    root_url = base_url.split("/v1", 1)[0].rstrip("/")
-    url = f"{root_url}/v1beta/models/{image_model}:generateContent"
+    images = [image_reference_to_banana2_url(raw_path) for raw_path in image_inputs]
+    url = image_api_endpoint(base_url, "/images/generations")
     for _ in range(count):
         response = requests.post(
             url,
-            params={"key": api_key},
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
             json={
-                "contents": [{"parts": parts}],
-                "generationConfig": {
-                    "responseModalities": ["TEXT", "IMAGE"],
-                    "imageConfig": {
-                        "aspectRatio": aspect_ratio_for_size(size),
-                        "imageSize": image_size_label(size),
-                    }
-                },
+                "model": image_model,
+                "prompt": prompt,
+                "images": images,
+                "aspectRatio": aspect_ratio_for_size(size),
+                "imageSize": image_size_label(size),
+                "replyType": "json",
             },
             timeout=900,
         )
         if response.status_code >= 400:
             raise BatchImageError(
-                f"Gemini image API request failed ({response.status_code}): {response.text[:1200]}"
+                f"Banana2 generate API request failed ({response.status_code}): {response.text[:1200]}"
             )
-        images = collect_chat_images(response.json())
-        encoded_images.extend(images["b64_json"])
-        downloaded_urls.extend(images["url"])
+        response_images = collect_chat_images(response.json())
+        encoded_images.extend(response_images["b64_json"])
+        downloaded_urls.extend(response_images["url"])
 
     if encoded_images:
         return save_b64_images(encoded_images, output_paths)
     if downloaded_urls:
         return save_url_images(downloaded_urls, output_paths)
-    raise BatchImageError("Gemini image API returned no image data.")
+    raise BatchImageError("Banana2 API returned no image data.")
 
 
 def standardize_image_size(path: Path, item: PromptItem) -> str:
@@ -936,7 +1013,7 @@ def main() -> None:
     parser.add_argument(
         "--image-model",
         default=DEFAULT_IMAGE_MODEL,
-        help="Image model name: gpt-image-2, banana2, or gemini-3.1-flash-image.",
+        help="Image model name: gpt-image-2, banana2, or nano-banana-2.",
     )
     parser.add_argument(
         "--api-key",

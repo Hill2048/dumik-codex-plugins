@@ -1,6 +1,6 @@
 ---
 name: super-image-prompt
-version: 0.1.2
+version: 0.1.3
 description: "用于创建、改写或优化高级中文图像提示词，覆盖产品视觉、电商场景、图片改图、商业摄影、多参考图、材质光影优化、产品结构保真和视觉总监 brief。默认只写提示词或 brief，不调用生图、改图接口或图片工具。"
 ---
 
@@ -14,6 +14,8 @@ Match the user's language by default; for Chinese ecommerce and image-edit tasks
 默认只输出文字：提示词、视觉 brief、改图指令或美术指导语言。不直接生成图片，不调用 `image-batch-agent`、图片 API、批量生成脚本或其他图片工具。
 
 只有用户明确说“生图 / 出图 / 生成图片 / 调用接口 / 直接生成”等实际生成意图时，才进入图片生成；如果用户只是要“提示词 / prompt / brief / 改图指令 / 优化一下”，必须停在文字交付。
+
+如果用户给的是已有视频、教程、录屏或参考视频，目标是拆关键帧、提口播、做图文 HTML 或分析节奏卖点，不要把它改写成图片提示词；改用 `video-evidence-html-report`。
 
 ## Core Rule
 
