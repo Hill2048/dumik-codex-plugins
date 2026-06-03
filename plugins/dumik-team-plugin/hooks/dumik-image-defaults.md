@@ -19,12 +19,12 @@
 当用户提出视频脚本、卖点顺序、分镜、关键帧、视频 AI 序列提示词等任务时：
 
 1. 先使用 `ecom-video-conversion` 判断转化逻辑。
-2. 再使用 `sequential-storyboard-prompts` 输出连续镜头和提示词。
+2. 再使用 `video-storyboard-prompts` 输出视频故事板、连续镜头和逐镜提示词。
 3. 默认只写脚本、分镜和视频提示词，不调用额外图片或视频生成工具。
 
 当用户明确提出产品故事板、Image2 故事板、产品身份板、产品故事板生图提示词或逐镜生视频提示词时：
 
-1. 使用 `product-storyboard-video-prompts`。
+1. 使用 `video-storyboard-prompts` 的 product / hybrid 模式。
 2. 输出产品变量表、Image2 产品身份板提示词、Image2 产品故事板提示词、分镜拆解表和逐镜生视频提示词。
 3. 默认只输出提示词，不提交图片或视频生成任务。
 

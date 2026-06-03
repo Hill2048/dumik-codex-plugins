@@ -17,7 +17,7 @@ Do not call the image API unless the user explicitly asks for actual generation 
 
 - 单图模式是默认；不要因为用户说“生图/出图”就自动走批量项目流程。
 - 批量模式必须有明确批量意图；没有“批量/多张/整组/项目制/批量生成”等表达时，按单图处理。
-- 提示词类请求不属于本 skill；转交 `image-prompt-optimizer`、`product-storyboard-video-prompts`、`super-image-prompt` 等提示词 skill。
+- 提示词类请求不属于本 skill；转交 `image-prompt-optimizer`、`video-storyboard-prompts`、`super-image-prompt` 等提示词 skill。
 - 本 skill 不写提示词、不优化提示词、不判断提示词质量，只校验是否有可提交的 `prompt` / `prompt-file` / `final_instruction`。
 - 单图实际出图默认生成 `1` 张；批量多候选不要依赖 `count` 参数，同一提示词要多张候选时必须拆成多条独立 row，每条 `count: 1`、不同 `id` 和 `output_name`。
 - 未指定模型时默认调用 `gpt-image-2`，默认请求 `2K`。

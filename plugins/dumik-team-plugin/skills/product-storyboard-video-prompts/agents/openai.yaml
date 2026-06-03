@@ -1,4 +1,0 @@
-interface:
-  display_name: "Product Image2 Storyboard"
-  short_description: "Image2 product identity boards, storyboard prompts, and per-shot video prompts."
-  default_prompt: "把这个产品整理成 Image2 产品身份板、故事板生图提示词和逐镜生视频提示词。"

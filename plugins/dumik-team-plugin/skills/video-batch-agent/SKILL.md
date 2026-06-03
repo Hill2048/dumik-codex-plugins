@@ -120,10 +120,9 @@ When the user says the files are ready:
 0. Confirm the newest source-of-truth files before writing or submitting anything.
 1. Read `原图` and `参考`.
 2. Choose the first source image in stable filename sort order as the confirmation sample.
-3. If the task is product storyboard or product video, use `product-storyboard-video-prompts`.
-4. If the task is general continuous shots, use `sequential-storyboard-prompts`.
-5. Generate one strict Chinese video prompt for that one item.
-6. Save the prompt row to:
+3. Use `video-storyboard-prompts` for product storyboards, product videos, general continuous shots, and hybrid scene-product videos.
+4. Generate one strict Chinese video prompt for that one item.
+5. Save the prompt row to:
 
 ```text
 输出\提示词记录.json

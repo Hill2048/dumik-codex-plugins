@@ -9,8 +9,8 @@
 - 视觉语言增强时：再用 `super-image-prompt` 提升场景、材质、光线和真实质感表达。
 - 明确要求生图、出图、生成图片、编辑图片或调用接口时：使用 `image-batch-agent` 单图模式；生图前选择 `gpt-image-2` 或 `banana2`；优先读本机 `CODEX_HOME/dumik-team-plugin/api_settings.py` 缓存。
 - 批量改图任务前：只有用户明确说批量、多张、整组、项目制或批量生成时，才用 `image-batch-agent` 批量模式建项目、提交上游已准备的逐图提示词；明确实际出图时先选模型、再出确认图。
-- 产品 Image2 故事板任务前：用 `product-storyboard-video-prompts` 输出产品身份板、故事板生图提示词和逐镜生视频提示词。
-- 视频写作任务前：先用 `ecom-video-conversion` 梳理卖点顺序，再用 `sequential-storyboard-prompts` 写镜头和序列提示词。
+- 视频故事板、产品故事板、连续分镜、关键帧和逐镜视频提示词任务前：用 `video-storyboard-prompts`，内部按 product / sequential / hybrid 模式处理。
+- 视频转化顺序任务前：先用 `ecom-video-conversion` 梳理卖点顺序，再用 `video-storyboard-prompts` 写镜头和序列提示词。
 - 批量生视频任务前：用 `video-batch-agent` 建项目、写逐条视频提示词、先出确认片，确认后再批量提交。
 - 最终交付改图指令时：仍以 `image-prompt-optimizer` 的格式为准。
 - 所有图片和视频流程默认停在文字交付；只有用户明确要求实际生成时才调用生成工具。

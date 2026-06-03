@@ -1,15 +1,14 @@
 # DUMIK 团队插件
 
-这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、单图生图/改图、明确批量时的批量改图、产品故事板、视频写作和批量生视频流程。
+这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的图片提示词、改图指令、单图生图/改图、明确批量时的批量改图、统一视频故事板、视频写作和批量生视频流程。
 
 ## 已收纳流程
 
 - `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
 - `image-batch-agent`：统一承接实际生图和改图。默认单图模式；只有明确说批量、项目制批量或批量生成时才进入批量模式；生图前可选 `gpt-image-2` 或 `banana2`。
-- `product-storyboard-video-prompts`：把产品资料整理成 Image2 产品身份板、产品故事板生图提示词和逐镜生视频提示词。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
-- `sequential-storyboard-prompts`：写连续分镜、关键帧和视频 AI 序列提示词。
+- `video-storyboard-prompts`：统一产品故事板、Image2 身份板、连续分镜、关键帧和逐镜生视频提示词。
 - `video-batch-agent`：项目制批量生视频，先建项目、写逐条视频提示词，先出确认片，确认后用 Dreamina CLI 批量提交。
 
 ## 团队使用建议
@@ -22,7 +21,7 @@
 
 ## 钩子
 
-`hooks/` 里放了团队默认触发规则：单张图片提示词任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；明确要求实际生图/改图时走 `image-batch-agent` 单图模式；明确批量时才走 `image-batch-agent` 批量模式；产品 Image2 故事板走 `product-storyboard-video-prompts`；普通视频脚本、分镜、镜头顺序任务优先走 `ecom-video-conversion` 和 `sequential-storyboard-prompts`；批量生视频走 `video-batch-agent`。
+`hooks/` 里放了团队默认触发规则：单张图片提示词任务优先走 `image-prompt-optimizer` 和 `super-image-prompt`；明确要求实际生图/改图时走 `image-batch-agent` 单图模式；明确批量时才走 `image-batch-agent` 批量模式；视频故事板、产品故事板、连续分镜和逐镜视频提示词统一走 `video-storyboard-prompts`；需要卖点顺序时先走 `ecom-video-conversion`；批量生视频走 `video-batch-agent`。
 
 ## 注意
 
