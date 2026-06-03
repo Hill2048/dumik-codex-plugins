@@ -11,10 +11,10 @@
 | 用户意图 | 实际提交模型 | 默认输出 |
 | --- | --- | --- |
 | `banana` / `banana2` | `nano-banana-2` | `2K` |
-| `banana-vip` / `banana2-vip`，普通 2K 任务 | `nano-banana-2-vip-2k` | `2K` |
-| `banana-vip` / `banana2-vip`，明确 4K / 故事板 4K | `nano-banana-2-vip-4k` | `4K` |
+| `banana-vip` / `banana2-vip`，普通 2K 任务 | `nano-banana-2-cl` | `2K` |
+| `banana-vip` / `banana2-vip`，明确 4K / 故事板 4K | `nano-banana-2-4k-cl` | `4K` |
 | `bananapro` / `banana-pro` | `nano-banana-pro` | `2K` |
-| `bananapro-vip` / `banana-pro-vip` | `nano-banana-pro-vip` | `2K` |
+| `bananapro-vip` / `banana-pro-vip` | `nano-banana-pro-cl` | `2K` |
 
 如果用户没有指定任何模型，整个生图 skill 默认使用 `gpt-image-2`，不是 Banana。
 
@@ -52,6 +52,7 @@
 - `aspectRatio`：由 `output_size` 自动换算，当前脚本输出 `1:1`、`16:9`、`9:16`、`4:3`、`3:4` 中最接近的一种。
 - `imageSize`：默认 `2K`；明确 4K 输出时写 `4K`；小尺寸才写 `1K`。
 - `replyType`：固定 `json`。
+- Banana 系列的 `output_size` 用来选择比例和 `imageSize` 档位，不承诺返回精确像素；脚本会记录实际尺寸，并校验返回比例不能明显偏离请求比例。
 
 ## 返回结构
 

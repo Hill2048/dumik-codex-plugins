@@ -1,6 +1,6 @@
 ---
 name: image-batch-agent
-version: 1.2.5
+version: 1.2.8
 description: "图片生成、单图改图和项目制批量改图执行入口。只负责把已经准备好的提示词、原图、参考图提交给图片接口并保存结果；不负责写提示词、优化提示词或判断画面文案。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。未指定模型时默认 gpt-image-2 出 2K；明确使用 banana 时自动路由到 Banana2 / Banana Pro 系列。"
 ---
 
@@ -39,7 +39,7 @@ The generation script uses OpenAI-compatible image API settings in this order:
 - 环境变量：`JUAIHUB_BASE_URL`、`OPENAI_BASE_URL`、`JUAIHUB_API_KEY`、`OPENAI_API_KEY`
 - 安全默认 URL：`https://api.juaihub.cn`
 - Image model default: `gpt-image-2`.
-- Banana aliases: `banana` / `banana2` -> `nano-banana-2`, `bananapro` -> `nano-banana-pro`, VIP aliases route to `nano-banana-2-vip-2k` / `nano-banana-2-vip-4k` / `nano-banana-pro-vip`.
+- Banana aliases: `banana` / `banana2` -> `nano-banana-2`, `bananapro` -> `nano-banana-pro`, VIP aliases route to `nano-banana-2-cl` / `nano-banana-2-4k-cl` / `nano-banana-pro-cl`.
 
 Do not store API keys in this public plugin package. Do not print keys or tokens.
 

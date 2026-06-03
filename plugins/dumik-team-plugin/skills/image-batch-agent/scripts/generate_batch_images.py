@@ -37,10 +37,10 @@ DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
 BANANA2_IMAGE_MODEL = "nano-banana-2"
 BANANA2_VIP_AUTO_MODEL = "__banana2_vip_auto__"
-BANANA2_VIP_2K_MODEL = "nano-banana-2-vip-2k"
-BANANA2_VIP_4K_MODEL = "nano-banana-2-vip-4k"
+BANANA2_VIP_2K_MODEL = "nano-banana-2-cl"
+BANANA2_VIP_4K_MODEL = "nano-banana-2-4k-cl"
 BANANAPRO_IMAGE_MODEL = "nano-banana-pro"
-BANANAPRO_VIP_MODEL = "nano-banana-pro-vip"
+BANANAPRO_VIP_MODEL = "nano-banana-pro-cl"
 CHAT_IMAGE_MODELS = {
     BANANA2_IMAGE_MODEL,
     BANANA2_VIP_2K_MODEL,
@@ -58,9 +58,11 @@ IMAGE_MODEL_ALIASES = {
     "banana-vip": BANANA2_VIP_AUTO_MODEL,
     "banana2-vip": BANANA2_VIP_AUTO_MODEL,
     "nano-banana-2-vip": BANANA2_VIP_AUTO_MODEL,
+    "nano-banana-2-cl": BANANA2_VIP_2K_MODEL,
     "banana-vip-2k": BANANA2_VIP_2K_MODEL,
     "banana2-vip-2k": BANANA2_VIP_2K_MODEL,
     "nano-banana-2-vip-2k": BANANA2_VIP_2K_MODEL,
+    "nano-banana-2-4k-cl": BANANA2_VIP_4K_MODEL,
     "banana-vip-4k": BANANA2_VIP_4K_MODEL,
     "banana2-vip-4k": BANANA2_VIP_4K_MODEL,
     "nano-banana-2-vip-4k": BANANA2_VIP_4K_MODEL,
@@ -71,6 +73,7 @@ IMAGE_MODEL_ALIASES = {
     "bananapro-vip": BANANAPRO_VIP_MODEL,
     "banana-pro-vip": BANANAPRO_VIP_MODEL,
     "banana_pro_vip": BANANAPRO_VIP_MODEL,
+    "nano-banana-pro-cl": BANANAPRO_VIP_MODEL,
     "nano-banana-pro-vip": BANANAPRO_VIP_MODEL,
     "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
     "gemini-3.1-flash-image-preview": BANANA2_IMAGE_MODEL,
@@ -656,15 +659,23 @@ def generate_chat_images(
     raise BatchImageError("Banana2 API returned no image data.")
 
 
-def standardize_image_size(path: Path, item: PromptItem) -> str:
+def standardize_image_size(path: Path, item: PromptItem, *, enforce_exact_target: bool) -> str:
     with Image.open(path) as image:
         target = target_size_for_item(item)
         if target:
-            if image.size != target:
+            if image.size != target and enforce_exact_target:
                 raise BatchImageError(
                     f"Generated image size {image.size[0]}x{image.size[1]} does not match requested "
                     f"{target[0]}x{target[1]}; refusing to stretch storyboard output."
                 )
+            if image.size != target:
+                target_ratio = target[0] / target[1]
+                actual_ratio = image.size[0] / image.size[1]
+                if abs(actual_ratio - target_ratio) / target_ratio > 0.03:
+                    raise BatchImageError(
+                        f"Generated image aspect ratio {image.size[0]}x{image.size[1]} is too far from requested "
+                        f"{target[0]}x{target[1]}."
+                    )
             return f"{image.size[0]}x{image.size[1]}"
 
         image = image.convert("RGB") if path.suffix.lower() in {".jpg", ".jpeg"} else image
@@ -679,10 +690,15 @@ def standardize_image_size(path: Path, item: PromptItem) -> str:
         return f"{width}x{height}"
 
 
-def standardize_saved_images(paths: list[str], item: PromptItem) -> tuple[list[str], list[str]]:
+def standardize_saved_images(
+    paths: list[str],
+    item: PromptItem,
+    *,
+    enforce_exact_target: bool,
+) -> tuple[list[str], list[str]]:
     sizes: list[str] = []
     for raw_path in paths:
-        sizes.append(standardize_image_size(Path(raw_path), item))
+        sizes.append(standardize_image_size(Path(raw_path), item, enforce_exact_target=enforce_exact_target))
     return paths, sizes
 
 
@@ -893,7 +909,11 @@ def run_prompt_item(
             size=size,
             output_paths=build_output_paths(output_dir, item.output_name, item.count),
         )
-        images, output_sizes = standardize_saved_images(images, item)
+        images, output_sizes = standardize_saved_images(
+            images,
+            item,
+            enforce_exact_target=resolved_image_model not in CHAT_IMAGE_MODELS,
+        )
         return {
             "id": item.id,
             "file": item.file,
