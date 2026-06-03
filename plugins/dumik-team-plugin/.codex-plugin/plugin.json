@@ -1,6 +1,6 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "DUMIK 团队电商视觉总监、TVC 总导演、图片提示词、单图生图改图、明确批量时的批量改图、统一视频故事板、视频写作与批量生视频核心流程插件。",
   "author": {
     "name": "DUMIK Team"
