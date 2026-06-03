@@ -1,7 +1,7 @@
 ---
 name: image-batch-agent
-version: 1.2.1
-description: "图片生成、单图改图和项目制批量改图执行入口。只负责把已经准备好的提示词、原图、参考图提交给图片接口并保存结果；不负责写提示词、优化提示词或判断画面文案。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。生图前先选择模型，支持 gpt-image-2 和 banana2。"
+version: 1.2.2
+description: "图片生成、单图改图和项目制批量改图执行入口。只负责把已经准备好的提示词、原图、参考图提交给图片接口并保存结果；不负责写提示词、优化提示词或判断画面文案。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。未指定模型时默认 gpt-image-2 出 2K；明确使用 banana 时自动路由到 Banana2 / Banana Pro 系列。"
 ---
 
 # 图片生成与批量修改 Agent
@@ -20,9 +20,10 @@ Do not call the image API unless the user explicitly asks for actual generation 
 - 提示词类请求不属于本 skill；转交 `image-prompt-optimizer`、`product-storyboard-video-prompts`、`super-image-prompt` 等提示词 skill。
 - 本 skill 不写提示词、不优化提示词、不判断提示词质量，只校验是否有可提交的 `prompt` / `prompt-file` / `final_instruction`。
 - 单图实际出图默认生成 `1` 张；批量多候选不要依赖 `count` 参数，同一提示词要多张候选时必须拆成多条独立 row，每条 `count: 1`、不同 `id` 和 `output_name`。
-- 实际生图前必须选择模型：`gpt-image-2` 或 `banana2`。`banana2` 会提交为 `nano-banana-2`。
-- 选定模型后再读对应参数规范：`gpt-image-2` 读 [references/model-image2.md](references/model-image2.md)，`banana2` 读 [references/model-banana2.md](references/model-banana2.md)。
-- 两个模型默认都按 `2K` 请求；用户或上游 row 明确写 `output_size` 时才覆盖。
+- 未指定模型时默认调用 `gpt-image-2`，默认请求 `2K`。
+- 明确说用 `banana` / `banana2` 时，默认提交 `nano-banana-2`，默认请求 `2K`。
+- 明确说用 `bananapro` 时提交 `nano-banana-pro`；明确说用 VIP 时按需求路由到对应 VIP 模型。
+- 选定模型后再读对应参数规范：`gpt-image-2` 读 [references/model-image2.md](references/model-image2.md)，banana 系列读 [references/model-banana2.md](references/model-banana2.md)。
 - 批量模式开始前必须确认输出路径；不能静默使用默认路径继续。
 - 批量项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
 - 批量创建文件夹后必须暂停，让用户或上游提示词 skill 准备原图、参考图和任务 JSON。
@@ -37,7 +38,8 @@ The generation script uses OpenAI-compatible image API settings in this order:
 - Codex 配置：`CODEX_HOME/config.toml`、`CODEX_HOME/auth.json`
 - 环境变量：`JUAIHUB_BASE_URL`、`OPENAI_BASE_URL`、`JUAIHUB_API_KEY`、`OPENAI_API_KEY`
 - 安全默认 URL：`https://api.juaihub.cn`
-- Image model: `gpt-image-2` or `banana2` (`nano-banana-2`)
+- Image model default: `gpt-image-2`.
+- Banana aliases: `banana` / `banana2` -> `nano-banana-2`, `bananapro` -> `nano-banana-pro`, VIP aliases route to `nano-banana-2-vip-2k` / `nano-banana-2-vip-4k` / `nano-banana-pro-vip`.
 
 Do not store API keys in this public plugin package. Do not print keys or tokens.
 
@@ -70,7 +72,7 @@ This writes the generated public base URL to `CODEX_HOME\dumik-team-plugin\nas_i
 ## Model Parameter Specs
 
 - 使用 `gpt-image-2` 前，读取 [references/model-image2.md](references/model-image2.md)，按 Image2 的尺寸、质量、生成/编辑接口规则提交。
-- 使用 `banana2` 前，读取 [references/model-banana2.md](references/model-banana2.md)，按 Banana2 的 `/v1/images/generations`、`aspectRatio`、`imageSize` 和参考图规则提交。
+- 使用 banana 系列前，读取 [references/model-banana2.md](references/model-banana2.md)，按 Banana 的 `/v1/images/generations`、`aspectRatio`、`imageSize` 和参考图规则提交。
 - 不要把一个模型的参数套到另一个模型上；例如 `gpt-image-2` 的 `quality` 不等于 Banana2 的 `imageSize`。
 
 ## Output Size And Concurrency
@@ -98,14 +100,14 @@ Minimum inputs:
 - 如果是改图：目标图路径。
 - 输出位置；用户没指定时可使用当前项目的 `输出` 目录。
 - 输出尺寸；没指定时默认 `2K`。
-- 生图模型：`gpt-image-2` 或 `banana2`。
+- 生图模型：不指定时默认 `gpt-image-2`；只有明确说用 banana / Banana Pro / VIP 时才切换。
 
 Run pattern:
 
 ```powershell
 python scripts\generate_batch_images.py `
   --prompt "<可执行中文提示词>" `
-  --image-model banana2 `
+  --image-model banana `
   --out "<输出图片路径>"
 ```
 
@@ -115,7 +117,7 @@ Single image edit:
 python scripts\generate_batch_images.py `
   --image "<目标图路径>" `
   --prompt "<可执行中文改图指令>" `
-  --image-model banana2 `
+  --image-model banana `
   --out "<输出图片路径>"
 ```
 
@@ -131,7 +133,7 @@ Only enter this flow when the user explicitly asks for batch mode. Ask for the m
 - 故事板类任务使用哪种整张比例：`16:9`、`9:16`；默认每格分镜比例为 `3:4`。
 - 是否有参考图，以及参考图分别控制什么。
 - 每张图生成几张，默认 `2`。仅在用户明确要求实际出图时询问。
-- 使用哪个图片模型：`gpt-image-2` 或 `banana2`。仅在用户明确要求实际出图时询问。
+- 使用哪个图片模型：不问也可以默认 `gpt-image-2`；只有用户提到 banana / Banana Pro / VIP 时才切到对应模型。
 
 Default output path suggestion:
 
@@ -202,7 +204,7 @@ python scripts\generate_batch_images.py `
   --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认图" `
-  --image-model banana2 `
+  --image-model banana `
   --concurrency 1 `
   --api-key "<图片接口 Key>"
 ```
@@ -226,7 +228,7 @@ python scripts\generate_batch_images.py `
   --batch `
   --results-input "<项目目录>\输出\提示词记录.json" `
   --output-dir "<项目目录>\输出" `
-  --image-model banana2 `
+  --image-model banana `
   --concurrency 3 `
   --api-key "<图片接口 Key>"
 ```

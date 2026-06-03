@@ -36,11 +36,41 @@ DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
 BANANA2_IMAGE_MODEL = "nano-banana-2"
-CHAT_IMAGE_MODELS = {"nano-banana-2"}
+BANANA2_VIP_AUTO_MODEL = "__banana2_vip_auto__"
+BANANA2_VIP_2K_MODEL = "nano-banana-2-vip-2k"
+BANANA2_VIP_4K_MODEL = "nano-banana-2-vip-4k"
+BANANAPRO_IMAGE_MODEL = "nano-banana-pro"
+BANANAPRO_VIP_MODEL = "nano-banana-pro-vip"
+CHAT_IMAGE_MODELS = {
+    BANANA2_IMAGE_MODEL,
+    BANANA2_VIP_2K_MODEL,
+    BANANA2_VIP_4K_MODEL,
+    BANANAPRO_IMAGE_MODEL,
+    BANANAPRO_VIP_MODEL,
+}
 IMAGE_MODEL_ALIASES = {
     "gpt-image-2": "gpt-image-2",
+    "image2": "gpt-image-2",
+    "banana": BANANA2_IMAGE_MODEL,
     "banana2": BANANA2_IMAGE_MODEL,
     "nano-banana-2": BANANA2_IMAGE_MODEL,
+    "banana-vip": BANANA2_VIP_AUTO_MODEL,
+    "banana2-vip": BANANA2_VIP_AUTO_MODEL,
+    "nano-banana-2-vip": BANANA2_VIP_AUTO_MODEL,
+    "banana-vip-2k": BANANA2_VIP_2K_MODEL,
+    "banana2-vip-2k": BANANA2_VIP_2K_MODEL,
+    "nano-banana-2-vip-2k": BANANA2_VIP_2K_MODEL,
+    "banana-vip-4k": BANANA2_VIP_4K_MODEL,
+    "banana2-vip-4k": BANANA2_VIP_4K_MODEL,
+    "nano-banana-2-vip-4k": BANANA2_VIP_4K_MODEL,
+    "bananapro": BANANAPRO_IMAGE_MODEL,
+    "banana-pro": BANANAPRO_IMAGE_MODEL,
+    "banana_pro": BANANAPRO_IMAGE_MODEL,
+    "nano-banana-pro": BANANAPRO_IMAGE_MODEL,
+    "bananapro-vip": BANANAPRO_VIP_MODEL,
+    "banana-pro-vip": BANANAPRO_VIP_MODEL,
+    "banana_pro_vip": BANANAPRO_VIP_MODEL,
+    "nano-banana-pro-vip": BANANAPRO_VIP_MODEL,
     "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
     "gemini-3.1-flash-image-preview": BANANA2_IMAGE_MODEL,
 }
@@ -223,6 +253,13 @@ def normalize_image_model(value: str) -> str:
     if not model:
         choices = ", ".join(IMAGE_MODEL_ALIASES)
         raise BatchImageError(f"Unsupported image model: {value}. Use one of: {choices}.")
+    return model
+
+
+def resolve_image_model_for_size(value: str, size: str) -> str:
+    model = normalize_image_model(value)
+    if model == BANANA2_VIP_AUTO_MODEL:
+        return BANANA2_VIP_4K_MODEL if image_size_label(size) == "4K" else BANANA2_VIP_2K_MODEL
     return model
 
 
@@ -710,7 +747,7 @@ def generate_images(
     output_paths: list[Path],
 ) -> list[str]:
     headers = {"Authorization": f"Bearer {api_key}"}
-    image_model = normalize_image_model(image_model)
+    image_model = resolve_image_model_for_size(image_model, size)
     if image_model in CHAT_IMAGE_MODELS:
         return generate_chat_images(
             base_url=base_url,
@@ -842,6 +879,8 @@ def run_prompt_item(
     image_model: str,
 ) -> dict[str, Any]:
     try:
+        size = api_size_for_item(item)
+        resolved_image_model = resolve_image_model_for_size(image_model, size)
         images = generate_images(
             base_url=base_url,
             api_key=api_key,
@@ -850,7 +889,7 @@ def run_prompt_item(
             reference_files=item.reference_files,
             prompt=item.final_instruction,
             count=item.count,
-            size=api_size_for_item(item),
+            size=size,
             output_paths=build_output_paths(output_dir, item.output_name, item.count),
         )
         images, output_sizes = standardize_saved_images(images, item)
@@ -861,7 +900,7 @@ def run_prompt_item(
             "task": item.task,
             "count": item.count,
             "output_name": item.output_name,
-            "image_model": normalize_image_model(image_model),
+            "image_model": resolved_image_model,
             "output_size": item.output_size
             or (
                 "4K storyboard 9:16 2160x3840, 3:4 panels"
@@ -873,6 +912,11 @@ def run_prompt_item(
             "generated_files": images,
         }
     except BatchImageError as exc:
+        try:
+            size = api_size_for_item(item)
+            resolved_image_model = resolve_image_model_for_size(image_model, size)
+        except BatchImageError:
+            resolved_image_model = normalize_image_model(image_model)
         return {
             "id": item.id,
             "file": item.file,
@@ -880,7 +924,7 @@ def run_prompt_item(
             "task": item.task,
             "count": item.count,
             "output_name": item.output_name,
-            "image_model": normalize_image_model(image_model),
+            "image_model": resolved_image_model,
             "final_instruction": item.final_instruction,
             "error": str(exc),
             "generated_files": [],
@@ -966,6 +1010,11 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str) -> None:
             try:
                 rows_by_id[item.id] = future.result()
             except Exception as exc:
+                try:
+                    size = api_size_for_item(item)
+                    resolved_model = resolve_image_model_for_size(args.image_model, size)
+                except Exception:
+                    resolved_model = normalize_image_model(args.image_model)
                 rows_by_id[item.id] = {
                     "id": item.id,
                     "file": item.file,
@@ -973,7 +1022,7 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str) -> None:
                     "task": item.task,
                     "count": item.count,
                     "output_name": item.output_name,
-                    "image_model": normalize_image_model(args.image_model),
+                    "image_model": resolved_model,
                     "final_instruction": item.final_instruction,
                     "error": str(exc),
                     "generated_files": [],
@@ -1013,7 +1062,7 @@ def main() -> None:
     parser.add_argument(
         "--image-model",
         default=DEFAULT_IMAGE_MODEL,
-        help="Image model name: gpt-image-2, banana2, or nano-banana-2.",
+        help="Image model name. Default gpt-image-2. Banana aliases: banana, banana-vip, bananapro, bananapro-vip.",
     )
     parser.add_argument(
         "--api-key",

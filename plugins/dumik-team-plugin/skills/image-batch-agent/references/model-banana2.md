@@ -1,8 +1,22 @@
-# Banana2 参数规范
+# Banana 系列参数规范
 
-适用模型：`banana2`，脚本会提交为 `nano-banana-2`。除模型名外，其他参数按 Apifox 文档执行。
+适用模型：Banana2、Banana2 VIP、Banana Pro、Banana Pro VIP。除模型名和自动路由外，其他参数按 Apifox 文档执行。
 
-使用时机：用户明确选择 `banana2`，或需要用 Banana2 做文生图 / 图生图。
+使用时机：用户明确说用 `banana`、`banana2`、`bananapro`、`Banana Pro` 或 `VIP`，或上游明确要求 Banana 系列生成 / 改图。
+
+## 模型路由
+
+用户不需要说具体分辨率模型名，脚本按需求自动路由：
+
+| 用户意图 | 实际提交模型 | 默认输出 |
+| --- | --- | --- |
+| `banana` / `banana2` | `nano-banana-2` | `2K` |
+| `banana-vip` / `banana2-vip`，普通 2K 任务 | `nano-banana-2-vip-2k` | `2K` |
+| `banana-vip` / `banana2-vip`，明确 4K / 故事板 4K | `nano-banana-2-vip-4k` | `4K` |
+| `bananapro` / `banana-pro` | `nano-banana-pro` | `2K` |
+| `bananapro-vip` / `banana-pro-vip` | `nano-banana-pro-vip` | `2K` |
+
+如果用户没有指定任何模型，整个生图 skill 默认使用 `gpt-image-2`，不是 Banana。
 
 ## 调用入口
 
@@ -15,7 +29,7 @@
 
 ```json
 {
-  "model": "nano-banana-2",
+  "model": "按路由得到的实际 Banana 模型名",
   "prompt": "完整中文提示词",
   "images": [
     "https://example.com/input.png"
@@ -28,7 +42,7 @@
 
 ## 字段规则
 
-- `model`：团队固定传 `nano-banana-2`。
+- `model`：由脚本按上面的模型路由决定。
 - `prompt`：必填，传完整中文提示词或改图指令。
 - `images`：图片参考数组。
   - 文生图时传空数组 `[]`。
@@ -62,7 +76,7 @@
 
 ## 默认建议
 
-- 普通单图：`output_size` 不填，脚本默认请求 `2048x2048`，Banana2 参数为 `aspectRatio: 1:1`、`imageSize: 2K`。
+- 普通单图：`output_size` 不填，脚本默认请求 `2048x2048`，Banana 参数为 `aspectRatio: 1:1`、`imageSize: 2K`。
 - 故事板：`output_size` 用 `2160x3840` 或 `3840x2160`，让脚本写入对应比例和 `4K`。
 - 批量多候选：拆成多条 row，每条 `count: 1`，不要依赖一个 row 里多张返回。
 
