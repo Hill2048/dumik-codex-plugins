@@ -1,6 +1,6 @@
 # DUMIK 团队插件
 
-这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的电商视觉总监、TVC 总导演、项目环境部署、图片提示词、改图指令、单图生图/改图、明确批量时的批量改图、统一视频故事板、视频写作和批量生视频流程。
+这是给 DUMIK 团队共享的 Codex 插件包，保留本项目最核心的电商视觉总监、TVC 总导演、项目环境部署、已检查清单、图片提示词、改图指令、单图生图/改图、明确批量时的批量改图、统一视频故事板、视频写作和批量生视频流程。
 
 ## 已收纳流程
 
@@ -17,6 +17,7 @@
 
 - Markdown 版：`assets/workflow-map.md`
 - 可视化版：`assets/workflow-map.html`
+- 已检查清单：`assets/verified-environment-checklist.md`
 
 ## 团队使用建议
 

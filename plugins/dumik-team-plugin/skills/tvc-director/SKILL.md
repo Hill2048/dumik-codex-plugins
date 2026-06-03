@@ -1,7 +1,7 @@
 ---
 name: tvc-director
 description: "TVC 总导演顶层调度入口。用于电商视频、TVC、产品广告片、卖点顺序、视频脚本、故事板、Image2 产品故事板、连续分镜、关键帧、逐镜生视频提示词、批量生视频和 Dreamina 提交前的路线判断；负责调度 ecom-video-conversion、video-storyboard-prompts、video-batch-agent，必要时调用 ecom-visual-director / image-batch-agent 处理故事板生图。"
-version: 0.1.2
+version: 0.1.3
 ---
 
 # TVC 总导演
@@ -11,6 +11,8 @@ version: 0.1.2
 不要替代底层技能。先选对路线，再按对应底层技能的规则执行。
 
 同时负责本次视频项目的前置环境部署：当任务进入项目制、批量生视频、确认片、关键帧生图或多轮制作时，先创建项目文件夹、分好素材和产物分类、检查 Dreamina / Veo / 图片生成所需工具；工具缺失时优先自动安装或初始化，不能自动解决时再停下来说明缺口。
+
+全量环境检查不要每次重复做。先查看插件 `assets\verified-environment-checklist.md`；如果清单版本与当前插件版本匹配，就复用清单结论，只做本次项目级检查和实际执行前的动态项轻量检查。
 
 ## 先给判断
 
@@ -47,6 +49,13 @@ version: 0.1.2
 - 用户明确说项目制、批量生视频、先出确认片、确认后批量、出片、提交 Dreamina / Veo。
 - 任务包含首帧、故事板、参考图、参考视频、参考音频、逐镜提示词、确认片、成片和运行记录。
 - 视频项目需要先生成故事板图片或关键帧图片，再进入生视频。
+
+部署前先读 `assets\verified-environment-checklist.md`：
+
+- 清单匹配当前插件版本时，不重复检查插件结构、脚本存在性、Python、FFmpeg、Dreamina 和敏感信息扫描。
+- 只检查本次项目目录、分类目录、输入文件、提示词 JSON、参考素材和输出路径。
+- 实际提交视频前，再轻量确认 Dreamina 登录 / Veo 权限 / API 缓存 / FFmpeg 当前可用。
+- 使用 Banana2 生成关键帧且依赖本地参考图公网 URL 时，再轻量确认 tunnel URL 可达。
 
 默认视频项目根路径：
 
