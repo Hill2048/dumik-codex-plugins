@@ -54,6 +54,7 @@ IMAGE_MODEL_ALIASES = {
     "banana": BANANA2_IMAGE_MODEL,
     "banana2": BANANA2_IMAGE_MODEL,
     "nano-banana-2": BANANA2_IMAGE_MODEL,
+    BANANA2_VIP_AUTO_MODEL: BANANA2_VIP_AUTO_MODEL,
     "banana-vip": BANANA2_VIP_AUTO_MODEL,
     "banana2-vip": BANANA2_VIP_AUTO_MODEL,
     "nano-banana-2-vip": BANANA2_VIP_AUTO_MODEL,
