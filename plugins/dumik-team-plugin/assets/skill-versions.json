@@ -1,7 +1,9 @@
 {
     "plugin":  "dumik-team-plugin",
-    "pluginVersion":  "0.1.1",
+    "pluginVersion":  "0.1.2",
     "skills":  {
+                   "ecom-visual-director":  "0.1.0",
+                   "tvc-director":  "0.1.0",
                    "ecom-video-conversion":  "0.1.1",
                    "image-batch-agent":  "1.2.8",
                    "image-prompt-optimizer":  "0.1.2",

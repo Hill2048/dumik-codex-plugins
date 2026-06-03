@@ -1,0 +1,4 @@
+interface:
+  display_name: "电商视觉总监"
+  short_description: "统筹电商图片、主图、详情页和批量视觉任务，调度 DUMIK 图片 skills。"
+  default_prompt: "按电商视觉总监模式帮我判断这次图片任务该怎么做。"

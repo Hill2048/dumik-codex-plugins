@@ -1,5 +1,11 @@
 # DUMIK 团队核心流程地图
 
+## 顶层调度
+
+图片、电商主图、详情页、白底精修、产品改图、KV、批量图片和实际生图任务先走 `ecom-visual-director`。
+
+视频、TVC、卖点顺序、故事板、连续分镜、逐镜提示词、关键帧和批量生视频任务先走 `tvc-director`。
+
 ## 图片改图
 
 入口：`image-prompt-optimizer`，必要时叠加 `super-image-prompt`。
