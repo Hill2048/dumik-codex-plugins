@@ -1,7 +1,7 @@
 ---
 name: video-batch-agent
 description: "项目制批量生视频。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入首帧/参考素材，再先出 1 条确认片，确认后用即梦 CLI 或 Veo 异步接口批量提交视频任务。默认走 Dreamina，全能参考 `multimodal2video`，模型为 `seedance2.0fast_vip`；用户明确选择 Veo 时走 NewAPI Business `/v1/videos`。"
-version: 0.1.5
+version: 0.1.6
 ---
 
 # 批量视频生成 Agent
@@ -24,7 +24,7 @@ Do not skip the confirmation clip. Do not start full batch submission before the
 - 如果参考视频上传返回远端 `502`、upload video/audio 失败、VOD 上传失败或类似网络上传错误，先把该参考视频处理成 `5` 秒以内、无音频、H.264 MP4、小体积版本，再替换 `reference_videos` 重提一次；不要反复提交同一个失败视频文件。
 - Seedance2 / Dreamina 视频生成通常是 `10-30` 分钟级异步任务。提交成功并返回 `querying` / `Queueing` / `Generating` 后，不要把几分钟无结果误判成失败；按长任务节奏轮询和汇报。
 - 每条视频默认生成 `1` 条，除非用户明确指定其他数量。
-- 项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
+- 项目目录必须保留三个入口文件夹：`原图`、`参考`、`输出`；同时在 `输出` 内创建 `提示词`、`确认片`、`成片`、`运行记录`、`临时`，让后续产物归档到对应分类。
 - 创建文件夹后必须暂停，让用户把首帧/分镜图放进 `原图`，参考素材放进 `参考`。
 - 默认执行入口是 `dreamina` CLI，提交前先按子命令 help 确认参数。
 - 用户明确选择 Veo 时，执行入口改为 NewAPI Business `/v1/videos` 异步接口；默认仍是 Dreamina。
@@ -96,13 +96,18 @@ Or pass an exact confirmed output path:
 python scripts\init_project.py --output-path "<已确认输出路径>"
 ```
 
-The helper creates only:
+The helper creates:
 
 ```text
 <项目目录>\
   原图\
   参考\
   输出\
+    提示词\
+    确认片\
+    成片\
+    运行记录\
+    临时\
 ```
 
 After creating the folders, stop and tell the user:
@@ -125,7 +130,7 @@ When the user says the files are ready:
 5. Save the prompt row to:
 
 ```text
-输出\提示词记录.json
+输出\提示词\提示词记录.json
 ```
 
 Use this row shape:
@@ -179,7 +184,7 @@ Then call the generation script with `count: 1` and output to `输出\确认片`
 
 ```powershell
 python scripts\generate_batch_videos.py `
-  --results-input "<项目目录>\输出\提示词记录.json" `
+  --results-input "<项目目录>\输出\提示词\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认片"
 ```
 
@@ -191,16 +196,16 @@ Only after the user approves the confirmation clip:
 
 1. Write one prompt row per item.
 2. Use the confirmed per-item count, defaulting to `1`.
-3. Save all rows to `输出\提示词记录.json`.
-4. Run the generation script with output dir `输出`.
-5. Save run records in `输出\运行记录.json` and `输出\运行记录.md`.
+3. Save all rows to `输出\提示词\提示词记录.json`，并在需要兼容脚本时复制到 `输出\提示词记录.json`。
+4. Run the generation script with output dir `输出\成片`.
+5. Save or copy run records into `输出\运行记录`，不要混进成片目录。
 
 Run pattern:
 
 ```powershell
 python scripts\generate_batch_videos.py `
-  --results-input "<项目目录>\输出\提示词记录.json" `
-  --output-dir "<项目目录>\输出"
+  --results-input "<项目目录>\输出\提示词\提示词记录.json" `
+  --output-dir "<项目目录>\输出\成片"
 ```
 
 ## Prompt Writing Rules
@@ -286,7 +291,7 @@ Never infer duration or ratio from an older report when a newer planning file ex
 
 ## Guardrails
 
-- Do not create extra project subfolders beyond `原图`、`参考`、`输出`.
+- Do not create extra top-level project subfolders beyond `原图`、`参考`、`输出`; output categorization belongs under `输出`.
 - Do not begin full batch generation from an unapproved confirmation clip.
 - Do not generate prompts without a clear Dreamina execution path.
 - Do not silently change ratio, duration, model, or reference roles.

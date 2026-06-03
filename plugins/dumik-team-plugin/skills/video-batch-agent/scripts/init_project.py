@@ -23,7 +23,7 @@ def build_project_path(root: Path, project_name: str) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create 原图/参考/输出 folders.")
+    parser = argparse.ArgumentParser(description="Create project folders and output categories.")
     parser.add_argument("--project-name", help="Chinese project name.")
     parser.add_argument(
         "--root",
@@ -43,13 +43,22 @@ def main() -> None:
             parser.error("--project-name is required when --output-path is not provided.")
         project_dir = build_project_path(Path(args.root).resolve(), args.project_name)
 
-    for folder_name in ("原图", "参考", "输出"):
+    folders = (
+        "原图",
+        "参考",
+        "输出",
+        "输出/提示词",
+        "输出/确认片",
+        "输出/成片",
+        "输出/运行记录",
+        "输出/临时",
+    )
+    for folder_name in folders:
         (project_dir / folder_name).mkdir(parents=True, exist_ok=True)
 
     print(project_dir)
-    print(project_dir / "原图")
-    print(project_dir / "参考")
-    print(project_dir / "输出")
+    for folder_name in folders:
+        print(project_dir / folder_name)
 
 
 if __name__ == "__main__":

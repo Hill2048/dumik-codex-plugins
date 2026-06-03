@@ -553,11 +553,12 @@
         <img src="logo.svg" alt="DUMIK 标识">
         <span>
           <strong>DUMIK Team Plugin</strong>
-          <span>流程地图 / 0.1.4</span>
+          <span>流程地图 / 0.1.5</span>
         </span>
       </a>
       <nav class="nav" aria-label="页面导航">
         <a href="#map">总览</a>
+        <a href="#environment">项目环境</a>
         <a href="#lanes">两条主线</a>
         <a href="#matrix">任务路由</a>
       </nav>
@@ -567,8 +568,8 @@
       <section class="hero" id="map">
         <div class="hero-copy">
           <div class="eyebrow">DUMIK 工作流调度</div>
-          <h1>两位领导，八个技能，一张图看清。</h1>
-          <p>先判断任务属于电商视觉还是 TVC 视频，再由对应领导调度底层技能；默认只写提示词和分镜，明确要生成时才进入执行链路。</p>
+          <h1>两位领导，先搭环境，再调技能。</h1>
+          <p>先判断任务属于电商视觉还是 TVC 视频；进入项目制或生成执行前，领导先创建项目目录、分好素材和产物分类、检查工具，再调度底层技能。</p>
           <div class="filter" aria-label="流程筛选">
             <button class="active" type="button" data-filter="all">全部</button>
             <button type="button" data-filter="image">电商视觉</button>
@@ -591,13 +592,13 @@
             <article class="node director image n1" data-group="image">
               <small>顶层入口</small>
               <h2>电商视觉总监</h2>
-              <p><code>ecom-visual-director</code><br>判断图片任务、锁定产品保护点、决定提示词还是生成执行。</p>
+              <p><code>ecom-visual-director</code><br>判断图片任务、部署图片项目环境、检查接口工具、决定提示词还是生成执行。</p>
             </article>
 
             <article class="node director video n2" data-group="video">
               <small>顶层入口</small>
               <h2>TVC 总导演</h2>
-              <p><code>tvc-director</code><br>判断视频阶段，调度转化逻辑、故事板、逐镜提示词和生视频。</p>
+              <p><code>tvc-director</code><br>判断视频阶段、部署视频项目环境、检查 Dreamina / Veo / FFmpeg，再调度生视频。</p>
             </article>
 
             <article class="node exec image n3" data-group="image">
@@ -645,10 +646,69 @@
         </div>
       </section>
 
+      <section id="environment">
+        <div class="section-head">
+          <h2>项目环境</h2>
+          <p>两位领导不只判断路线，也负责把项目落到可执行目录里。所有后续提示词、确认图、确认片、成品和运行记录都进入对应分类，避免素材和结果混在一起。</p>
+        </div>
+
+        <div class="lanes">
+          <article class="lane">
+            <h3>图片项目部署</h3>
+            <div class="step">
+              <span class="num">1</span>
+              <div>
+                <strong>创建项目目录</strong>
+                <p>`F:\AI HOME\CODEX\image\outputs\批量改图项目\项目名-时间戳`，保留 `原图`、`参考`、`输出` 三个入口。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">2</span>
+              <div>
+                <strong>输出内部分仓</strong>
+                <p>`输出\提示词`、`输出\确认图`、`输出\成品`、`输出\运行记录`、`输出\临时`。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">3</span>
+              <div>
+                <strong>检查图片工具</strong>
+                <p>检查 Python、项目脚本、图片接口缓存、Banana2 公网参考图发布配置；能初始化的直接初始化。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="lane video">
+            <h3>视频项目部署</h3>
+            <div class="step">
+              <span class="num">1</span>
+              <div>
+                <strong>创建项目目录</strong>
+                <p>`F:\AI HOME\CODEX\video\outputs\批量视频项目\项目名-时间戳`，保留 `原图`、`参考`、`输出` 三个入口。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">2</span>
+              <div>
+                <strong>输出内部分仓</strong>
+                <p>`输出\提示词`、`输出\确认片`、`输出\成片`、`输出\运行记录`、`输出\临时`。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">3</span>
+              <div>
+                <strong>检查视频工具</strong>
+                <p>检查 Python、视频脚本、Dreamina CLI、Veo API 配置、FFmpeg；能安装或初始化的先处理。</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section id="lanes">
         <div class="section-head">
           <h2>两条主线</h2>
-          <p>所有任务先进入一个顶层判断口。图片任务先由电商视觉总监定方向；视频任务先由 TVC 总导演定阶段。只有用户明确要生成，才从文字链路进入执行链路。</p>
+          <p>所有任务先进入一个顶层判断口。图片任务先由电商视觉总监定方向；视频任务先由 TVC 总导演定阶段。进入项目制或生成执行前，先部署项目环境和工具。</p>
         </div>
 
         <div class="lanes">
@@ -672,7 +732,7 @@
               <span class="num">3</span>
               <div>
                 <strong>调度底层技能</strong>
-                <p>改图走 `image-prompt-optimizer`，视觉增强走 `super-image-prompt`，明确生成走 `image-batch-agent`。</p>
+                <p>改图走 `image-prompt-optimizer`，视觉增强走 `super-image-prompt`，明确生成走 `image-batch-agent`，产物进入对应输出分类。</p>
               </div>
             </div>
           </article>
@@ -697,7 +757,7 @@
               <span class="num">3</span>
               <div>
                 <strong>调度底层技能</strong>
-                <p>卖点顺序走 `ecom-video-conversion`，故事板走 `video-storyboard-prompts`，批量生视频走 `video-batch-agent`。</p>
+                <p>卖点顺序走 `ecom-video-conversion`，故事板走 `video-storyboard-prompts`，批量生视频走 `video-batch-agent`，产物进入对应输出分类。</p>
               </div>
             </div>
           </article>
@@ -722,9 +782,9 @@
           <div class="cell"><strong>中文改图指令</strong><p>第一行写比例，最终指令放进代码块。</p></div>
 
           <div class="cell"><strong>生图 / 改图接口</strong><p>用户明确要求生成、出图、调用接口、保存结果。</p></div>
-          <div class="cell"><strong>电商视觉总监</strong><p>确认已有可提交提示词和输出位置。</p></div>
+          <div class="cell"><strong>电商视觉总监</strong><p>确认已有可提交提示词、输出位置和项目目录分类。</p></div>
           <div class="cell"><strong>image-batch-agent</strong><p>未明确批量时走单图模式。</p></div>
-          <div class="cell"><strong>图片结果</strong><p>多张任务好一张发一张预览和路径。</p></div>
+          <div class="cell"><strong>图片结果</strong><p>确认图进 `输出\确认图`，成品进 `输出\成品`，记录进 `输出\运行记录`。</p></div>
 
           <div class="cell"><strong>卖点顺序 / 视频结构</strong><p>用户关心视频为什么能转化、怎么排卖点。</p></div>
           <div class="cell video-head"><strong>TVC 总导演</strong><p>先判断策略阶段。</p></div>
@@ -735,13 +795,18 @@
           <div class="cell video-head"><strong>TVC 总导演</strong><p>判断 product / sequential / hybrid。</p></div>
           <div class="cell"><strong>video-storyboard-prompts</strong><p>统一承接产品和连续分镜。</p></div>
           <div class="cell"><strong>可执行分镜</strong><p>稳定锚点、镜头动作、起止画面完整。</p></div>
+
+          <div class="cell"><strong>项目制 / 批量执行</strong><p>用户明确要项目文件夹、确认图、确认片、批量生成或后续归档。</p></div>
+          <div class="cell"><strong>两位领导</strong><p>先部署项目环境，再检查缺失工具。</p></div>
+          <div class="cell"><strong>image-batch-agent / video-batch-agent</strong><p>实际创建目录并执行后续生成。</p></div>
+          <div class="cell"><strong>分类归档</strong><p>原图、参考、提示词、确认件、成品、运行记录各归其位。</p></div>
         </div>
       </section>
     </main>
 
     <footer class="footer">
       <span>DUMIK Team Plugin / assets/workflow-map.html</span>
-      <span>默认文字交付，明确生成才执行。</span>
+      <span>项目先分仓，明确生成才执行。</span>
     </footer>
   </div>
 

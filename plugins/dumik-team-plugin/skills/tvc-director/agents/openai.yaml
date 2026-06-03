@@ -1,4 +1,4 @@
 interface:
   display_name: "TVC 总导演"
-  short_description: "统筹电商视频、TVC、故事板、连续分镜和批量生视频任务，调度 DUMIK 视频技能。"
-  default_prompt: "按TVC总导演模式帮我判断这次视频任务该怎么做。"
+  short_description: "统筹电商视频、TVC、项目环境部署、工具检查和 DUMIK 视频技能调度。"
+  default_prompt: "按 TVC 总导演模式帮我判断这次视频任务，并先部署项目环境。"

@@ -1,6 +1,6 @@
 ---
 name: image-batch-agent
-version: 1.2.8
+version: 1.2.9
 description: "图片生成、单图改图和项目制批量改图执行入口。只负责把已经准备好的提示词、原图、参考图提交给图片接口并保存结果；不负责写提示词、优化提示词或判断画面文案。默认按单图模式处理明确生图/出图/编辑图片请求；只有用户明确说批量、项目制批量、批量生成或多图成组处理时，才开启批量模式。未指定模型时默认 gpt-image-2 出 2K；明确使用 banana 时自动路由到 Banana2 / Banana Pro 系列。"
 ---
 
@@ -25,7 +25,7 @@ Do not call the image API unless the user explicitly asks for actual generation 
 - 明确说用 `bananapro` 时提交 `nano-banana-pro`；明确说用 VIP 时按需求路由到对应 VIP 模型。
 - 选定模型后再读对应参数规范：`gpt-image-2` 读 [references/model-image2.md](references/model-image2.md)，banana 系列读 [references/model-banana2.md](references/model-banana2.md)。
 - 批量模式开始前必须确认输出路径；不能静默使用默认路径继续。
-- 批量项目目录内部只创建三个文件夹：`原图`、`参考`、`输出`。
+- 批量项目目录必须保留三个入口文件夹：`原图`、`参考`、`输出`；同时在 `输出` 内创建 `提示词`、`确认图`、`成品`、`运行记录`、`临时`，让后续产物归档到对应分类。
 - 批量创建文件夹后必须暂停，让用户或上游提示词 skill 准备原图、参考图和任务 JSON。
 - `final_instruction` 由上游提示词 skill 提供；本 skill 只把它原样提交给 API，不擅自改写。
 
@@ -157,20 +157,25 @@ Or pass an exact confirmed output path:
 python scripts\init_project.py --output-path "<已确认输出路径>"
 ```
 
-The helper creates only:
+The helper creates:
 
 ```text
 <项目目录>\
   原图\
   参考\
   输出\
+    提示词\
+    确认图\
+    成品\
+    运行记录\
+    临时\
 ```
 
 After creating the folders, stop and tell the user:
 
 - 把待处理图片放进 `原图`。
 - 把参考图放进 `参考`。
-- 把上游提示词 skill 生成的任务 JSON 或提示词文件放进 `输出`，或直接告诉你路径。
+- 把上游提示词 skill 生成的任务 JSON 或提示词文件放进 `输出\提示词`，或直接告诉你路径。
 - 放好后让你继续提交。
 
 Do not scan or generate until the user says the files are ready.
@@ -202,7 +207,7 @@ Only when the user explicitly says they want actual image generation, such as "�
 ```powershell
 python scripts\generate_batch_images.py `
   --batch `
-  --results-input "<项目目录>\输出\提示词记录.json" `
+  --results-input "<项目目录>\输出\提示词\提示词记录.json" `
   --output-dir "<项目目录>\输出\确认图" `
   --image-model banana `
   --concurrency 1 `
@@ -218,16 +223,16 @@ Only after the user approves the confirmation image:
 1. Use the already approved prompt rows.
 2. If the user wants multiple candidates, expand them into multiple rows before running: candidate 1, candidate 2, candidate 3, etc. Do not rely on `count` to request multiple images from one row.
 3. Keep every row at `count: 1` with a unique `id` and `output_name`.
-4. Run the generation script with output dir `输出`.
-5. Save run records in `输出\运行记录.json` and `输出\运行记录.md`.
+4. Run the generation script with output dir `输出\成品`.
+5. Save or copy run records into `输出\运行记录`，不要混进成品图片目录。
 
 Run pattern:
 
 ```powershell
 python scripts\generate_batch_images.py `
   --batch `
-  --results-input "<项目目录>\输出\提示词记录.json" `
-  --output-dir "<项目目录>\输出" `
+  --results-input "<项目目录>\输出\提示词\提示词记录.json" `
+  --output-dir "<项目目录>\输出\成品" `
   --image-model banana `
   --concurrency 3 `
   --api-key "<图片接口 Key>"
@@ -272,7 +277,7 @@ Correct approach:
 
 ## Guardrails
 
-- Do not create extra project subfolders beyond `原图`、`参考`、`输出`.
+- Do not create extra top-level project subfolders beyond `原图`、`参考`、`输出`; output categorization belongs under `输出`.
 - Do not begin full batch generation from an unapproved confirmation image.
 - Do not generate, optimize, shorten, expand, or rewrite prompts.
 - Do not call `image-prompt-optimizer`; prompt writing belongs to prompt skills.
