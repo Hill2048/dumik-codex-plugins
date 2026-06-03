@@ -1,6 +1,6 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "DUMIK 团队电商视觉总监、TVC 总导演、图片提示词、单图生图改图、明确批量时的批量改图、统一视频故事板、视频写作与批量生视频核心流程插件。",
   "author": {
     "name": "DUMIK Team"
@@ -24,7 +24,7 @@
       "逐镜提示词",
       "批量生视频"
     ],
-    "defaultPrompt": "按 DUMIK 团队流程帮我判断该走电商视觉总监还是 TVC 总导演，并调度对应 skills。",
+    "defaultPrompt": "按 DUMIK 团队流程帮我判断该走电商视觉总监还是 TVC 总导演，并调度对应技能。",
     "brandColor": "#2F4534",
     "composerIcon": "./assets/logo.svg",
     "logo": "./assets/logo.svg"

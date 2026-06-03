@@ -13,6 +13,11 @@
 - `video-storyboard-prompts`：统一产品故事板、Image2 身份板、连续分镜、关键帧和逐镜生视频提示词。
 - `video-batch-agent`：项目制批量生视频，先建项目、写逐条视频提示词，先出确认片，确认后用 Dreamina CLI 批量提交。
 
+## 流程地图
+
+- Markdown 版：`assets/workflow-map.md`
+- 可视化版：`assets/workflow-map.html`
+
 ## 团队使用建议
 
 优先把任务说成真实工作目标，例如“这张锅图保留结构，改成天猫主图风格”“根据这些参考图写改图指令”“批量给这组图片写提示词”“把这个卖点写成 30 秒视频分镜”。

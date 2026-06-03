@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DUMIK Team Plugin 流程地图</title>
+  <style>
+    :root {
+      --ink: #17211b;
+      --muted: #65736a;
+      --line: #dbe4dc;
+      --paper: #f7f4ec;
+      --panel: #fffdf8;
+      --green: #2f4534;
+      --green-soft: #e4efe6;
+      --blue: #2d4f68;
+      --blue-soft: #e4edf3;
+      --gold: #b98235;
+      --gold-soft: #f4ead8;
+      --danger: #8e4b3f;
+      --shadow: 0 18px 45px rgba(23, 33, 27, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+      background:
+        linear-gradient(90deg, rgba(47, 69, 52, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(47, 69, 52, 0.05) 1px, transparent 1px),
+        var(--paper);
+      background-size: 36px 36px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .shell {
+      min-height: 100svh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 14px 28px;
+      border-bottom: 1px solid rgba(47, 69, 52, 0.14);
+      background: rgba(247, 244, 236, 0.86);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 240px;
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .nav a,
+    .filter button {
+      border: 1px solid rgba(47, 69, 52, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 253, 248, 0.74);
+      color: var(--green);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      padding: 8px 12px;
+      transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+    }
+
+    .nav a:hover,
+    .filter button:hover,
+    .filter button.active {
+      background: var(--green);
+      color: #fffdf8;
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      min-height: calc(100svh - 64px);
+      grid-template-columns: minmax(300px, 0.88fr) minmax(420px, 1.12fr);
+      gap: 42px;
+      align-items: center;
+      padding: 54px 44px 34px;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 28px 44px auto auto;
+      width: min(42vw, 560px);
+      height: min(42vw, 560px);
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      border-radius: 50%;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .hero-copy {
+      position: relative;
+      max-width: 620px;
+      animation: rise 620ms ease both;
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 6.2vw, 84px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .hero-copy p {
+      max-width: 540px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.72;
+    }
+
+    .filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    .map-stage {
+      position: relative;
+      min-height: 620px;
+      animation: rise 760ms 120ms ease both;
+    }
+
+    .flow-panel {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(47, 69, 52, 0.14);
+      background: rgba(255, 253, 248, 0.58);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .flow-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .flow-line {
+      fill: none;
+      stroke: rgba(47, 69, 52, 0.36);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-dasharray: 10 12;
+      animation: dash 16s linear infinite;
+    }
+
+    .flow-line.video {
+      stroke: rgba(45, 79, 104, 0.42);
+      animation-duration: 18s;
+    }
+
+    .node {
+      position: absolute;
+      width: clamp(180px, 20vw, 245px);
+      min-height: 118px;
+      padding: 18px;
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      background: rgba(255, 253, 248, 0.92);
+      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .node:hover,
+    .node.highlight {
+      transform: translateY(-4px);
+      border-color: rgba(47, 69, 52, 0.42);
+      box-shadow: 0 16px 34px rgba(23, 33, 27, 0.12);
+    }
+
+    .node.dim {
+      opacity: 0.28;
+    }
+
+    .node.director {
+      width: clamp(210px, 22vw, 280px);
+      min-height: 150px;
+      color: #fffdf8;
+      background: var(--green);
+    }
+
+    .node.director.video {
+      background: var(--blue);
+    }
+
+    .node.exec.image {
+      background: var(--green-soft);
+    }
+
+    .node.exec.video {
+      background: var(--blue-soft);
+    }
+
+    .node.exec.mix {
+      background: var(--gold-soft);
+    }
+
+    .node small {
+      display: block;
+      color: inherit;
+      opacity: 0.72;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .node h2,
+    .node h3 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .node p {
+      margin: 12px 0 0;
+      color: inherit;
+      font-size: 13px;
+      line-height: 1.55;
+      opacity: 0.82;
+    }
+
+    .node code {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .n1 { left: 6%; top: 10%; }
+    .n2 { left: 6%; top: 58%; }
+    .n3 { left: 42%; top: 5%; }
+    .n4 { left: 68%; top: 13%; }
+    .n5 { left: 43%; top: 34%; }
+    .n6 { left: 42%; top: 63%; }
+    .n7 { left: 68%; top: 52%; }
+    .n8 { left: 68%; top: 74%; }
+
+    .legend {
+      position: absolute;
+      right: 18px;
+      bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .dot.video {
+      background: var(--blue);
+    }
+
+    .dot.mix {
+      background: var(--gold);
+    }
+
+    section {
+      padding: 70px 44px;
+      border-top: 1px solid rgba(47, 69, 52, 0.12);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(240px, 0.55fr) minmax(320px, 1fr);
+      gap: 44px;
+      align-items: end;
+      margin-bottom: 30px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 54px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    .lanes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .lane {
+      border-top: 4px solid var(--green);
+      background: rgba(255, 253, 248, 0.72);
+      padding: 24px;
+    }
+
+    .lane.video {
+      border-color: var(--blue);
+    }
+
+    .lane h3 {
+      margin: 0 0 18px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 14px;
+      padding: 18px 0;
+      border-top: 1px solid rgba(47, 69, 52, 0.12);
+    }
+
+    .step:first-of-type {
+      border-top: 0;
+    }
+
+    .num {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      color: #fffdf8;
+      background: var(--green);
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .lane.video .num {
+      background: var(--blue);
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      background: rgba(47, 69, 52, 0.16);
+      border: 1px solid rgba(47, 69, 52, 0.16);
+    }
+
+    .cell {
+      min-height: 140px;
+      padding: 18px;
+      background: rgba(255, 253, 248, 0.86);
+    }
+
+    .cell.head {
+      min-height: auto;
+      color: #fffdf8;
+      background: var(--green);
+      font-weight: 700;
+    }
+
+    .cell.video-head {
+      background: var(--blue);
+    }
+
+    .cell strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .cell p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 34px 44px 46px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(47, 69, 52, 0.12);
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -220;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero,
+      .section-head,
+      .lanes {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: auto;
+        padding: 42px 20px 28px;
+      }
+
+      .map-stage {
+        min-height: 980px;
+      }
+
+      .flow-panel {
+        position: relative;
+        inset: auto;
+        min-height: 940px;
+      }
+
+      .flow-lines {
+        display: none;
+      }
+
+      .node,
+      .node.director {
+        left: 5%;
+        width: 90%;
+      }
+
+      .n1 { top: 3%; }
+      .n3 { top: 19%; }
+      .n4 { top: 33%; }
+      .n5 { top: 47%; }
+      .n2 { top: 61%; }
+      .n6 { top: 75%; }
+      .n7 { top: 89%; }
+      .n8 { top: 103%; }
+
+      .flow-panel {
+        padding-bottom: 260px;
+      }
+
+      .legend {
+        left: 5%;
+        right: 5%;
+      }
+
+      section,
+      .footer {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .matrix {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="回到顶部">
+        <img src="logo.svg" alt="DUMIK 标识">
+        <span>
+          <strong>DUMIK Team Plugin</strong>
+          <span>流程地图 / 0.1.4</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="页面导航">
+        <a href="#map">总览</a>
+        <a href="#lanes">两条主线</a>
+        <a href="#matrix">任务路由</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" id="map">
+        <div class="hero-copy">
+          <div class="eyebrow">DUMIK 工作流调度</div>
+          <h1>两位领导，八个技能，一张图看清。</h1>
+          <p>先判断任务属于电商视觉还是 TVC 视频，再由对应领导调度底层技能；默认只写提示词和分镜，明确要生成时才进入执行链路。</p>
+          <div class="filter" aria-label="流程筛选">
+            <button class="active" type="button" data-filter="all">全部</button>
+            <button type="button" data-filter="image">电商视觉</button>
+            <button type="button" data-filter="video">TVC 视频</button>
+            <button type="button" data-filter="exec">执行生成</button>
+          </div>
+        </div>
+
+        <div class="map-stage" aria-label="DUMIK 插件流程地图">
+          <div class="flow-panel">
+            <svg class="flow-lines" viewBox="0 0 900 620" aria-hidden="true">
+              <path class="flow-line image" d="M210 136 C310 70 360 80 430 94" />
+              <path class="flow-line image" d="M220 160 C360 170 430 185 560 178" />
+              <path class="flow-line image" d="M220 185 C340 270 420 310 438 360" />
+              <path class="flow-line video" d="M215 438 C310 410 360 386 432 382" />
+              <path class="flow-line video" d="M220 462 C360 460 430 455 560 438" />
+              <path class="flow-line video" d="M220 488 C330 555 430 560 562 552" />
+            </svg>
+
+            <article class="node director image n1" data-group="image">
+              <small>顶层入口</small>
+              <h2>电商视觉总监</h2>
+              <p><code>ecom-visual-director</code><br>判断图片任务、锁定产品保护点、决定提示词还是生成执行。</p>
+            </article>
+
+            <article class="node director video n2" data-group="video">
+              <small>顶层入口</small>
+              <h2>TVC 总导演</h2>
+              <p><code>tvc-director</code><br>判断视频阶段，调度转化逻辑、故事板、逐镜提示词和生视频。</p>
+            </article>
+
+            <article class="node exec image n3" data-group="image">
+              <small>改图纪律</small>
+              <h3>图片提示词优化</h3>
+              <p><code>image-prompt-optimizer</code><br>产品结构保护、白底精修、多参考图角色、Banana Pro 改图指令。</p>
+            </article>
+
+            <article class="node exec image n4" data-group="image">
+              <small>视觉增强</small>
+              <h3>高级图像提示词</h3>
+              <p><code>super-image-prompt</code><br>把模糊想法整理成场景、材质、光线和真实质感。</p>
+            </article>
+
+            <article class="node exec mix n5" data-group="image exec">
+              <small>图片执行</small>
+              <h3>生图 / 改图执行</h3>
+              <p><code>image-batch-agent</code><br>单图默认；明确批量时建项目；明确生成时才调用接口。</p>
+            </article>
+
+            <article class="node exec video n6" data-group="video">
+              <small>转化策略</small>
+              <h3>电商视频转化</h3>
+              <p><code>ecom-video-conversion</code><br>卖点顺序、证据链、开头钩子和 30 到 60 秒结构。</p>
+            </article>
+
+            <article class="node exec video n7" data-group="video">
+              <small>分镜提示词</small>
+              <h3>故事板与逐镜提示词</h3>
+              <p><code>video-storyboard-prompts</code><br>产品故事板、连续分镜、关键帧和逐镜生视频提示词。</p>
+            </article>
+
+            <article class="node exec mix n8" data-group="video exec">
+              <small>视频执行</small>
+              <h3>批量生视频</h3>
+              <p><code>video-batch-agent</code><br>创建项目、先出确认片、确认后用 Dreamina 批量提交。</p>
+            </article>
+
+            <div class="legend">
+              <span><i class="dot"></i>图片链路</span>
+              <span><i class="dot video"></i>视频链路</span>
+              <span><i class="dot mix"></i>真实执行</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="lanes">
+        <div class="section-head">
+          <h2>两条主线</h2>
+          <p>所有任务先进入一个顶层判断口。图片任务先由电商视觉总监定方向；视频任务先由 TVC 总导演定阶段。只有用户明确要生成，才从文字链路进入执行链路。</p>
+        </div>
+
+        <div class="lanes">
+          <article class="lane">
+            <h3>电商视觉链路</h3>
+            <div class="step">
+              <span class="num">1</span>
+              <div>
+                <strong>判断任务类型</strong>
+                <p>主图、详情页、白底、产品改图、KV、批量图片、实际生图。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">2</span>
+              <div>
+                <strong>锁定产品保护点</strong>
+                <p>画幅依据、目标图、参考图角色、产品结构、品牌区和 SKU 比例。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">3</span>
+              <div>
+                <strong>调度底层技能</strong>
+                <p>改图走 `image-prompt-optimizer`，视觉增强走 `super-image-prompt`，明确生成走 `image-batch-agent`。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="lane video">
+            <h3>TVC 视频链路</h3>
+            <div class="step">
+              <span class="num">1</span>
+              <div>
+                <strong>判断视频阶段</strong>
+                <p>策略顺序、故事板、逐镜提示词、关键帧生图、真实生视频。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">2</span>
+              <div>
+                <strong>建立稳定锚点</strong>
+                <p>产品结构、角色身份、空间、光线、色调、镜头衔接和时长。</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num">3</span>
+              <div>
+                <strong>调度底层技能</strong>
+                <p>卖点顺序走 `ecom-video-conversion`，故事板走 `video-storyboard-prompts`，批量生视频走 `video-batch-agent`。</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="matrix">
+        <div class="section-head">
+          <h2>任务路由</h2>
+          <p>用这张表快速判断入口。左侧是用户真实意图，右侧是应调用的底层能力。</p>
+        </div>
+
+        <div class="matrix" role="table" aria-label="DUMIK 任务路由表">
+          <div class="cell head" role="columnheader">用户意图</div>
+          <div class="cell head" role="columnheader">顶层入口</div>
+          <div class="cell head" role="columnheader">底层技能</div>
+          <div class="cell head" role="columnheader">完成标准</div>
+
+          <div class="cell"><strong>改图 / 精修 / 白底</strong><p>保留结构、保持角度、参考图融合、品牌区保护。</p></div>
+          <div class="cell"><strong>电商视觉总监</strong><p>先判断比例、目标图、参考图角色和保护点。</p></div>
+          <div class="cell"><strong>image-prompt-optimizer</strong><p>必要时叠加 super-image-prompt。</p></div>
+          <div class="cell"><strong>中文改图指令</strong><p>第一行写比例，最终指令放进代码块。</p></div>
+
+          <div class="cell"><strong>生图 / 改图接口</strong><p>用户明确要求生成、出图、调用接口、保存结果。</p></div>
+          <div class="cell"><strong>电商视觉总监</strong><p>确认已有可提交提示词和输出位置。</p></div>
+          <div class="cell"><strong>image-batch-agent</strong><p>未明确批量时走单图模式。</p></div>
+          <div class="cell"><strong>图片结果</strong><p>多张任务好一张发一张预览和路径。</p></div>
+
+          <div class="cell"><strong>卖点顺序 / 视频结构</strong><p>用户关心视频为什么能转化、怎么排卖点。</p></div>
+          <div class="cell video-head"><strong>TVC 总导演</strong><p>先判断策略阶段。</p></div>
+          <div class="cell"><strong>ecom-video-conversion</strong><p>输出转化逻辑和 30 到 60 秒结构。</p></div>
+          <div class="cell"><strong>视频策划</strong><p>卖点顺序、证据链、开头钩子清楚。</p></div>
+
+          <div class="cell"><strong>故事板 / 连续分镜</strong><p>产品故事板、Image2 身份板、关键帧、逐镜提示词。</p></div>
+          <div class="cell video-head"><strong>TVC 总导演</strong><p>判断 product / sequential / hybrid。</p></div>
+          <div class="cell"><strong>video-storyboard-prompts</strong><p>统一承接产品和连续分镜。</p></div>
+          <div class="cell"><strong>可执行分镜</strong><p>稳定锚点、镜头动作、起止画面完整。</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>DUMIK Team Plugin / assets/workflow-map.html</span>
+      <span>默认文字交付，明确生成才执行。</span>
+    </footer>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll("[data-filter]");
+    const nodes = document.querySelectorAll(".node");
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const filter = button.dataset.filter;
+        buttons.forEach((item) => item.classList.toggle("active", item === button));
+        nodes.forEach((node) => {
+          const groups = node.dataset.group.split(" ");
+          const active = filter === "all" || groups.includes(filter);
+          node.classList.toggle("dim", !active);
+          node.classList.toggle("highlight", active && filter !== "all");
+        });
+      });
+    });
+  </script>
+</body>
+</html>
