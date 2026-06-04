@@ -1,4 +1,4 @@
 interface:
   display_name: "批量视频生成"
-  short_description: "项目制批量生视频，先出确认片，再用即梦批量提交任务"
-  default_prompt: "Use $video-batch-agent to set up a batch video project, generate one confirmation clip, then batch submit with Dreamina after approval."
+  short_description: "按 assets/agent-skill-routing.md 只执行确认片和批量生视频；确认片通过后再全量"
+  default_prompt: "只执行已确认的逐镜提示词和参考素材；先出确认片，确认后再批量提交。"

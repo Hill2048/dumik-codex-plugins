@@ -1,4 +1,4 @@
 interface:
   display_name: "批量图片修改"
-  short_description: "项目制批量写改图提示词，明确要求时才出图"
-  default_prompt: "Use $image-batch-agent to set up a batch image editing project and write per-image prompts only unless I explicitly ask to generate images."
+  short_description: "按 assets/agent-skill-routing.md 只执行已确认的生图/改图；明确生成才调用，明确批量才批量"
+  default_prompt: "只执行已确认提示词或改图指令；没有明确生成不调用接口，没有明确批量不建批量项目。"

@@ -1,83 +1,22 @@
-# DUMIK 团队核心流程地图
+# DUMIK 流程地图索引
 
-## 顶层调度
-
-图片、电商主图、详情页、白底精修、产品改图、KV、批量图片和实际生图任务先走 `ecom-visual-director`。
-
-视频、TVC、卖点顺序、故事板、连续分镜、逐镜提示词、关键帧和批量生视频任务先走 `tvc-director`。
-
-两位顶层领导还负责项目前置部署：创建本次项目文件夹、补齐 `原图`、`参考`、`输出` 和 `输出` 内分类，检查图片 / 视频流程所需工具；能自动安装或初始化的直接处理，缺 key、登录、额度、管理员权限等无法自动处理的问题再停下来说明。
-
-全量环境检查结果见 `assets/verified-environment-checklist.md`。清单版本匹配当前插件时，不要每次重复做插件结构、脚本存在性、Python、FFmpeg、Dreamina 和敏感信息扫描；只做本次项目级检查和真实执行前的动态项轻量检查。
-
-## 项目环境部署
-
-图片项目默认目录：
+权威路由只看：
 
 ```text
-F:\AI HOME\CODEX\image\outputs\批量改图项目\<项目名-时间戳>\
-  原图\
-  参考\
-  输出\
-    提示词\
-    确认图\
-    成品\
-    运行记录\
-    临时\
+assets/agent-skill-routing.md
 ```
 
-视频项目默认目录：
+本文件不再保存完整规则，避免和统一路由文档重复或冲突。
 
-```text
-F:\AI HOME\CODEX\video\outputs\批量视频项目\<项目名-时间戳>\
-  原图\
-  参考\
-  输出\
-    提示词\
-    确认片\
-    成片\
-    运行记录\
-    临时\
-```
+## 快速入口
 
-## 图片改图
+- 图片主线：`ecom-visual-director`
+- 视频旁路：`tvc-director`
+- 改图指令：`image-prompt-optimizer`
+- 视觉 brief：`super-image-prompt`
+- 图片执行：`image-batch-agent`
+- 视频转化：`ecom-video-conversion`
+- 视频故事板：`video-storyboard-prompts`
+- 视频执行：`video-batch-agent`
 
-入口：`image-prompt-optimizer`，必要时叠加 `super-image-prompt`。
-
-适合：图片改图、白底精修、角度保持、结构保护、多参考图融合、品牌文字修正。默认只写提示词或改图指令，不调用生图工具。
-
-## 高级视觉语言
-
-入口：`super-image-prompt`，最终改图交付仍回到 `image-prompt-optimizer` 格式。
-
-适合：把模糊需求转成可执行的美术指导语言，补齐场景母体、主角关系、材质、光线和真实质感。默认只交付文字 brief。
-
-## 图像生成编辑
-
-入口：`image-batch-agent` 单图模式。
-
-适合：用户明确要求生图、出图、生成图片、编辑图片或调用接口，且没有明确说批量时，通过图片接口生成或编辑单张图片。生图前先选 `gpt-image-2` 或 `banana2`。用户只要提示词、brief 或改图指令时不要调用接口。
-
-## 批量改图
-
-入口：`image-batch-agent`。
-
-适合：用户明确说批量、多张、整组、项目制或批量生成时，先建项目文件夹，提交上游已准备的逐图提示词。默认不生图；只有明确要求生图/出图/调用接口时，才先选模型、出确认图，确认后再批量生成；出图时支持 `output_size`、`--image-model` 和 `--concurrency`。
-
-## 视频写作
-
-入口：`ecom-video-conversion`、`video-storyboard-prompts`。
-
-适合：电商视频卖点顺序、30 秒到 60 秒视频结构、连续分镜、关键帧和视频 AI 序列提示词。默认只写脚本和提示词，不调用视频生成工具。
-
-## 视频故事板与分镜提示词
-
-入口：`video-storyboard-prompts`。
-
-适合：用户明确要求产品故事板、Image2 故事板、产品身份板、连续分镜、关键帧、视频 AI 序列提示词或逐镜生视频提示词时使用。内部按 product / sequential / hybrid 模式处理；需要卖点顺序时仍先用 `ecom-video-conversion`。
-
-## 批量生视频
-
-入口：`video-batch-agent`。
-
-适合：项目制批量生视频，先确认需求和输出路径，创建中文项目文件夹，让用户放首帧/分镜图/参考素材；先出 1 条确认片，确认后用 Dreamina CLI 批量提交。
+可视化旧版仍在 `assets/workflow-map.html`，只作展示参考；执行时以 `agent-skill-routing.md` 为准。

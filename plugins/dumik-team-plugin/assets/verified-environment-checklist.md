@@ -4,9 +4,9 @@
 
 适用版本：
 
-- 插件版本：`0.1.6`
-- `ecom-visual-director`：`0.1.3`
-- `tvc-director`：`0.1.3`
+- 插件版本：`0.1.7`
+- `ecom-visual-director`：`0.1.4`
+- `tvc-director`：`0.1.4`
 - `image-batch-agent`：`1.2.9`
 - `video-batch-agent`：`0.1.6`
 - `video-storyboard-prompts`：`1.0.0`
@@ -14,7 +14,7 @@
 ## 已确认正确
 
 - 源插件、本机插件缓存、GitHub 发布仓库三边都有 8 个技能目录和对应 `SKILL.md`。
-- `plugin.json`、`assets/skill-versions.json` 可正常解析，版本矩阵一致。
+- `assets/skill-versions.json` 可正常解析，版本矩阵一致；当前源目录未提供 `plugin.json`。
 - `assets/workflow-map.html` 可解析，本地引用存在，包含项目环境部署、图片确认图、视频确认片和版本 `0.1.5`。
 - 图片项目初始化脚本可创建：
 
@@ -54,10 +54,10 @@
 
 ## 后续调用规则
 
-如果当前插件版本仍为 `0.1.6`，且本清单存在：
+如果当前插件版本仍为 `0.1.7`，且本清单存在：
 
 - 不要每次重新做全量插件结构、版本矩阵、脚本存在性、Python、FFmpeg、Dreamina、敏感信息扫描。
-- 项目制、批量或生成执行前，只做本次项目级检查：项目目录是否存在、分类目录是否齐全、输入文件是否到位、提示词 JSON 是否在正确位置、输出目录是否写入当前项目。
+- 项目制、批量或生成执行前，先按 `assets/agent-skill-routing.md` 判断项目入口；确认进入项目后，只做本次项目级检查：项目目录是否存在、分类目录是否齐全、输入文件是否到位、提示词 JSON 是否在正确位置、输出目录是否写入当前项目。
 - 实际调用图片或视频接口前，仍需轻量确认本次所需动态项：API 缓存是否存在且 key 非空、Dreamina 是否仍登录、Veo 是否有权限、FFmpeg 是否仍在 PATH。
 - 使用 Banana2 本地参考图公网 URL 前，仍需轻量确认当前 tunnel URL 可达；不可达时运行 `skills\image-batch-agent\scripts\start_nas_public_tunnel.ps1` 重启，并将 `nas_image_url.json` 标准化为 UTF-8 无 BOM JSON。
 - 如果插件版本、技能版本、目录脚本、生成脚本或模型接口规范发生变化，本清单失效，必须重新全量检查并更新清单。

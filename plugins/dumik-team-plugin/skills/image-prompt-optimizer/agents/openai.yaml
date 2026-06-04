@@ -1,3 +1,4 @@
 interface:
   display_name: "改图提示词优化"
-  short_description: "用美术指导思路整理中文改图提示词，把约束转成可见画面语言"
+  short_description: "按 assets/agent-skill-routing.md 承接改图、白底、结构保护和 Banana Pro 指令，不调用生成接口"
+  default_prompt: "按统一路由只做改图提示词优化：先判断比例、目标图、参考图角色和产品保护点，再输出可复制中文改图指令。"

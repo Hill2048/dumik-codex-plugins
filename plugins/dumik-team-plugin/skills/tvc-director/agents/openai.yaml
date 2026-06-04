@@ -1,4 +1,4 @@
 interface:
   display_name: "TVC 总导演"
-  short_description: "统筹电商视频、TVC、项目环境部署、工具检查和 DUMIK 视频技能调度。"
-  default_prompt: "按 TVC 总导演模式帮我判断这次视频任务，并先部署项目环境。"
+  short_description: "按 assets/agent-skill-routing.md 统筹视频/TVC、项目入口和 DUMIK 视频技能调度。"
+  default_prompt: "先判断是否进入项目制；如已有 CURRENT_PROJECT.md 就沿用，如无则先问项目；再按 TVC 总导演路由调度。"

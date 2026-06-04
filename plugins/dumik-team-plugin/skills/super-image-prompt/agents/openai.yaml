@@ -1,3 +1,4 @@
 interface:
   display_name: "高级图像提示词"
-  short_description: "把模糊视觉需求整理成更清楚、更高级的中文画面简报"
+  short_description: "按 assets/agent-skill-routing.md 把模糊视觉需求整理成场景、材质、光线和视觉 brief"
+  default_prompt: "按统一路由只做高级视觉 brief：把需求转成可见画面语言，不调用生成接口。"
