@@ -1,0 +1,4 @@
+interface:
+  display_name: "RunningHub 工作流执行"
+  short_description: "按已配置 preset 提交 RunningHub 放大工作流并下载结果"
+  default_prompt: "只执行已配置好的 RunningHub 工作流，不写提示词，不做普通图片生图。"

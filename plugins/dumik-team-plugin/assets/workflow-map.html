@@ -3,30 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DUMIK Team Plugin 流程地图</title>
+  <title>DUMIK 项目内 Skills 流程图</title>
   <style>
     :root {
-      --ink: #17211b;
-      --muted: #65736a;
-      --line: #dbe4dc;
-      --paper: #f7f4ec;
+      --paper: #f6f2e9;
       --panel: #fffdf8;
+      --ink: #17211b;
+      --muted: #69766e;
+      --line: #d9e1d8;
       --green: #2f4534;
-      --green-soft: #e4efe6;
+      --green-soft: #e6efe7;
       --blue: #2d4f68;
-      --blue-soft: #e4edf3;
-      --gold: #b98235;
-      --gold-soft: #f4ead8;
-      --danger: #8e4b3f;
-      --shadow: 0 18px 45px rgba(23, 33, 27, 0.12);
+      --blue-soft: #e5edf3;
+      --gold: #a6732d;
+      --gold-soft: #f3e7cf;
+      --red: #87483e;
+      --red-soft: #f0dfdc;
+      --shadow: 0 18px 42px rgba(23, 33, 27, 0.12);
     }
 
     * {
       box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
     }
 
     body {
@@ -40,26 +37,17 @@
       background-size: 36px 36px;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .shell {
-      min-height: 100svh;
-    }
-
     .topbar {
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 10;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
+      gap: 20px;
       padding: 14px 28px;
       border-bottom: 1px solid rgba(47, 69, 52, 0.14);
-      background: rgba(247, 244, 236, 0.86);
+      background: rgba(246, 242, 233, 0.9);
       backdrop-filter: blur(16px);
     }
 
@@ -67,7 +55,6 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      min-width: 240px;
     }
 
     .brand img {
@@ -75,8 +62,12 @@
       height: 34px;
     }
 
-    .brand strong {
+    .brand strong,
+    .brand span {
       display: block;
+    }
+
+    .brand strong {
       font-size: 15px;
       line-height: 1.2;
     }
@@ -93,739 +84,624 @@
       gap: 8px;
     }
 
-    .nav a,
-    .filter button {
+    .nav a {
+      color: var(--green);
+      text-decoration: none;
       border: 1px solid rgba(47, 69, 52, 0.18);
       border-radius: 999px;
-      background: rgba(255, 253, 248, 0.74);
-      color: var(--green);
-      cursor: pointer;
-      font: inherit;
+      background: rgba(255, 253, 248, 0.72);
       font-size: 13px;
       padding: 8px 12px;
-      transition: background 180ms ease, color 180ms ease, transform 180ms ease;
     }
 
-    .nav a:hover,
-    .filter button:hover,
-    .filter button.active {
-      background: var(--green);
-      color: #fffdf8;
-      transform: translateY(-1px);
+    main {
+      padding: 44px clamp(18px, 4vw, 54px) 54px;
     }
 
     .hero {
-      position: relative;
       display: grid;
-      min-height: calc(100svh - 64px);
-      grid-template-columns: minmax(300px, 0.88fr) minmax(420px, 1.12fr);
-      gap: 42px;
-      align-items: center;
-      padding: 54px 44px 34px;
-      overflow: hidden;
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 28px 44px auto auto;
-      width: min(42vw, 560px);
-      height: min(42vw, 560px);
-      border: 1px solid rgba(47, 69, 52, 0.16);
-      border-radius: 50%;
-      opacity: 0.7;
-      pointer-events: none;
-    }
-
-    .hero-copy {
-      position: relative;
-      max-width: 620px;
-      animation: rise 620ms ease both;
+      grid-template-columns: minmax(280px, 0.72fr) minmax(360px, 1fr);
+      gap: 36px;
+      align-items: end;
+      max-width: 1320px;
+      margin: 0 auto 32px;
     }
 
     .eyebrow {
       color: var(--gold);
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: 0;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
     }
 
     h1 {
-      margin: 0;
-      font-size: clamp(42px, 6.2vw, 84px);
-      line-height: 0.96;
-      letter-spacing: 0;
-    }
-
-    .hero-copy p {
-      max-width: 540px;
-      margin: 24px 0 0;
-      color: var(--muted);
-      font-size: 18px;
-      line-height: 1.72;
-    }
-
-    .filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 30px;
-    }
-
-    .map-stage {
-      position: relative;
-      min-height: 620px;
-      animation: rise 760ms 120ms ease both;
-    }
-
-    .flow-panel {
-      position: absolute;
-      inset: 0;
-      border: 1px solid rgba(47, 69, 52, 0.14);
-      background: rgba(255, 253, 248, 0.58);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .flow-lines {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .flow-line {
-      fill: none;
-      stroke: rgba(47, 69, 52, 0.36);
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      stroke-dasharray: 10 12;
-      animation: dash 16s linear infinite;
-    }
-
-    .flow-line.video {
-      stroke: rgba(45, 79, 104, 0.42);
-      animation-duration: 18s;
-    }
-
-    .node {
-      position: absolute;
-      width: clamp(180px, 20vw, 245px);
-      min-height: 118px;
-      padding: 18px;
-      border: 1px solid rgba(47, 69, 52, 0.16);
-      background: rgba(255, 253, 248, 0.92);
-      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-    }
-
-    .node:hover,
-    .node.highlight {
-      transform: translateY(-4px);
-      border-color: rgba(47, 69, 52, 0.42);
-      box-shadow: 0 16px 34px rgba(23, 33, 27, 0.12);
-    }
-
-    .node.dim {
-      opacity: 0.28;
-    }
-
-    .node.director {
-      width: clamp(210px, 22vw, 280px);
-      min-height: 150px;
-      color: #fffdf8;
-      background: var(--green);
-    }
-
-    .node.director.video {
-      background: var(--blue);
-    }
-
-    .node.exec.image {
-      background: var(--green-soft);
-    }
-
-    .node.exec.video {
-      background: var(--blue-soft);
-    }
-
-    .node.exec.mix {
-      background: var(--gold-soft);
-    }
-
-    .node small {
-      display: block;
-      color: inherit;
-      opacity: 0.72;
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-
-    .node h2,
-    .node h3 {
-      margin: 0;
-      font-size: 20px;
-      line-height: 1.2;
-      letter-spacing: 0;
-    }
-
-    .node p {
-      margin: 12px 0 0;
-      color: inherit;
-      font-size: 13px;
-      line-height: 1.55;
-      opacity: 0.82;
-    }
-
-    .node code {
-      font-family: "Cascadia Mono", Consolas, monospace;
-      font-size: 12px;
-    }
-
-    .n1 { left: 6%; top: 10%; }
-    .n2 { left: 6%; top: 58%; }
-    .n3 { left: 42%; top: 5%; }
-    .n4 { left: 68%; top: 13%; }
-    .n5 { left: 43%; top: 34%; }
-    .n6 { left: 42%; top: 63%; }
-    .n7 { left: 68%; top: 52%; }
-    .n8 { left: 68%; top: 74%; }
-
-    .legend {
-      position: absolute;
-      right: 18px;
-      bottom: 16px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .legend span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-    }
-
-    .dot.video {
-      background: var(--blue);
-    }
-
-    .dot.mix {
-      background: var(--gold);
-    }
-
-    section {
-      padding: 70px 44px;
-      border-top: 1px solid rgba(47, 69, 52, 0.12);
-    }
-
-    .section-head {
-      display: grid;
-      grid-template-columns: minmax(240px, 0.55fr) minmax(320px, 1fr);
-      gap: 44px;
-      align-items: end;
-      margin-bottom: 30px;
-    }
-
-    .section-head h2 {
-      margin: 0;
-      font-size: clamp(30px, 4vw, 54px);
+      margin-bottom: 18px;
+      font-size: clamp(40px, 5.8vw, 72px);
       line-height: 1;
       letter-spacing: 0;
     }
 
-    .section-head p {
-      margin: 0;
+    .hero p {
+      max-width: 620px;
       color: var(--muted);
-      font-size: 16px;
+      font-size: 17px;
       line-height: 1.75;
     }
 
-    .lanes {
+    .status-strip {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 22px;
+      gap: 12px;
     }
 
-    .lane {
-      border-top: 4px solid var(--green);
-      background: rgba(255, 253, 248, 0.72);
-      padding: 24px;
+    .metric {
+      border: 1px solid rgba(47, 69, 52, 0.14);
+      background: rgba(255, 253, 248, 0.82);
+      padding: 18px;
+      box-shadow: 0 12px 28px rgba(23, 33, 27, 0.08);
     }
 
-    .lane.video {
-      border-color: var(--blue);
+    .metric strong {
+      display: block;
+      font-size: 26px;
+      line-height: 1.1;
     }
 
-    .lane h3 {
-      margin: 0 0 18px;
-      font-size: 24px;
-      letter-spacing: 0;
-    }
-
-    .step {
-      display: grid;
-      grid-template-columns: 42px 1fr;
-      gap: 14px;
-      padding: 18px 0;
-      border-top: 1px solid rgba(47, 69, 52, 0.12);
-    }
-
-    .step:first-of-type {
-      border-top: 0;
-    }
-
-    .num {
-      display: grid;
-      place-items: center;
-      width: 34px;
-      height: 34px;
-      color: #fffdf8;
-      background: var(--green);
-      border-radius: 50%;
+    .metric span {
+      color: var(--muted);
       font-size: 13px;
+    }
+
+    section {
+      max-width: 1320px;
+      margin: 0 auto 34px;
+    }
+
+    .section-head {
+      margin-bottom: 18px;
+    }
+
+    .section-head h2 {
+      margin-bottom: 8px;
+      font-size: clamp(26px, 3vw, 38px);
+    }
+
+    .section-head p {
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .router {
+      display: grid;
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      background: rgba(255, 253, 248, 0.72);
+      box-shadow: var(--shadow);
+    }
+
+    .router-core {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.85fr) minmax(260px, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .root-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid rgba(47, 69, 52, 0.18);
+      background: var(--green);
+      color: #fffdf8;
+      padding: 22px;
+    }
+
+    .root-card small {
+      color: rgba(255, 253, 248, 0.72);
       font-weight: 700;
     }
 
-    .lane.video .num {
-      background: var(--blue);
+    .root-card code,
+    .card code,
+    .mini code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
     }
 
-    .step strong {
+    .decision {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .pill {
+      min-height: 94px;
+      border: 1px solid rgba(47, 69, 52, 0.14);
+      background: var(--panel);
+      padding: 16px;
+    }
+
+    .pill strong {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 7px;
+    }
+
+    .pill p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 0;
+    }
+
+    .pill.image {
+      background: var(--green-soft);
+    }
+
+    .pill.runninghub {
+      background: var(--gold-soft);
+    }
+
+    .pill.video {
+      background: var(--blue-soft);
+    }
+
+    .flow-lanes {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .lane {
+      position: relative;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      background: rgba(255, 253, 248, 0.82);
+      padding: 18px;
+      min-height: 100%;
+    }
+
+    .lane h3 {
+      margin-bottom: 2px;
+      font-size: 20px;
+    }
+
+    .lane > p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      position: relative;
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      background: var(--panel);
+      padding: 15px;
+      min-height: 112px;
+    }
+
+    .card:not(:last-child)::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      bottom: -21px;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-weight: 700;
+      z-index: 1;
+    }
+
+    .card .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .card h4 {
+      margin: 0 0 7px;
       font-size: 16px;
     }
 
-    .step p {
-      margin: 0;
+    .card p {
       color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 0;
+    }
+
+    .card.image {
+      border-left: 5px solid var(--green);
+    }
+
+    .card.runninghub {
+      border-left: 5px solid var(--gold);
+    }
+
+    .card.video {
+      border-left: 5px solid var(--blue);
+    }
+
+    .card.warning {
+      border-left: 5px solid var(--red);
+      background: var(--red-soft);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mini {
+      border: 1px solid rgba(47, 69, 52, 0.14);
+      background: rgba(255, 253, 248, 0.78);
+      padding: 12px;
+      min-height: 98px;
+    }
+
+    .mini strong {
+      display: block;
+      margin-bottom: 6px;
       font-size: 14px;
-      line-height: 1.65;
+    }
+
+    .mini p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.48;
+      margin-bottom: 0;
+    }
+
+    .archive {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.55fr) minmax(280px, 1fr);
+      gap: 18px;
+      border: 1px solid rgba(47, 69, 52, 0.16);
+      background: rgba(255, 253, 248, 0.82);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .archive-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .archive-list span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 64px;
+      border: 1px solid rgba(47, 69, 52, 0.14);
+      background: var(--panel);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      padding: 8px;
     }
 
     .matrix {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1px;
-      background: rgba(47, 69, 52, 0.16);
       border: 1px solid rgba(47, 69, 52, 0.16);
+      background: rgba(255, 253, 248, 0.82);
+      overflow: hidden;
     }
 
     .cell {
-      min-height: 140px;
-      padding: 18px;
-      background: rgba(255, 253, 248, 0.86);
+      min-height: 96px;
+      padding: 14px;
+      border-right: 1px solid rgba(47, 69, 52, 0.12);
+      border-bottom: 1px solid rgba(47, 69, 52, 0.12);
+      background: rgba(255, 253, 248, 0.72);
     }
 
     .cell.head {
       min-height: auto;
-      color: #fffdf8;
       background: var(--green);
+      color: #fffdf8;
       font-weight: 700;
-    }
-
-    .cell.video-head {
-      background: var(--blue);
     }
 
     .cell strong {
       display: block;
-      margin-bottom: 8px;
-      font-size: 15px;
+      margin-bottom: 6px;
     }
 
     .cell p {
-      margin: 0;
       color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-bottom: 0;
     }
 
     .footer {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 12px 0 30px;
+      color: var(--muted);
       display: flex;
       justify-content: space-between;
-      gap: 24px;
-      padding: 34px 44px 46px;
-      color: var(--muted);
-      font-size: 13px;
-      border-top: 1px solid rgba(47, 69, 52, 0.12);
-    }
-
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes dash {
-      to {
-        stroke-dashoffset: -220;
-      }
+      gap: 18px;
+      font-size: 12px;
     }
 
     @media (max-width: 980px) {
-      .topbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
       .hero,
-      .section-head,
-      .lanes {
+      .router-core,
+      .flow-lanes,
+      .archive {
         grid-template-columns: 1fr;
       }
 
-      .hero {
-        min-height: auto;
-        padding: 42px 20px 28px;
-      }
-
-      .map-stage {
-        min-height: 980px;
-      }
-
-      .flow-panel {
-        position: relative;
-        inset: auto;
-        min-height: 940px;
-      }
-
-      .flow-lines {
-        display: none;
-      }
-
-      .node,
-      .node.director {
-        left: 5%;
-        width: 90%;
-      }
-
-      .n1 { top: 3%; }
-      .n3 { top: 19%; }
-      .n4 { top: 33%; }
-      .n5 { top: 47%; }
-      .n2 { top: 61%; }
-      .n6 { top: 75%; }
-      .n7 { top: 89%; }
-      .n8 { top: 103%; }
-
-      .flow-panel {
-        padding-bottom: 260px;
-      }
-
-      .legend {
-        left: 5%;
-        right: 5%;
-      }
-
-      section,
-      .footer {
-        padding-left: 20px;
-        padding-right: 20px;
+      .decision,
+      .status-strip,
+      .archive-list {
+        grid-template-columns: 1fr;
       }
 
       .matrix {
         grid-template-columns: 1fr;
       }
+
+      .cell.head {
+        display: none;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <header class="topbar">
-      <a class="brand" href="#top" aria-label="回到顶部">
-        <img src="logo.svg" alt="DUMIK 标识">
-        <span>
-          <strong>DUMIK Team Plugin</strong>
-          <span>流程地图 / 0.1.6</span>
-        </span>
-      </a>
-      <nav class="nav" aria-label="页面导航">
-        <a href="#map">总览</a>
-        <a href="#environment">项目环境</a>
-        <a href="#lanes">两条主线</a>
-        <a href="#matrix">任务路由</a>
-      </nav>
-    </header>
+  <header class="topbar">
+    <div class="brand">
+      <img src="logo.svg" alt="DUMIK 标识">
+      <span>
+        <strong>DUMIK Team Plugin</strong>
+        <span>项目内 skills 流程图 / 0.1.16</span>
+      </span>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#flow">流程图</a>
+      <a href="#capabilities">能力</a>
+      <a href="#archive">归档</a>
+      <a href="#matrix">任务路由</a>
+    </nav>
+  </header>
 
-    <main id="top">
-      <section class="hero" id="map">
-        <div class="hero-copy">
-          <div class="eyebrow">DUMIK 工作流调度</div>
-          <h1>两位领导，先搭环境，再调技能。</h1>
-          <p>先判断任务属于电商视觉还是 TVC 视频；进入项目制或生成执行前，领导先创建项目目录、分好素材和产物分类、检查工具，再调度底层技能。</p>
-          <div class="filter" aria-label="流程筛选">
-            <button class="active" type="button" data-filter="all">全部</button>
-            <button type="button" data-filter="image">电商视觉</button>
-            <button type="button" data-filter="video">TVC 视频</button>
-            <button type="button" data-filter="exec">执行生成</button>
+  <main>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">当前项目路由</div>
+        <h1>先分流，再执行。</h1>
+        <p>项目内所有视觉任务先过统一路由。RunningHub 放大和抠图归在图片主线里，作为后处理小环；视频仍走单独旁路。</p>
+      </div>
+      <div class="status-strip">
+        <div class="metric"><strong>13</strong><span>当前技能入口</span></div>
+        <div class="metric"><strong>2</strong><span>主分流：图片主线 / 视频旁路</span></div>
+        <div class="metric"><strong>1</strong><span>权威规则：agent-skill-routing.md</span></div>
+      </div>
+    </section>
+
+    <section id="flow">
+      <div class="section-head">
+        <h2>总流程图</h2>
+        <p>不要从底层技能硬闯。先判断真实意图，再进入对应链路。RunningHub 后处理在图片链路里，但不塞进普通图片执行器。</p>
+      </div>
+
+      <div class="router">
+        <div class="router-core">
+          <div class="root-card">
+            <small>统一路由</small>
+            <h2>agent-skill-routing.md</h2>
+            <p>识别用户意图、当前项目、是否真实执行、是否需要项目制。</p>
+            <code>先看 CURRENT_PROJECT.md，再看本路由</code>
+          </div>
+
+          <div class="decision">
+            <div class="pill image">
+              <strong>图片主线</strong>
+              <p>主图、详情页、白底、产品改图、KV、场景图、图片批量。</p>
+            </div>
+            <div class="pill video">
+              <strong>视频旁路</strong>
+              <p>TVC、卖点顺序、故事板、连续分镜、生视频、视频批量。</p>
+            </div>
           </div>
         </div>
 
-        <div class="map-stage" aria-label="DUMIK 插件流程地图">
-          <div class="flow-panel">
-            <svg class="flow-lines" viewBox="0 0 900 620" aria-hidden="true">
-              <path class="flow-line image" d="M210 136 C310 70 360 80 430 94" />
-              <path class="flow-line image" d="M220 160 C360 170 430 185 560 178" />
-              <path class="flow-line image" d="M220 185 C340 270 420 310 438 360" />
-              <path class="flow-line video" d="M215 438 C310 410 360 386 432 382" />
-              <path class="flow-line video" d="M220 462 C360 460 430 455 560 438" />
-              <path class="flow-line video" d="M220 488 C330 555 430 560 562 552" />
-            </svg>
+        <div class="flow-lanes">
+          <div class="lane">
+            <h3>图片主线</h3>
+            <p>先由总监判断，再进入策划、提示词、执行或修复。</p>
 
-            <article class="node director image n1" data-group="image">
-              <small>顶层入口</small>
-              <h2>电商视觉总监</h2>
-              <p><code>ecom-visual-director</code><br>判断图片任务、部署图片项目环境、检查接口工具、决定提示词还是生成执行。</p>
+            <article class="card image">
+              <span class="tag">顶层入口</span>
+              <h4>电商视觉总监</h4>
+              <p><code>ecom-visual-director</code><br>判断任务、项目入口、输出归档、底层调度。</p>
             </article>
 
-            <article class="node director video n2" data-group="video">
-              <small>顶层入口</small>
-              <h2>TVC 总导演</h2>
-              <p><code>tvc-director</code><br>判断视频阶段、部署视频项目环境、检查 Dreamina / Veo / FFmpeg，再调度生视频。</p>
+            <article class="card image">
+              <span class="tag">详情页策略</span>
+              <h4>详情页策划</h4>
+              <p><code>ecom-detail-planner</code><br>固化视觉设定，规划卖点证据和创意方向。</p>
             </article>
 
-            <article class="node exec image n3" data-group="image">
-              <small>改图纪律</small>
-              <h3>图片提示词优化</h3>
-              <p><code>image-prompt-optimizer</code><br>产品结构保护、白底精修、多参考图角色、Banana Pro 改图指令。</p>
+            <article class="card image">
+              <span class="tag">方向发散</span>
+              <h4>四宫格抽卡</h4>
+              <p><code>grid-card-prompts</code><br>2x2 探方向，选中后展开全幅候选。</p>
             </article>
 
-            <article class="node exec image n4" data-group="image">
-              <small>视觉增强</small>
-              <h3>高级图像提示词</h3>
-              <p><code>super-image-prompt</code><br>把模糊想法整理成场景、材质、光线和真实质感。</p>
+            <div class="split">
+              <div class="mini">
+                <strong>改图指令</strong>
+                <p><code>image-prompt-optimizer</code><br>目标图、比例、参考图角色、产品保护。</p>
+              </div>
+              <div class="mini">
+                <strong>视觉 brief</strong>
+                <p><code>super-image-prompt</code><br>场景、材质、光线、真实质感。</p>
+              </div>
+            </div>
+
+            <article class="card image">
+              <span class="tag">普通图片执行</span>
+              <h4>生图 / 改图接口</h4>
+              <p><code>image-batch-agent</code><br>只提交已确认提示词到 Image2 / Banana，不写词。</p>
             </article>
 
-            <article class="node exec mix n5" data-group="image exec">
-              <small>图片执行</small>
-              <h3>生图 / 改图执行</h3>
-              <p><code>image-batch-agent</code><br>单图默认；明确批量时建项目；明确生成时才调用接口。</p>
+            <article class="card runninghub">
+              <span class="tag">图片后处理小环</span>
+              <h4>RunningHub 后处理</h4>
+              <p><code>runninghub-workflow-agent</code><br>在图片结果或指定原图之后做 SeedVR 放大、抠图，轮询并下载结果。</p>
             </article>
 
-            <article class="node exec video n6" data-group="video">
-              <small>转化策略</small>
-              <h3>电商视频转化</h3>
-              <p><code>ecom-video-conversion</code><br>卖点顺序、证据链、开头钩子和 30 到 60 秒结构。</p>
-            </article>
-
-            <article class="node exec video n7" data-group="video">
-              <small>分镜提示词</small>
-              <h3>故事板与逐镜提示词</h3>
-              <p><code>video-storyboard-prompts</code><br>产品故事板、连续分镜、关键帧和逐镜生视频提示词。</p>
-            </article>
-
-            <article class="node exec mix n8" data-group="video exec">
-              <small>视频执行</small>
-              <h3>批量生视频</h3>
-              <p><code>video-batch-agent</code><br>创建项目、先出确认片、确认后用 Dreamina 批量提交。</p>
-            </article>
-
-            <div class="legend">
-              <span><i class="dot"></i>图片链路</span>
-              <span><i class="dot video"></i>视频链路</span>
-              <span><i class="dot mix"></i>真实执行</span>
+            <div class="split">
+              <div class="mini">
+                <strong>自动串跑</strong>
+                <p><code>ecom-detail-autopilot</code><br>详情页批量 Agent 模式。</p>
+              </div>
+              <div class="mini">
+                <strong>细节修复</strong>
+                <p><code>product-detail-repair</code><br>抽卡后修产品结构漂移。</p>
+              </div>
             </div>
           </div>
+
+          <div class="lane">
+            <h3>视频旁路</h3>
+            <p>视频先定转化逻辑，再写故事板，最后执行生成。</p>
+
+            <article class="card video">
+              <span class="tag">顶层入口</span>
+              <h4>TVC 总导演</h4>
+              <p><code>tvc-director</code><br>判断视频阶段、项目入口、输出归档、底层调度。</p>
+            </article>
+
+            <article class="card video">
+              <span class="tag">转化策略</span>
+              <h4>电商视频转化</h4>
+              <p><code>ecom-video-conversion</code><br>卖点顺序、证据链、开头钩子和视频结构。</p>
+            </article>
+
+            <article class="card video">
+              <span class="tag">分镜提示词</span>
+              <h4>故事板与逐镜提示词</h4>
+              <p><code>video-storyboard-prompts</code><br>产品故事板、连续分镜、关键帧和逐镜提示词。</p>
+            </article>
+
+            <article class="card video">
+              <span class="tag">视频执行</span>
+              <h4>批量生视频</h4>
+              <p><code>video-batch-agent</code><br>先出确认片，确认后批量生成。</p>
+            </article>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="environment">
-        <div class="section-head">
-          <h2>项目环境</h2>
-          <p>两位领导不只判断路线，也负责把项目落到可执行目录里。所有后续提示词、确认图、确认片、成品和运行记录都进入对应分类，避免素材和结果混在一起。</p>
+    <section id="capabilities">
+      <div class="section-head">
+        <h2>当前能力</h2>
+        <p>按真实入口归类，不重复列同一条链路。</p>
+      </div>
+
+      <div class="archive-list">
+        <span>图片生成<br>Image2 / Banana2 / Pro</span>
+        <span>图片放大<br>RunningHub / SeedVR</span>
+        <span>图片抠图<br>RunningHub</span>
+        <span>详情页流程<br>策划 / 抽卡 / 修复</span>
+        <span>视频生成<br>Seedance 2.0</span>
+        <span>视频流程<br>TVC / 故事板 / 逐镜</span>
+        <span>批量执行<br>图片 / 视频</span>
+      </div>
+    </section>
+
+    <section id="archive">
+      <div class="section-head">
+        <h2>项目归档</h2>
+        <p>项目制开启后，所有结果都进当前项目目录，不回写 Eagle，不乱放顶层。</p>
+      </div>
+
+      <div class="archive">
+        <div>
+          <h3>当前项目</h3>
+          <p><code>project\纯钛+乌檀木菜板</code></p>
+          <p>图片确认、成品、运行记录和临时文件都按输出分类走。</p>
         </div>
-
-        <div class="lanes">
-          <article class="lane">
-            <h3>图片项目部署</h3>
-            <div class="step">
-              <span class="num">1</span>
-              <div>
-                <strong>创建项目目录</strong>
-                <p>`F:\AI HOME\CODEX\image\outputs\批量改图项目\项目名-时间戳`，保留 `原图`、`参考`、`输出` 三个入口。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">2</span>
-              <div>
-                <strong>输出内部分仓</strong>
-                <p>`输出\提示词`、`输出\确认图`、`输出\成品`、`输出\运行记录`、`输出\临时`。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">3</span>
-              <div>
-                <strong>检查图片工具</strong>
-                <p>检查 Python、项目脚本、图片接口缓存、Banana2 公网参考图发布配置；能初始化的直接初始化。</p>
-              </div>
-            </div>
-          </article>
-
-          <article class="lane video">
-            <h3>视频项目部署</h3>
-            <div class="step">
-              <span class="num">1</span>
-              <div>
-                <strong>创建项目目录</strong>
-                <p>`F:\AI HOME\CODEX\video\outputs\批量视频项目\项目名-时间戳`，保留 `原图`、`参考`、`输出` 三个入口。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">2</span>
-              <div>
-                <strong>输出内部分仓</strong>
-                <p>`输出\提示词`、`输出\确认片`、`输出\成片`、`输出\运行记录`、`输出\临时`。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">3</span>
-              <div>
-                <strong>检查视频工具</strong>
-                <p>检查 Python、视频脚本、Dreamina CLI、Veo API 配置、FFmpeg；能安装或初始化的先处理。</p>
-              </div>
-            </div>
-          </article>
+        <div class="archive-list">
+          <span>提示词</span>
+          <span>确认图</span>
+          <span>成品</span>
+          <span>运行记录</span>
+          <span>临时</span>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="lanes">
-        <div class="section-head">
-          <h2>两条主线</h2>
-          <p>所有任务先进入一个顶层判断口。图片任务先由电商视觉总监定方向；视频任务先由 TVC 总导演定阶段。进入项目制或生成执行前，先部署项目环境和工具。</p>
-        </div>
+    <section id="matrix">
+      <div class="section-head">
+        <h2>任务路由表</h2>
+        <p>一眼判断该进哪个 skill。</p>
+      </div>
 
-        <div class="lanes">
-          <article class="lane">
-            <h3>电商视觉链路</h3>
-            <div class="step">
-              <span class="num">1</span>
-              <div>
-                <strong>判断任务类型</strong>
-                <p>主图、详情页、白底、产品改图、KV、批量图片、实际生图。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">2</span>
-              <div>
-                <strong>锁定产品保护点</strong>
-                <p>画幅依据、目标图、参考图角色、产品结构、品牌区和 SKU 比例。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">3</span>
-              <div>
-                <strong>调度底层技能</strong>
-                <p>改图走 `image-prompt-optimizer`，视觉增强走 `super-image-prompt`，明确生成走 `image-batch-agent`，产物进入对应输出分类。</p>
-              </div>
-            </div>
-          </article>
+      <div class="matrix" role="table" aria-label="DUMIK 任务路由表">
+        <div class="cell head">用户意图</div>
+        <div class="cell head">顶层入口</div>
+        <div class="cell head">底层技能</div>
+        <div class="cell head">完成标准</div>
 
-          <article class="lane video">
-            <h3>TVC 视频链路</h3>
-            <div class="step">
-              <span class="num">1</span>
-              <div>
-                <strong>判断视频阶段</strong>
-                <p>策略顺序、故事板、逐镜提示词、关键帧生图、真实生视频。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">2</span>
-              <div>
-                <strong>建立稳定锚点</strong>
-                <p>产品结构、角色身份、空间、光线、色调、镜头衔接和时长。</p>
-              </div>
-            </div>
-            <div class="step">
-              <span class="num">3</span>
-              <div>
-                <strong>调度底层技能</strong>
-                <p>卖点顺序走 `ecom-video-conversion`，故事板走 `video-storyboard-prompts`，批量生视频走 `video-batch-agent`，产物进入对应输出分类。</p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
+        <div class="cell"><strong>主图 / 详情页 / KV</strong><p>电商静态视觉。</p></div>
+        <div class="cell"><strong>ecom-visual-director</strong><p>先判断项目和交付形态。</p></div>
+        <div class="cell"><strong>planner / prompt / batch</strong><p>按阶段调度。</p></div>
+        <div class="cell"><strong>图或提示词归档</strong><p>进入当前项目输出分类。</p></div>
 
-      <section id="matrix">
-        <div class="section-head">
-          <h2>任务路由</h2>
-          <p>用这张表快速判断入口。左侧是用户真实意图，右侧是应调用的底层能力。</p>
-        </div>
+        <div class="cell"><strong>改图 / 白底精修</strong><p>保结构、保角度、修品牌区。</p></div>
+        <div class="cell"><strong>ecom-visual-director</strong><p>确认目标图和参考角色。</p></div>
+        <div class="cell"><strong>image-prompt-optimizer</strong><p>写可执行改图指令。</p></div>
+        <div class="cell"><strong>比例清楚</strong><p>指令可直接交给执行层。</p></div>
 
-        <div class="matrix" role="table" aria-label="DUMIK 任务路由表">
-          <div class="cell head" role="columnheader">用户意图</div>
-          <div class="cell head" role="columnheader">顶层入口</div>
-          <div class="cell head" role="columnheader">底层技能</div>
-          <div class="cell head" role="columnheader">完成标准</div>
+        <div class="cell"><strong>普通生图 / 改图接口</strong><p>Image2、Banana。</p></div>
+        <div class="cell"><strong>ecom-visual-director</strong><p>确认已有提示词。</p></div>
+        <div class="cell"><strong>image-batch-agent</strong><p>只提交，不写词。</p></div>
+        <div class="cell"><strong>图片保存</strong><p>确认图 / 成品 / 记录齐全。</p></div>
 
-          <div class="cell"><strong>改图 / 精修 / 白底</strong><p>保留结构、保持角度、参考图融合、品牌区保护。</p></div>
-          <div class="cell"><strong>电商视觉总监</strong><p>先判断比例、目标图、参考图角色和保护点。</p></div>
-          <div class="cell"><strong>image-prompt-optimizer</strong><p>必要时叠加 super-image-prompt。</p></div>
-          <div class="cell"><strong>中文改图指令</strong><p>第一行写比例，最终指令放进代码块。</p></div>
+        <div class="cell"><strong>RunningHub 后处理</strong><p>超分、高清放大、抠图。</p></div>
+        <div class="cell"><strong>图片主线</strong><p>作为图片后处理小环。</p></div>
+        <div class="cell"><strong>runninghub-workflow-agent</strong><p>提交 workflow / AI App 并下载结果。</p></div>
+        <div class="cell"><strong>后处理图保存</strong><p>结果和 taskId 记录齐全。</p></div>
 
-          <div class="cell"><strong>生图 / 改图接口</strong><p>用户明确要求生成、出图、调用接口、保存结果。</p></div>
-          <div class="cell"><strong>电商视觉总监</strong><p>确认已有可提交提示词、输出位置和项目目录分类。</p></div>
-          <div class="cell"><strong>image-batch-agent</strong><p>未明确批量时走单图模式。</p></div>
-          <div class="cell"><strong>图片结果</strong><p>确认图进 `输出\确认图`，成品进 `输出\成品`，记录进 `输出\运行记录`。</p></div>
+        <div class="cell"><strong>视频策略 / 分镜 / 生视频</strong><p>TVC 或动态交付。</p></div>
+        <div class="cell"><strong>tvc-director</strong><p>先判断阶段。</p></div>
+        <div class="cell"><strong>conversion / storyboard / video-batch</strong><p>策略、分镜、执行分开。</p></div>
+        <div class="cell"><strong>确认片或成片</strong><p>进入视频输出分类。</p></div>
+      </div>
+    </section>
+  </main>
 
-          <div class="cell"><strong>卖点顺序 / 视频结构</strong><p>用户关心视频为什么能转化、怎么排卖点。</p></div>
-          <div class="cell video-head"><strong>TVC 总导演</strong><p>先判断策略阶段。</p></div>
-          <div class="cell"><strong>ecom-video-conversion</strong><p>输出转化逻辑和 30 到 60 秒结构。</p></div>
-          <div class="cell"><strong>视频策划</strong><p>卖点顺序、证据链、开头钩子清楚。</p></div>
-
-          <div class="cell"><strong>故事板 / 连续分镜</strong><p>产品故事板、Image2 身份板、关键帧、逐镜提示词。</p></div>
-          <div class="cell video-head"><strong>TVC 总导演</strong><p>判断 product / sequential / hybrid。</p></div>
-          <div class="cell"><strong>video-storyboard-prompts</strong><p>统一承接产品和连续分镜。</p></div>
-          <div class="cell"><strong>可执行分镜</strong><p>稳定锚点、镜头动作、起止画面完整。</p></div>
-
-          <div class="cell"><strong>项目制 / 批量执行</strong><p>用户明确要项目文件夹、确认图、确认片、批量生成或后续归档。</p></div>
-          <div class="cell"><strong>两位领导</strong><p>先部署项目环境，再检查缺失工具。</p></div>
-          <div class="cell"><strong>image-batch-agent / video-batch-agent</strong><p>实际创建目录并执行后续生成。</p></div>
-          <div class="cell"><strong>分类归档</strong><p>原图、参考、提示词、确认件、成品、运行记录各归其位。</p></div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <span>DUMIK Team Plugin / assets/workflow-map.html</span>
-      <span>项目先分仓，明确生成才执行。</span>
-    </footer>
-  </div>
-
-  <script>
-    const buttons = document.querySelectorAll("[data-filter]");
-    const nodes = document.querySelectorAll(".node");
-
-    buttons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const filter = button.dataset.filter;
-        buttons.forEach((item) => item.classList.toggle("active", item === button));
-        nodes.forEach((node) => {
-          const groups = node.dataset.group.split(" ");
-          const active = filter === "all" || groups.includes(filter);
-          node.classList.toggle("dim", !active);
-          node.classList.toggle("highlight", active && filter !== "all");
-        });
-      });
-    });
-  </script>
+  <footer class="footer">
+    <span>assets/workflow-map.html</span>
+    <span>执行规则仍以 agent-skill-routing.md 为准。</span>
+  </footer>
 </body>
 </html>

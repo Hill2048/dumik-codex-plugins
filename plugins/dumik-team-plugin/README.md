@@ -6,6 +6,10 @@
 
 - `ecom-visual-director`：电商视觉总监顶层入口，先按统一路由判断是否进入项目制，再统筹主图、详情页、白底精修、产品改图、KV、批量图片和实际生图链路。
 - `tvc-director`：TVC 总导演顶层入口，先按统一路由判断是否进入项目制，再统筹电商视频、TVC、卖点顺序、故事板、连续分镜、逐镜提示词和批量生视频链路。
+- `ecom-detail-planner`：详情页出图策略层，固化视觉设定，规划详情页结构、每卖点视觉证据和创意方向，是图片线对称于视频线 `ecom-video-conversion` 的转化策划入口。
+- `grid-card-prompts`：详情页发散层，两段式四宫格抽卡，段一 2x2 探方向、段二选中后展开全幅候选，引用视觉设定不重写 SKU。
+- `ecom-detail-autopilot`：详情页批量出图的 Agent 模式编排器，把策划、抽卡、生图、修复串成自动流水线，按《批量协作-文件合同》读写 run-state / selection / 校准沉淀，配合本地桥服务（`bridge-server/`）和 BatchRefiner Agent 模式；三个闸（方向 / 选片 / 终审）停等设计师，校准回写视觉设定后再批量。
+- `product-detail-repair`：抽卡选片后的细节修复质量门，诊断漂移的产品细节，给局部切图指引，再用 banana2 加产品白底图作参考写局部修复提示词。
 - `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
 - `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
 - `image-batch-agent`：统一承接实际生图和改图。默认单图模式；只有明确说批量、项目制批量或批量生成时才进入批量模式；生图前可选 `gpt-image-2` 或 `banana2`。

@@ -1,0 +1,20 @@
+{
+  "apiBaseUrl": "https://www.runninghub.cn",
+  "apiKeyEnv": "RUNNINGHUB_API_KEY",
+  "name": "matting",
+  "type": "ai-app",
+  "webappId": "替换成你的抠图 AI App webappId",
+  "instanceType": "plus",
+  "pollIntervalSeconds": 5,
+  "timeoutSeconds": 900,
+  "requestTimeoutSeconds": 120,
+  "inputs": [
+    {
+      "name": "image",
+      "sourceArg": "image",
+      "mode": "upload",
+      "nodeId": "替换成 AI App 图片输入节点 ID",
+      "fieldName": "image"
+    }
+  ]
+}

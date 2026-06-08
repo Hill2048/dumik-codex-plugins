@@ -1,0 +1,17 @@
+{
+  "family_id": "proof-by-contrast",
+  "name_cn": "对比证明",
+  "intent": "用可见对比让用户一眼信结论：前后、正反、生熟、有无、好坏。",
+  "suits_selling_points": ["双面分区", "耐用不留痕", "防霉防渗", "升级换代", "对手做不到的差异"],
+  "visual_evidence": "同框或并置两种状态，差异要肉眼可读：一面剁肉一面切菜、用前用后、本品 vs 普通货。",
+  "composition_variables": ["左右并置 / 上下并置 / 同图分区", "对比强度（克制 or 强烈）", "分隔方式（中线 / 留白 / 道具）", "机位（平视 / 微俯）"],
+  "common_drift": ["两边产品身份不一致（一边漂了）", "对比不公平显得假", "分区线把产品切变形"],
+  "fits_stage1_2x2": true,
+  "needs_white_bg_ref": true,
+  "routes": [
+    { "route_id": "contrast_side_by_side", "camera_route": "eye-level-split", "note": "左右并置，最稳" },
+    { "route_id": "contrast_same_board_split", "camera_route": "top-down-split", "note": "同一块板分区，适合双面卖点" },
+    { "route_id": "contrast_before_after", "camera_route": "matched-pair", "note": "用前用后，两图同机位同光" }
+  ],
+  "card_direction_seed": "围绕该卖点给出 3-4 个对比表达：换并置方式、换对比强度、换分隔手法，产品身份统一引用视觉设定。"
+}

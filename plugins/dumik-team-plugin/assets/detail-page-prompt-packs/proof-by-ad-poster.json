@@ -1,0 +1,17 @@
+{
+  "family_id": "proof-by-ad-poster",
+  "name_cn": "广告化",
+  "intent": "把卖点做成主图 / 利益点海报式表达，冲击力强、信息聚焦，像品牌广告主角。",
+  "suits_selling_points": ["核心主卖点", "主图", "利益点提炼", "促销主视觉", "差异化王牌"],
+  "visual_evidence": "强主体、强光影、留出标题和利益点版位的广告化画面；产品被「捧」成主角，戏剧化但不失真。",
+  "composition_variables": ["主体占比与位置", "背景（纯色 / 戏剧光影 / 场景）", "留白版位（标题 / 卖点 / 价格区）", "光影强度"],
+  "common_drift": ["太花失去聚焦", "留白版位没留好，后期文字没处放", "戏剧光把产品材质打失真"],
+  "fits_stage1_2x2": true,
+  "needs_white_bg_ref": true,
+  "routes": [
+    { "route_id": "ad_hero_solid", "camera_route": "hero-solid-bg", "note": "纯色背景主体大图，留标题位" },
+    { "route_id": "ad_hero_dramatic", "camera_route": "dramatic-light", "note": "戏剧光影，产品仍要可读" },
+    { "route_id": "ad_benefit_poster", "camera_route": "benefit-layout", "note": "利益点海报版式，多留白版位" }
+  ],
+  "card_direction_seed": "围绕主卖点给 3-4 个广告化表达：换背景类型、换留白版位。文字/价格/利益点留给后期确定性叠加，AI 图只画主体和版位，不写死文案。"
+}

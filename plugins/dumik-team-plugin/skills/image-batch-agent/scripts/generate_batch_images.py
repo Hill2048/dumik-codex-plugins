@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 from PIL import Image
@@ -35,6 +36,8 @@ from PIL import Image
 DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
 DEFAULT_BASE_URL = "https://api.juaihub.cn"
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
+NAS_REFERENCE_CACHE_NAME = "nas_reference_cache.json"
+NAS_REFERENCE_TRUST_SECONDS = 30 * 60
 BANANA2_IMAGE_MODEL = "nano-banana-2"
 BANANA2_VIP_AUTO_MODEL = "__banana2_vip_auto__"
 BANANA2_VIP_2K_MODEL = "nano-banana-2-cl"
@@ -96,6 +99,17 @@ IMAGE2_2K_PIXELS = 2_359_296
 
 class BatchImageError(Exception):
     pass
+
+
+@dataclass
+class TimingLog:
+    steps: dict[str, float]
+
+    def add(self, name: str, seconds: float) -> None:
+        self.steps[name] = self.steps.get(name, 0.0) + seconds
+
+    def as_dict(self) -> dict[str, float]:
+        return {name: round(seconds, 3) for name, seconds in self.steps.items()}
 
 
 def codex_home() -> Path:
@@ -388,7 +402,7 @@ def is_storyboard_item(item: PromptItem) -> bool:
     return "故事板" in text or "storyboard" in text
 
 
-def parse_output_size(value: str | None) -> tuple[int, int] | None:
+def parse_output_size(value: str | None, *, image_model: str | None = None) -> tuple[int, int] | None:
     if not value:
         return None
     normalized = value.lower().replace("×", "x").strip()
@@ -414,7 +428,9 @@ def parse_output_size(value: str | None) -> tuple[int, int] | None:
     height = int(height_raw)
     if width < 1 or height < 1:
         raise BatchImageError(f"output_size must be positive: {value}")
-    validate_image2_size(width, height, source=value)
+    normalized_model = normalize_image_model(image_model) if image_model else DEFAULT_IMAGE_MODEL
+    if normalized_model not in CHAT_IMAGE_MODELS:
+        validate_image2_size(width, height, source=value)
     return width, height
 
 
@@ -431,8 +447,8 @@ def validate_image2_size(width: int, height: int, *, source: str) -> None:
         raise BatchImageError(f"Image2 pixels must be 655360..8294400: {source}")
 
 
-def target_size_for_item(item: PromptItem) -> tuple[int, int] | None:
-    explicit = parse_output_size(item.output_size)
+def target_size_for_item(item: PromptItem, *, image_model: str | None = None) -> tuple[int, int] | None:
+    explicit = parse_output_size(item.output_size, image_model=image_model)
     if explicit:
         return explicit
     if is_storyboard_item(item):
@@ -440,12 +456,14 @@ def target_size_for_item(item: PromptItem) -> tuple[int, int] | None:
     return None
 
 
-def api_size_for_item(item: PromptItem) -> str:
-    target = target_size_for_item(item)
+def api_size_for_item(item: PromptItem, *, image_model: str | None = None) -> str:
+    target = target_size_for_item(item, image_model=image_model)
     if not target:
         target = DEFAULT_2K_SIZE
     width, height = target
-    validate_image2_size(width, height, source=f"{width}x{height}")
+    normalized_model = normalize_image_model(image_model) if image_model else DEFAULT_IMAGE_MODEL
+    if normalized_model not in CHAT_IMAGE_MODELS:
+        validate_image2_size(width, height, source=f"{width}x{height}")
     return f"{width}x{height}"
 
 
@@ -513,6 +531,57 @@ def image_reference_to_generate_value(value: str) -> str:
     return image_path_to_data_url(image_path)
 
 
+def nas_reference_cache_path() -> Path:
+    codex_home = Path(os.environ.get("CODEX_HOME") or r"C:\Users\admin\.codex")
+    return codex_home / "dumik-team-plugin" / NAS_REFERENCE_CACHE_NAME
+
+
+def load_nas_reference_cache() -> dict[str, Any]:
+    path = nas_reference_cache_path()
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_nas_reference_cache(cache: dict[str, Any]) -> None:
+    path = nas_reference_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def nas_reference_cache_key(image_path: Path, public_base_url: str) -> str:
+    stat = image_path.stat()
+    resolved = str(image_path.resolve()).lower()
+    return "|".join(
+        [
+            resolved,
+            str(stat.st_size),
+            str(int(stat.st_mtime_ns)),
+            public_base_url.rstrip("/"),
+        ]
+    )
+
+
+def cached_nas_reference_url(cached: Any, public_base_url: str) -> str | None:
+    if not isinstance(cached, dict) or not isinstance(cached.get("url"), str):
+        return None
+    cached_url = cached["url"]
+    if urlparse(cached_url).netloc != urlparse(public_base_url).netloc:
+        return None
+    cached_at = str(cached.get("cached_at") or "")
+    try:
+        cached_time = datetime.fromisoformat(cached_at)
+    except ValueError:
+        return None
+    if (datetime.now() - cached_time).total_seconds() > NAS_REFERENCE_TRUST_SECONDS:
+        return None
+    return cached_url
+
+
 def image_reference_to_banana2_url(value: str) -> str:
     if value.startswith(("http://", "https://", "data:image/")):
         return value
@@ -541,7 +610,28 @@ def image_reference_to_banana2_url(value: str) -> str:
             )
         )
         subdir = f"banana2-submit/{datetime.now().strftime('%Y%m%d')}"
+        cache = load_nas_reference_cache()
+        cache_key = nas_reference_cache_key(image_path, public_base_url)
+        cached = cache.get(cache_key)
+        trusted_url = cached_nas_reference_url(cached, public_base_url)
+        if trusted_url:
+            return trusted_url
+        if isinstance(cached, dict) and isinstance(cached.get("url"), str):
+            verified, status_code, content_type = publisher.verify_url(cached["url"])
+            if verified:
+                return cached["url"]
+            cache.pop(cache_key, None)
+
         result = publisher.publish_one(image_path, nas_root, public_base_url, subdir, verify=True)
+        if result.verified:
+            cache[cache_key] = {
+                "url": result.url,
+                "nas_path": result.nas_path,
+                "cached_at": datetime.now().isoformat(timespec="seconds"),
+                "status_code": result.status_code,
+                "content_type": result.content_type,
+            }
+            save_nas_reference_cache(cache)
     except ImportError as exc:
         raise BatchImageError(f"Banana2 NAS publisher is unavailable: {exc}") from exc
     except Exception as exc:
@@ -619,15 +709,20 @@ def generate_chat_images(
     count: int,
     size: str,
     output_paths: list[Path],
+    timing: TimingLog | None = None,
 ) -> list[str]:
     image_inputs = [source_file] if source_file else []
     image_inputs.extend(reference_files)
 
     encoded_images: list[str] = []
     downloaded_urls: list[str] = []
+    started = time.perf_counter()
     images = [image_reference_to_banana2_url(raw_path) for raw_path in image_inputs]
+    if timing:
+        timing.add("reference_prepare_seconds", time.perf_counter() - started)
     url = image_api_endpoint(base_url, "/images/generations")
     for _ in range(count):
+        started = time.perf_counter()
         response = requests.post(
             url,
             headers={
@@ -644,6 +739,8 @@ def generate_chat_images(
             },
             timeout=900,
         )
+        if timing:
+            timing.add("api_wait_seconds", time.perf_counter() - started)
         if response.status_code >= 400:
             raise BatchImageError(
                 f"Banana2 generate API request failed ({response.status_code}): {response.text[:1200]}"
@@ -653,15 +750,29 @@ def generate_chat_images(
         downloaded_urls.extend(response_images["url"])
 
     if encoded_images:
-        return save_b64_images(encoded_images, output_paths)
+        started = time.perf_counter()
+        saved = save_b64_images(encoded_images, output_paths)
+        if timing:
+            timing.add("download_save_seconds", time.perf_counter() - started)
+        return saved
     if downloaded_urls:
-        return save_url_images(downloaded_urls, output_paths)
+        started = time.perf_counter()
+        saved = save_url_images(downloaded_urls, output_paths)
+        if timing:
+            timing.add("download_save_seconds", time.perf_counter() - started)
+        return saved
     raise BatchImageError("Banana2 API returned no image data.")
 
 
-def standardize_image_size(path: Path, item: PromptItem, *, enforce_exact_target: bool) -> str:
+def standardize_image_size(
+    path: Path,
+    item: PromptItem,
+    *,
+    image_model: str | None = None,
+    enforce_exact_target: bool,
+) -> str:
     with Image.open(path) as image:
-        target = target_size_for_item(item)
+        target = target_size_for_item(item, image_model=image_model)
         if target:
             if image.size != target and enforce_exact_target:
                 raise BatchImageError(
@@ -694,11 +805,19 @@ def standardize_saved_images(
     paths: list[str],
     item: PromptItem,
     *,
+    image_model: str | None = None,
     enforce_exact_target: bool,
 ) -> tuple[list[str], list[str]]:
     sizes: list[str] = []
     for raw_path in paths:
-        sizes.append(standardize_image_size(Path(raw_path), item, enforce_exact_target=enforce_exact_target))
+        sizes.append(
+            standardize_image_size(
+                Path(raw_path),
+                item,
+                image_model=image_model,
+                enforce_exact_target=enforce_exact_target,
+            )
+        )
     return paths, sizes
 
 
@@ -762,6 +881,7 @@ def generate_images(
     count: int,
     size: str,
     output_paths: list[Path],
+    timing: TimingLog | None = None,
 ) -> list[str]:
     headers = {"Authorization": f"Bearer {api_key}"}
     image_model = resolve_image_model_for_size(image_model, size)
@@ -776,6 +896,7 @@ def generate_images(
             count=count,
             size=size,
             output_paths=output_paths,
+            timing=timing,
         )
     model_options = image_model_payload_options(image_model, size)
     image_inputs = [source_file] if source_file else []
@@ -797,6 +918,7 @@ def generate_images(
                     ("image", (image_path.name, image_file))
                     for image_path, image_file in zip(image_paths, image_files)
                 ]
+                started = time.perf_counter()
                 response = requests.post(
                     url,
                     headers=headers,
@@ -809,11 +931,14 @@ def generate_images(
                     files=files,
                     timeout=900,
                 )
+                if timing:
+                    timing.add("api_wait_seconds", time.perf_counter() - started)
             finally:
                 for image_file in image_files:
                     image_file.close()
         else:
             url = image_api_endpoint(base_url, "/images/generations")
+            started = time.perf_counter()
             response = requests.post(
                 url,
                 headers=headers,
@@ -825,6 +950,8 @@ def generate_images(
                 },
                 timeout=900,
             )
+            if timing:
+                timing.add("api_wait_seconds", time.perf_counter() - started)
         if response.status_code < 500:
             break
         last_error = f"Image API request failed ({response.status_code}): {response.text[:1200]}"
@@ -837,7 +964,11 @@ def generate_images(
             f"Image API request failed ({response.status_code}): {response.text[:1200]}"
         )
 
-    return save_response_images(response.json(), output_paths)
+    started = time.perf_counter()
+    saved = save_response_images(response.json(), output_paths)
+    if timing:
+        timing.add("download_save_seconds", time.perf_counter() - started)
+    return saved
 
 
 def write_json(path: Path, payload: Any) -> None:
@@ -866,6 +997,18 @@ def write_markdown(path: Path, rows: list[dict[str, Any]]) -> None:
             lines.extend([f"- 任务: {row['task']}", ""])
         if row.get("actual_output_sizes"):
             lines.extend([f"- 输出尺寸: {', '.join(row['actual_output_sizes'])}", ""])
+        if row.get("timing"):
+            timing = row["timing"]
+            lines.extend(
+                [
+                    "- 耗时: "
+                    + ", ".join(
+                        f"{name}={seconds}s"
+                        for name, seconds in timing.items()
+                    ),
+                    "",
+                ]
+            )
         if row.get("error"):
             lines.extend(["### 错误", "", row["error"], ""])
             continue
@@ -896,24 +1039,31 @@ def run_prompt_item(
     image_model: str,
 ) -> dict[str, Any]:
     try:
-        size = api_size_for_item(item)
+        total_started = time.perf_counter()
+        timing = TimingLog({})
+        size = api_size_for_item(item, image_model=image_model)
         resolved_image_model = resolve_image_model_for_size(image_model, size)
         images = generate_images(
             base_url=base_url,
             api_key=api_key,
-            image_model=image_model,
+            image_model=resolved_image_model,
             source_file=item.file,
             reference_files=item.reference_files,
             prompt=item.final_instruction,
             count=item.count,
             size=size,
             output_paths=build_output_paths(output_dir, item.output_name, item.count),
+            timing=timing,
         )
+        started = time.perf_counter()
         images, output_sizes = standardize_saved_images(
             images,
             item,
+            image_model=resolved_image_model,
             enforce_exact_target=resolved_image_model not in CHAT_IMAGE_MODELS,
         )
+        timing.add("standardize_seconds", time.perf_counter() - started)
+        timing.add("total_seconds", time.perf_counter() - total_started)
         return {
             "id": item.id,
             "file": item.file,
@@ -929,6 +1079,7 @@ def run_prompt_item(
                 else "2K long edge 2048"
             ),
             "actual_output_sizes": output_sizes,
+            "timing": timing.as_dict(),
             "final_instruction": item.final_instruction,
             "generated_files": images,
         }
@@ -994,6 +1145,9 @@ def run_single(args: argparse.Namespace, base_url: str, api_key: str) -> None:
     write_markdown(output_dir / "运行记录.md", [row])
     if row.get("error"):
         die(str(row["error"]))
+    if row.get("timing"):
+        timing = ", ".join(f"{name}={seconds}s" for name, seconds in row["timing"].items())
+        print(f"Timing: {timing}")
     print(f"Done. Results written to: {output_dir}")
 
 
@@ -1048,7 +1202,12 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str) -> None:
                     "error": str(exc),
                     "generated_files": [],
                 }
-            print(f"Finished {item.id}.")
+            timing = rows_by_id[item.id].get("timing")
+            if timing:
+                timing_text = ", ".join(f"{name}={seconds}s" for name, seconds in timing.items())
+                print(f"Finished {item.id}. Timing: {timing_text}")
+            else:
+                print(f"Finished {item.id}.")
 
     rows = [rows_by_id[item.id] for item in prompt_items]
 

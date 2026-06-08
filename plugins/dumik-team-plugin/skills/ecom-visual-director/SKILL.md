@@ -1,7 +1,7 @@
 ---
 name: ecom-visual-director
 description: "电商视觉总监顶层调度入口。用于电商图片、主图、详情页、白底精修、产品图改图、参考图融合、KV、场景图、批量图片任务、实际生图/改图接口调用前的路线判断；负责调度 image-prompt-optimizer、super-image-prompt、image-batch-agent，必要时把视频化需求转给 tvc-director / video-storyboard-prompts。"
-version: 0.1.4
+version: 0.1.5
 ---
 
 # 电商视觉总监
@@ -52,6 +52,10 @@ version: 0.1.4
 
 ## 调度地图
 
+- 详情页出图策划、视觉设定、卖点视觉证据、详情页结构、卖点创意方向：使用 `ecom-detail-planner`。
+- 单个卖点发散、四宫格抽卡、2x2 探方向、量产全幅候选、一个卖点多种可能：使用 `grid-card-prompts`。
+- 详情页批量自动串跑、项目制批量出图、走 Agent 模式、一整套详情页自动跑：使用 `ecom-detail-autopilot`。
+- 抽卡选片后产品细节漂移、把手/盖子/五金/品牌区/材质偏离产品白底图、局部切图修复：使用 `product-detail-repair`。
 - 产品改图、精修、白底图、保持角度、保护结构、保护品牌区、多参考图改图指令：使用 `image-prompt-optimizer`。
 - 模糊电商视觉想法、KV 概念、场景视觉、材质光线增强、高级产品氛围：使用 `super-image-prompt`；如果最终交付是改图指令，再回到 `image-prompt-optimizer` 格式。
 - 实际生图、实际改图接口调用、保存输出、单图执行：使用 `image-batch-agent` 单图模式。
@@ -170,6 +174,20 @@ ecom-visual-director -> image-batch-agent
 
 ```text
 ecom-visual-director -> image-batch-agent 批量模式
+```
+
+详情页 AI 出图流水线（手动逐步）：
+
+```text
+ecom-visual-director -> ecom-detail-planner -> grid-card-prompts -> image-batch-agent -> product-detail-repair -> image-batch-agent
+```
+
+详情页批量自动串跑（Agent 模式，配桥服务 + BatchRefiner）：
+
+```text
+ecom-visual-director -> ecom-detail-autopilot
+  （内部按文件合同串跑 planner / grid-card-prompts / image-batch-agent / product-detail-repair，
+    三个闸停等 selection.json，校准回写视觉设定后再批量）
 ```
 
 电商视觉转产品视频：

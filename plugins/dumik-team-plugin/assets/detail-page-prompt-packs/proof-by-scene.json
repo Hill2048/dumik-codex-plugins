@@ -1,0 +1,17 @@
+{
+  "family_id": "proof-by-scene",
+  "name_cn": "场景证明",
+  "intent": "用真实使用场景证明卖点，让用户代入「我用起来就是这样」。",
+  "suits_selling_points": ["好用顺手", "适配厨房", "轻便省力", "日常高频使用", "送礼有面子"],
+  "visual_evidence": "产品在真实台面 / 人手使用 / 真实餐厨环境里，有动作、有接触、有重量感，不是悬空摆拍。",
+  "composition_variables": ["人手介入 or 纯静物场景", "机位（平视 / 低角 / 俯拍）", "景深（突出产品 / 带环境）", "光线（晨光 / 暖厨 / 冷调高端）"],
+  "common_drift": ["产品像贴上去的，没接触阴影和台面反射", "手部畸形 / 多指", "环境抢主体"],
+  "fits_stage1_2x2": true,
+  "needs_white_bg_ref": true,
+  "routes": [
+    { "route_id": "scene_on_counter", "camera_route": "eye-level", "note": "真实台面静物，最通用" },
+    { "route_id": "scene_in_hand", "camera_route": "low-angle-hand", "note": "人手使用，强代入" },
+    { "route_id": "scene_kitchen_context", "camera_route": "wide-context", "note": "带厨房环境，讲氛围" }
+  ],
+  "card_direction_seed": "围绕该卖点给 3-4 个场景表达：换人手介入与否、换机位、换环境繁简，接触阴影和台面反射必须真实。"
+}

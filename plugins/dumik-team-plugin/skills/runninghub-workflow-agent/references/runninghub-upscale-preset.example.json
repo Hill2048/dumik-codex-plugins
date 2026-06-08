@@ -1,0 +1,44 @@
+{
+  "apiBaseUrl": "https://www.runninghub.cn",
+  "apiKeyEnv": "RUNNINGHUB_API_KEY",
+  "name": "upscale",
+  "type": "ai-app",
+  "webappId": "替换成你的放大 AI App webappId",
+  "instanceType": "plus",
+  "pollIntervalSeconds": 5,
+  "timeoutSeconds": 900,
+  "requestTimeoutSeconds": 120,
+  "parameterAliases": {
+    "reduce-size": {
+      "nodeId": "替换成缩小尺寸节点 ID",
+      "fieldName": "value",
+      "description": "缩小尺寸"
+    },
+    "upscale-size": {
+      "nodeId": "替换成放大尺寸节点 ID",
+      "fieldName": "value",
+      "description": "放大尺寸"
+    }
+  },
+  "inputs": [
+    {
+      "name": "image",
+      "sourceArg": "image",
+      "mode": "upload",
+      "nodeId": "替换成放大 AI App 图片输入节点 ID",
+      "fieldName": "image"
+    }
+  ],
+  "nodeInfoList": [
+    {
+      "nodeId": "替换成缩小尺寸节点 ID",
+      "fieldName": "value",
+      "fieldValue": "1500"
+    },
+    {
+      "nodeId": "替换成放大尺寸节点 ID",
+      "fieldName": "value",
+      "fieldValue": "4000"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "dumik-bridge-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DUMIK 详情页批量协作本地桥：托管 BatchRefiner 前端，watch 项目文件夹，WebSocket 推 run-state，收 selection。仅 Agent 模式使用。",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}

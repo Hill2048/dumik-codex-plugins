@@ -1,0 +1,17 @@
+{
+  "family_id": "proof-by-material-macro",
+  "name_cn": "材质微距",
+  "intent": "用微距和光学质感证明材质好，让用户「看到」高级感而不是被告知。",
+  "suits_selling_points": ["纯钛质感", "乌檀木纹理", "镜面工艺", "做工精细", "食品级安全材质"],
+  "visual_evidence": "贴近的微距特写：金属反射、木纹走向、边缘倒角、表面光学行为，光要打出材质的真实表现。",
+  "composition_variables": ["机位距离（微距 / 近特写）", "光线角度（掠射出纹理 / 正光出反射）", "聚焦点（边缘 / 表面 / 接缝）", "背景（极简 / 深色衬托）"],
+  "common_drift": ["镜面碎反射、脏反射线", "木纹方向乱 / 塑料感", "高光过曝成白块", "暗部死黑无细节"],
+  "fits_stage1_2x2": true,
+  "needs_white_bg_ref": true,
+  "routes": [
+    { "route_id": "material_macro_edge", "camera_route": "macro-grazing-light", "note": "掠射光打边缘倒角和纹理" },
+    { "route_id": "material_macro_surface", "camera_route": "macro-front-light", "note": "正光出镜面宽反射带" },
+    { "route_id": "material_macro_seam", "camera_route": "macro-detail", "note": "钛木接缝工艺特写" }
+  ],
+  "card_direction_seed": "围绕材质给 3-4 个微距表达：换光线角度、换聚焦部位，镜面用宽反射带不要碎线，木纹走向按视觉设定。"
+}

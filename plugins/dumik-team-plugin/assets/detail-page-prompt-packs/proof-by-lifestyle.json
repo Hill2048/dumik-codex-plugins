@@ -1,0 +1,17 @@
+{
+  "family_id": "proof-by-lifestyle",
+  "name_cn": "生活方式",
+  "intent": "用生活化氛围承载情绪价值，证明「拥有它的生活是这样的」，偏品牌调性和种草。",
+  "suits_selling_points": ["品质生活", "送礼", "颜值高", "提升幸福感", "品牌调性收尾"],
+  "visual_evidence": "产品融入有温度的生活画面：餐桌、晨光厨房、招待场景，重氛围和情绪，产品仍是视觉主角。",
+  "composition_variables": ["氛围（温暖家常 / 高端冷调）", "人物在场与否", "环境丰富度", "色温与光质"],
+  "common_drift": ["氛围抢戏、产品沦为背景", "调性跑偏离视觉设定的一句话", "环境道具杂乱"],
+  "fits_stage1_2x2": true,
+  "needs_white_bg_ref": false,
+  "routes": [
+    { "route_id": "lifestyle_table", "camera_route": "warm-tabletop", "note": "餐桌氛围，温暖" },
+    { "route_id": "lifestyle_morning_kitchen", "camera_route": "morning-light", "note": "晨光厨房，高级冷调" },
+    { "route_id": "lifestyle_gift", "camera_route": "gift-moment", "note": "送礼场景" }
+  ],
+  "card_direction_seed": "围绕情绪给 3-4 个氛围表达：换氛围基调、换人物在场与否。务必贴合视觉设定的视觉调性一句话，产品保持主角不被环境淹没。"
+}
