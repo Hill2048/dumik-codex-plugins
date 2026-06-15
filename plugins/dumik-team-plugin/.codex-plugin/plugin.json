@@ -1,6 +1,6 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.1.18",
+  "version": "0.3.0",
   "description": "DUMIK 团队电商视觉总监、TVC 总导演、项目环境部署、已检查清单、详情页出图策划、四宫格抽卡、产品细节修复、图片提示词、单图生图改图、RunningHub 后处理执行、明确批量时的批量改图、统一视频故事板、视频写作与批量生视频核心流程插件。",
   "author": {
     "name": "DUMIK Team"

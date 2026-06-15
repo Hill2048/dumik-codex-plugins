@@ -1,7 +1,7 @@
 ---
 name: video-batch-agent
 description: "项目制批量生视频。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入首帧/参考素材，再先出 1 条确认片，确认后用即梦 CLI 或 Veo 异步接口批量提交视频任务。默认走 Dreamina，全能参考 `multimodal2video`，模型为 `seedance2.0fast_vip`；用户明确选择 Veo 时走 NewAPI Business `/v1/videos`。"
-version: 0.1.6
+version: 0.1.7
 ---
 
 # 批量视频生成 Agent
@@ -46,18 +46,9 @@ Do not skip the confirmation clip. Do not start full batch submission before the
 
 Only switch to `image2video` when the user explicitly wants a single first-frame animation and does not need full mixed-media references.
 
-## Default Veo Settings
+## Veo 路线（仅用户明确选择时）
 
-- 默认接口：`POST /v1/videos`、`GET /v1/videos/{task_id}`、`GET /v1/videos/{task_id}/content`
-- 默认基础地址：`https://apibusiness.bafang.me`
-- 默认鉴权：优先读取 `CODEX_HOME\dumik-team-plugin\api_settings.py` 的本机缓存；缓存没有时再读 `CODEX_HOME\config.toml` 和 `CODEX_HOME\auth.json`；`CODEX_HOME` 未设时用 `C:\Users\admin\.codex`；命令行 `--base-url`、`--api-key` 可覆盖；不要打印 token/key。
-- 默认模型族：`gemini-veo-3.1-fast-generate-preview-{4s|6s|8s}`
-- Standard 模型：`gemini-veo-3.1-generate-preview-{4s|6s|8s}`
-- Ref 模型：`gemini-veo-3.1-generate-preview-ref-{4s|6s|8s}`
-- 默认分辨率：`720p`，可选 `1080p`
-- 支持尺寸：`1280x720`、`720x1280`、`1920x1080`、`1080x1920`
-- 普通 / Fast 最多 `2` 张参考图，含首帧和尾帧；Ref 最多 `3` 张参考图，更适合稳定产品外观。
-- 本地图片由脚本转成 data URL；公网图片 URL 可直接写入 `images` 或 `image_url`。
+主文件只记三条硬限制：Veo 不收参考视频/音频；比例只有 `16:9` / `9:16`；时长只有 `4/6/8` 秒。其余接口、模型族、鉴权、任务行形状、参考图上限全部见 `references/veo.md`，走 Veo 前必读。
 
 ## Step 1: Confirm The Job
 
@@ -74,11 +65,7 @@ Ask the user for the minimum information needed to start:
 - 如果用 Dreamina，是否直接使用默认模型 `seedance2.0fast_vip`。
 - 如果用 Veo，确认模型族 Fast / Standard / Ref、时长 `4/6/8` 秒、比例 `16:9/9:16`、分辨率 `720p/1080p`、是否生成音频。
 
-Default output path suggestion:
-
-```text
-F:\AI HOME\CODEX\video\outputs\批量视频项目\<项目名-时间戳>\
-```
+Default output path suggestion: 项目制按 `assets\project-env-protocol.md` 用仓库根 `project\<项目名>\`；用户给了别的路径就用用户的。
 
 If the user accepts the suggested path, treat it as confirmed.
 
@@ -87,7 +74,7 @@ If the user accepts the suggested path, treat it as confirmed.
 Use the bundled helper when creating the project folder:
 
 ```powershell
-python scripts\init_project.py --project-name "<项目名>" --root "F:\AI HOME\CODEX\video\outputs\批量视频项目"
+python scripts\init_project.py --project-name "<项目名>" --root "<仓库根>\project"
 ```
 
 Or pass an exact confirmed output path:
@@ -155,30 +142,7 @@ Use this row shape:
 }
 ```
 
-Veo row shape:
-
-```json
-{
-  "id": "shot-001",
-  "provider": "veo",
-  "file": "完整首帧路径或公网图片 URL",
-  "task": "本次视频目标",
-  "count": 1,
-  "output_name": "shot-001",
-  "ratio": "16:9",
-  "duration": 4,
-  "mode": "veo-fast",
-  "model_version": "gemini-veo-3.1-fast-generate-preview-4s",
-  "video_resolution": "720p",
-  "reference_images": [],
-  "reference_videos": [],
-  "reference_audios": [],
-  "images": [],
-  "generate_audio": true,
-  "negative_prompt": "字幕、水印、文字、变形",
-  "final_instruction": "按视频提示词规则写出的完整中文生视频提示词"
-}
-```
+Veo 任务行形状见 `references/veo.md`。
 
 Then call the generation script with `count: 1` and output to `输出\确认片`.
 

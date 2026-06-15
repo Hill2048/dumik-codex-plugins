@@ -1,16 +1,16 @@
 ---
 name: ecom-detail-autopilot
-version: 0.1.1
-description: "详情页批量出图的自动编排器，完全在 Codex 内跑。把 ecom-detail-planner / grid-card-prompts / image-batch-agent / product-detail-repair 串成一条流水线：先用 1 个卖点试跑、停下让用户在对话里确认方向、沉淀产品级校准回写视觉设定、再批量并发抽卡、用户选片、自检 QA、批量局部修复、终审交付。三个闸（方向 / 选片 / 终审）在对话里停等用户，Agent 直接把图展示出来。校准沉淀写文件回写视觉设定。前端（BatchRefiner）和本地桥是可选增强，默认不依赖。只有用户明确要求项目制自动串跑 / 批量出图时才进入。"
+version: 0.2.1
+description: "详情页批量出图的自动编排器，完全在 Agent（Codex / Hermes）内跑。把 ecom-detail-planner / grid-card-prompts / image-batch-agent / product-detail-repair 串成一条流水线：先用 1 个卖点试跑、停下让用户在对话里确认方向、沉淀产品级校准回写视觉设定、再批量并发抽卡、用户选片、自检 QA、批量局部修复、终审交付。三个闸（方向 / 选片 / 终审）在对话里停等用户，Agent 直接把图展示出来。进度与每张图状态写一份轻量 run-state.json 到运行记录，仅供 Agent 自己断点续跑，不依赖任何前端或桥服务。只有用户明确要求项目制自动串跑 / 批量出图时才进入。"
 ---
 
 # 详情页批量出图编排器
 
 这是详情页流水线唯一会**主动驱动生成**的 skill，是其他 skill「默认只出文字」规则的例外。只有用户明确要批量、项目制自动串跑时才进入；否则仍走手动逐步链路。
 
-默认**完全在 Codex 内跑**：Agent 自己生成、自己看图自检，到闸口直接把图展示给用户，用户在对话里确认方向、选片、终审，Agent 据此继续。不需要前端，不需要桥。
+**完全在 Agent 内跑**：Agent 自己生成、自己看图自检，到闸口直接把图展示给用户，用户在对话里确认方向、选片、终审，Agent 据此继续。不接前端、不起桥服务、不开端口。
 
-接前端是**可选增强**：以后接 BatchRefiner + 本地桥时，把每步状态写 `bridge/run-state.json`、读 `bridge/selection.json`（字段见 `assets/批量协作-文件合同.md`）。本版默认不写这些文件，下面标「可选·接前端」的才涉及。
+唯一的落盘是一份**轻量 run-state.json**，写在 `输出/运行记录/`，只给 Agent 自己用：会话中断后凭它断点续跑，不用从头重来。它不是对外合同，没有前端读它。
 
 ## 触发
 
@@ -24,6 +24,45 @@ description: "详情页批量出图的自动编排器，完全在 Codex 内跑�
 进入前确认：
 - 当前项目（`CURRENT_PROJECT.md`）和项目目录已就位。
 - 图片接口可用（按 `image-batch-agent` 的 API 缓存规则）。
+
+## 状态文件（断点续跑用）
+
+路径：`输出/运行记录/run-state.json`。每推进一步、每出一张图就更新它。**进入流水线前先读它**：
+
+- 不存在或 `stage=done`：从头开始（planning）。
+- 存在且停在某个闸（`stage=await_*`）：把对应的图重新展示给用户，接着等用户回话，不要重跑已完成的步骤。
+- 存在且停在生成中途（`batch_draw` 等）：只补跑 `status` 不是 `Success` 的任务，已成功的不重抽。
+
+字段保持精简，够 Agent 自己恢复即可：
+
+```json
+{
+  "schemaVersion": 2,
+  "projectName": "纯钛+乌檀木菜板 详情页",
+  "updatedAt": 1733500000000,
+  "stage": "batch_draw",
+  "sellingPointId": "双面生熟分离",
+  "message": "批量抽卡：12 张已出 7 张",
+  "openGate": null,
+  "stats": { "total": 12, "running": 3, "done": 7, "failed": 0 },
+  "tasks": [
+    {
+      "id": "卖点A-方向2-cand-1",
+      "title": "双面生熟分离 · 方向2 · 候选1",
+      "sellingPointId": "双面生熟分离",
+      "directionId": "double-side-direction-2",
+      "routeId": "material_macro",
+      "status": "Success",
+      "promptText": "引用视觉设定的完整中文提示词……",
+      "resultImage": "输出/确认图/卖点A-方向2-1.png",
+      "qaVerdict": "pass",
+      "qaNotes": ""
+    }
+  ]
+}
+```
+
+写盘用「先写 `.tmp` 再改名」，避免中断时留半截文件。`stage` 取值：`planning / pilot / await_direction / calibrating / batch_draw / await_selection / qa_repair / await_final / done`。
 
 ## 编排顺序
 
@@ -41,13 +80,13 @@ description: "详情页批量出图的自动编排器，完全在 Codex 内跑�
 
 ### 3. 闸① 方向确认（停，对话里等用户）
 
-把 pilot 图**直接展示给用户**，问两件事：选哪个方向？哪里崩了、要怎么改？
+把 pilot 图**直接展示给用户**，问两件事：选哪个方向？哪里崩了、要怎么改？写 `stage=await_direction`、`openGate=direction` 到 run-state，然后停。
 
 - 用户给：选中方向 + 哪里要锁（把手/反射/品牌区/木纹…）。
 - 不满意：用用户指出的问题调词，回第 2 步重跑 pilot。
 - 满意：进第 4 步。
 
-可选·接前端：写 `stage=await_direction`、`openGate=direction`，等 `selection.json` 的 `directionDecision`。
+收到用户回话、确认要继续后，先把 `openGate` 清回 null 再往下，避免续跑时误判还停在闸上。
 
 ### 4. calibrating — 沉淀校准 → 回写视觉设定（关键）
 
@@ -56,22 +95,21 @@ description: "详情页批量出图的自动编排器，完全在 Codex 内跑�
 
 只传播产品级（身份锁、材质光学、画幅光线、模型参数、参考图用法）。卖点级构图不进校准。
 
-这一步是「一个卖点对、批量都对」的命脉，不能省。即使纯 Codex 内跑，这个文件也要写——它是回写视觉设定的依据，跟前端无关。
+这一步是「一个卖点对、批量都对」的命脉，不能省。
 
 ### 5. batch_draw — 批量并发抽卡
 
 对所有卖点的选中方向，按 `grid-card-prompts` 段二展开多行独立全幅候选（每行 `count:1`、不同 id/output_name、带 `selected_direction_id` 和 `route_id`）。交 `image-batch-agent` 批量并发生成，落 `输出/确认图/`。
 
-每张生成后，Agent **自己看图自检**，标 `pass`/`drift`/`reject`；明显崩的（reject）先自己淘汰，不拿去烦用户。
+每张生成后，Agent **自己看图自检**，标 `pass`/`drift`/`reject`；明显崩的（reject）先自己淘汰，不拿去烦用户。每出一张就更新 run-state 的 `tasks[]` 和 `stats`，方便中途断了接着补。
 
 ### 6. 闸② 选片（停，对话里等用户全部选完）
 
-把存活候选**按卖点分组展示给用户**，让用户逐卖点选片，每张标：keep（留）/ repair（要修）/ reroll（重抽）。要求所有卖点都选完才继续。
+把存活候选**按卖点分组展示给用户**，让用户逐卖点选片，每张标：keep（留）/ repair（要修）/ reroll（重抽）。写 `stage=await_selection`、`openGate=selection`，要求所有卖点都选完才继续。
 
 - reroll：回第 5 步对该卖点重抽。
 - 全部 keep/repair 才进第 7 步。
-
-可选·接前端：写 `stage=await_selection`、`openGate=selection`，等 `selection.json` 的 `imageSelections`。
+- 选片完成后，按本批每条 route 汇总 keep / repair / reroll，追加写入 `assets/detail-page-prompt-packs/route-feedback.json`（规则见该目录 README），让 route 资产越用越准。
 
 ### 7. qa + repair — 诊断与批量修复
 
@@ -83,23 +121,22 @@ description: "详情页批量出图的自动编排器，完全在 Codex 内跑�
 
 ### 8. 闸③ 终审（停，对话里等用户）
 
-把修完的成品候选展示给用户终审：approved 进 `输出/成品`；redo 回对应步骤。
-
-可选·接前端：写 `stage=await_final`、`openGate=final`，等 `selection.json` 的 `finalReview`。
+把修完的成品候选展示给用户终审：approved 进 `输出/成品`；redo 回对应步骤。写 `stage=await_final`、`openGate=final`，然后停。
 
 ### 9. done — 交付
 
-approved 的图归 `输出/成品/`，写 `handoff.md` 记下每张来源（卖点/方向/route）和下一步归属。
+approved 的图归 `输出/成品/`，写 `handoff.md` 记下每张来源（卖点/方向/route）和下一步归属。run-state 写 `stage=done`。
 
 注意：本流水线交付的是**确认图/成品图**，不含文字、参数、logo、版式叠加（那是后续确定性叠加层，不在本 skill）。
 
 ## 硬规则
 
 - 三个闸（方向 / 选片 / 终审）必须真停，在对话里等用户回话才继续，不得擅自往下。
+- 闸的"开/关"以 run-state 的 `stage` / `openGate` 为准；继续前先清 `openGate`，避免断点续跑误判。
 - 校准只回写产品级；卖点级不污染视觉设定。`校准沉淀.json` 必写（回写视觉设定的依据）。
 - pilot 只跑一个卖点；并发只在校准之后。
 - 自己不写最终提示词、不手搓接口参数：词交 `grid-card-prompts`/`product-detail-repair`，生成交 `image-batch-agent`。
-- 默认不依赖前端/桥；标「可选·接前端」的文件只有接了前端才写。
+- run-state 只为 Agent 自己断点续跑，不对外、不接前端、不起服务；不要把它当成给别人读的合同来设计字段。
 
 ## 交接
 

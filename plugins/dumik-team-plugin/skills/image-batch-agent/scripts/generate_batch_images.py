@@ -89,6 +89,9 @@ DEFAULT_STORYBOARD_SIZES = {
 }
 DEFAULT_2K_SIZE = (2048, 2048)
 DEFAULT_BATCH_LONG_EDGE = 2048
+SOURCE_RATIO_2K_OUTPUT_SIZE = "source-2k"
+SOURCE_RATIO_4K_OUTPUT_SIZE = "source-4k"
+SOURCE_RATIO_LONG_EDGE_RE = re.compile(r"^source-(?:long-?edge-?)?(\d+)$")
 DEFAULT_CONCURRENCY = 3
 IMAGE2_MIN_PIXELS = 655_360
 IMAGE2_MAX_PIXELS = 8_294_400
@@ -434,6 +437,42 @@ def parse_output_size(value: str | None, *, image_model: str | None = None) -> t
     return width, height
 
 
+def source_ratio_long_edge(value: str | None) -> int | None:
+    if not value:
+        return None
+    normalized = value.lower().replace("×", "x").strip()
+    if normalized in {"source", "source-ratio", SOURCE_RATIO_2K_OUTPUT_SIZE, "source-ratio-2k"}:
+        return DEFAULT_BATCH_LONG_EDGE
+    if normalized in {SOURCE_RATIO_4K_OUTPUT_SIZE, "source-ratio-4k"}:
+        return 3840
+    match = SOURCE_RATIO_LONG_EDGE_RE.fullmatch(normalized)
+    if match:
+        long_edge = int(match.group(1))
+        if long_edge < 1:
+            raise BatchImageError(f"source-ratio long edge must be positive: {value}")
+        return long_edge
+    return None
+
+
+def source_ratio_target_size(item: PromptItem, long_edge: int) -> tuple[int, int]:
+    if not item.file:
+        raise BatchImageError("source-ratio output_size requires a source image file.")
+    source_path = Path(item.file)
+    if not source_path.exists():
+        raise BatchImageError(f"Source image not found: {source_path}")
+    with Image.open(source_path) as image:
+        width, height = image.size
+    if width <= 0 or height <= 0:
+        raise BatchImageError(f"Invalid source image size: {source_path}")
+    if width >= height:
+        target_width = long_edge
+        target_height = max(1, round(height * long_edge / width))
+    else:
+        target_height = long_edge
+        target_width = max(1, round(width * long_edge / height))
+    return target_width, target_height
+
+
 def validate_image2_size(width: int, height: int, *, source: str) -> None:
     if width % 16 != 0 or height % 16 != 0:
         raise BatchImageError(f"Image2 size must use multiples of 16: {source}")
@@ -448,6 +487,9 @@ def validate_image2_size(width: int, height: int, *, source: str) -> None:
 
 
 def target_size_for_item(item: PromptItem, *, image_model: str | None = None) -> tuple[int, int] | None:
+    source_long_edge = source_ratio_long_edge(item.output_size)
+    if source_long_edge:
+        return source_ratio_target_size(item, source_long_edge)
     explicit = parse_output_size(item.output_size, image_model=image_model)
     if explicit:
         return explicit
@@ -787,6 +829,19 @@ def standardize_image_size(
                         f"Generated image aspect ratio {image.size[0]}x{image.size[1]} is too far from requested "
                         f"{target[0]}x{target[1]}."
                     )
+                if source_ratio_long_edge(item.output_size):
+                    image = image.convert("RGB") if path.suffix.lower() in {".jpg", ".jpeg"} else image
+                    target_width, target_height = target
+                    scale = max(target_width / image.width, target_height / image.height)
+                    resized = image.resize(
+                        (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                        Image.Resampling.LANCZOS,
+                    )
+                    left = max(0, round((resized.width - target_width) / 2))
+                    top = max(0, round((resized.height - target_height) / 2))
+                    image = resized.crop((left, top, left + target_width, top + target_height))
+                    image.save(path)
+                    return f"{image.size[0]}x{image.size[1]}"
             return f"{image.size[0]}x{image.size[1]}"
 
         image = image.convert("RGB") if path.suffix.lower() in {".jpg", ".jpeg"} else image
@@ -1234,7 +1289,13 @@ def main() -> None:
     parser.add_argument("--id", help="Run record id for single-image mode.")
     parser.add_argument("--out", help="Output file path for single-image mode.")
     parser.add_argument("--count", type=int, default=1, help="Number of images for single-image mode.")
-    parser.add_argument("--output-size", help="Output size, for example 1024x1024, 2160x3840, 4K, or 2K.")
+    parser.add_argument(
+        "--output-size",
+        help=(
+            "Output size, for example 1024x1024, 2160x3840, 4K, 2K, "
+            "source-2k, source-4k, or source-long-edge-2048."
+        ),
+    )
     parser.add_argument(
         "--base-url",
         help="OpenAI-compatible API base URL. Overrides local Codex cache.",

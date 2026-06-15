@@ -4,14 +4,14 @@
 
 ## 已收纳流程
 
+- `workspace-init`：工作台初始化。新仓库/新电脑装好插件后跑一次，按模板生成入口文件（AGENTS.md、CLAUDE.md、CURRENT_PROJECT.md、CONTEXT.md），按需建第一个项目目录并做环境检查；只补缺不覆盖。
 - `ecom-visual-director`：电商视觉总监顶层入口，先按统一路由判断是否进入项目制，再统筹主图、详情页、白底精修、产品改图、KV、批量图片和实际生图链路。
 - `tvc-director`：TVC 总导演顶层入口，先按统一路由判断是否进入项目制，再统筹电商视频、TVC、卖点顺序、故事板、连续分镜、逐镜提示词和批量生视频链路。
 - `ecom-detail-planner`：详情页出图策略层，固化视觉设定，规划详情页结构、每卖点视觉证据和创意方向，是图片线对称于视频线 `ecom-video-conversion` 的转化策划入口。
 - `grid-card-prompts`：详情页发散层，两段式四宫格抽卡，段一 2x2 探方向、段二选中后展开全幅候选，引用视觉设定不重写 SKU。
-- `ecom-detail-autopilot`：详情页批量出图的 Agent 模式编排器，把策划、抽卡、生图、修复串成自动流水线，按《批量协作-文件合同》读写 run-state / selection / 校准沉淀，配合本地桥服务（`bridge-server/`）和 BatchRefiner Agent 模式；三个闸（方向 / 选片 / 终审）停等设计师，校准回写视觉设定后再批量。
+- `ecom-detail-autopilot`：详情页批量出图的 Agent 模式编排器，完全在 Agent（Codex / Hermes）内跑，把策划、抽卡、生图、修复串成自动流水线；三个闸（方向 / 选片 / 终审）在对话里停等用户，校准回写视觉设定后再批量；进度写一份轻量 run-state 到运行记录用于断点续跑，不接前端、不起桥服务。（早期的本地桥 + BatchRefiner 前端方案已归档到 `archive/bridge-frontend-legacy/`。）
 - `product-detail-repair`：抽卡选片后的细节修复质量门，诊断漂移的产品细节，给局部切图指引，再用 banana2 加产品白底图作参考写局部修复提示词。
-- `image-prompt-optimizer`：图片改图、白底精修、多参考图、产品结构保护、可复制改图指令。
-- `super-image-prompt`：把模糊视觉需求整理成更强的美术指导语言。
+- `image-prompt-optimizer`：图片提示词唯一入口，双模式。改图模式：白底精修、多参考图、产品结构保护、可复制改图指令；brief 模式：KV 概念、场景母体、材质光影、人像皮肤，把模糊视觉需求整理成美术指导语言（原 `super-image-prompt` 已并入，归档在 `archive/super-image-prompt-merged/`）。
 - `image-batch-agent`：统一承接实际生图和改图。默认单图模式；只有明确说批量、项目制批量或批量生成时才进入批量模式；生图前可选 `gpt-image-2` 或 `banana2`。
 - `ecom-video-conversion`：先梳理电商视频的转化逻辑和卖点顺序。
 - `video-storyboard-prompts`：统一产品故事板、Image2 身份板、连续分镜、关键帧和逐镜生视频提示词。
@@ -22,6 +22,7 @@
 - Markdown 版：`assets/workflow-map.md`
 - 可视化版：`assets/workflow-map.html`
 - Agent 路由：`assets/agent-skill-routing.md`
+- 项目入口与环境协议（唯一来源）：`assets/project-env-protocol.md`
 - 已检查清单：`assets/verified-environment-checklist.md`
 
 ## 团队使用建议

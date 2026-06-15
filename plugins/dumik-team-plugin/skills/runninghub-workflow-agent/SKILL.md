@@ -1,6 +1,6 @@
 ---
 name: runninghub-workflow-agent
-version: 0.1.4
+version: 0.1.5
 description: "RunningHub 图片后处理执行入口。只负责把已配置好的 RunningHub 工作流或 AI App、图片输入和固定节点参数提交到 RunningHub，并下载输出结果；不负责写提示词、不负责普通图片生图、不负责改图文案。"
 ---
 
@@ -51,6 +51,16 @@ API Key 优先从这些位置读取：
 ```powershell
 python scripts\run_runninghub_workflow.py --preset upscale --image "<要放大的图片路径>" --out-dir "<输出目录>"
 ```
+
+### 最短路径
+
+项目制放大时，优先走 skill 内脚本，只传图片路径：
+
+```powershell
+scripts\run-upscale.ps1 "<要放大的图片路径>"
+```
+
+默认锁定：`preset = upscale`、`reduce-size = 1500`、`upscale-size = 4000`；输出目录自动从仓库根 `CURRENT_PROJECT.md` 解析当前项目，落 `<项目路径>\输出\成品\runninghub-upscale`。要改尺寸传 `-ReduceSize` / `-UpscaleSize`，要改输出传 `-OutDir`。
 
 临时指定尺寸：
 

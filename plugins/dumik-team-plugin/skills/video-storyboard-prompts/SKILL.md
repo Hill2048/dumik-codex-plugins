@@ -1,71 +1,55 @@
 ---
 name: video-storyboard-prompts
 description: "统一视频故事板、产品故事板、连续分镜、关键帧提示词和逐镜生视频提示词。适用于产品视频、电商视频、Image2 产品故事板、通用连续镜头、剧情/场景分镜和需要跨镜头保持一致的视频提示词；默认只输出文字和可执行提示词，不提交图片或视频生成任务。"
-version: 1.0.0
+version: 1.1.0
 ---
 
 # 视频故事板与分镜提示词
 
-Use this skill as the single storyboard and shot-prompt entry for video work.
+视频工作的唯一故事板和逐镜提示词入口。旧的产品故事板和连续分镜两个入口已合并为一套逻辑。
 
-The old split between product storyboard and sequential storyboard is folded into one logic:
+默认只输出提示词、分镜、关键帧和逐镜视频提示词。不调用生图、生视频或 CLI。只有用户明确说“生成 / 出图 / 出片 / 提交 / 跑任务”时，才交给 `image-batch-agent` 或 `video-batch-agent` 执行。
 
-- `product` mode: 产品视频、电商视频、SKU、详情页、产品身份板、Image2 产品故事板。
-- `sequential` mode: 非产品的连续镜头、剧情、场景、人物动作、通用视频分镜。
-- `hybrid` mode: 产品广告片、生活方式短片、产品 + 场景叙事。
+可直接套用的模板块（Image2 身份板、故事板生图模板、逐镜模板、线性序列）在 [references/templates.md](references/templates.md)，写之前先读对应块。
 
-默认只输出提示词、分镜、关键帧和逐镜视频提示词。不要调用生图、生视频或 CLI。只有用户明确说“生成 / 出图 / 出片 / 提交 / 跑任务 / 调用接口”时，才交给 `image-batch-agent` 或 `video-batch-agent` 执行。
-
-## When To Use
-
-Use this skill when the user asks for any of these:
+## 何时使用
 
 - 产品故事板、Image2 故事板、产品身份板、产品视频分镜。
 - 分镜、连续镜头、关键帧、镜头语言、视频 AI 序列提示词。
 - 每个镜头的生视频提示词、首帧 / 尾帧提示词、故事板生图提示词。
-- 产品广告片、详情页视频、短视频脚本的画面分镜和逐镜提示词。
 
-If the user only asks for selling-point order, content strategy, or a 30-60 second commercial structure, use `ecom-video-conversion` first, then return here to make the visual storyboard and shot prompts.
+用户只要卖点顺序、内容策略或 30-60 秒结构时，先走 `ecom-video-conversion`，再回来做视觉分镜。
 
-## Core Principle
+## 核心原则
 
-Product storyboard and continuous storyboard share the same base logic:
+产品故事板和连续分镜共用同一套底层逻辑：
 
-1. Lock stable anchors.
-2. Split the video into visible stages.
-3. Keep adjacent frames connected.
-4. Give every shot one main action and one main camera movement.
-5. Define start frame, movement, environmental change, and end frame.
-6. Preserve identity across images, storyboards, and video generation.
+1. 先锁稳定锚点。
+2. 把视频拆成可见阶段。
+3. 相邻格保持衔接。
+4. 每镜只给一个主动作和一个主镜头运动。
+5. 定义起始画面、运动、环境变化、结束画面。
+6. 跨图片、故事板、生视频保持身份一致。
 
-Product mode adds stronger identity constraints: SKU, silhouette, structure, material, color, proportions, handle/lid/hardware, brand zone, and non-changeable features.
+product 模式额外加强身份约束：SKU、轮廓、结构、材质、颜色、比例、把手/盖子/五金、品牌区、不可改特征。
 
-## Mode Selection
+## 模式选择
 
-Choose the mode silently and state it in the output header.
+静默选择，在输出头部注明：
 
-- `product`: product, 商品, SKU, 主图, 详情页, 材质, 品牌区, 产品故事板, Image2.
-- `sequential`: 人物, 场景, 剧情, 氛围片, 连续镜头, 非产品分镜.
-- `hybrid`: 产品在生活场景里被使用、产品广告片、产品 + 人物动作、产品 + 场景叙事.
+- `product`：产品、商品、SKU、主图、详情页、材质、品牌区、产品故事板、Image2。
+- `sequential`：人物、场景、剧情、氛围片、连续镜头、非产品分镜。
+- `hybrid`：产品在生活场景里被使用、产品广告片、产品 + 人物动作、产品 + 场景叙事。
 
-When unsure, use `hybrid` and keep product identity constraints if a real product appears.
+拿不准用 `hybrid`，画面里有真实产品就保留产品身份约束。
 
-## Output Blocks
+## 输出块
 
-Default output:
+默认输出：1) 视频模式与目标；2) 稳定锚点表；3) 故事板 / 连续分镜提示词；4) 分镜拆解表；5) 逐镜生视频提示词；6) 返修检查点。需求窄时只出用户要的块。
 
-1. 视频模式与目标
-2. 稳定锚点表
-3. 故事板 / 连续分镜提示词
-4. 分镜拆解表
-5. 逐镜生视频提示词
-6. 返修检查点
+## 稳定锚点
 
-Only output the blocks the user asks for if the request is narrow.
-
-## Stable Anchors
-
-Always establish anchors before writing frames.
+写格子之前必须先立锚点：
 
 ```text
 视频目标：
@@ -84,145 +68,36 @@ Always establish anchors before writing frames.
 禁止出现：
 ```
 
-Product extension:
+product 扩展：产品名称、品类、核心卖点（最多 3 个按画面优先级）、关键部件、品牌区、可动状态、使用场景、产品身份参考。
 
-```text
-产品名称：
-品类：
-核心卖点：最多 3 个，按画面优先级排序
-关键部件：
-品牌区 / 标识区：
-可动状态：
-使用场景：
-产品身份参考：
-```
+## 故事板生图提示词规则
 
-## Image2 Product Identity Board
+提示词里写：画布/排版（如 `12 格视频故事板，3 列 × 4 行`）、参考图角色、画面语言、逐格可见动作节点、最小风险控制。
 
-Only use this block when the work includes a product whose identity must stay stable.
+提示词里不写：文件路径、上传步骤、命令、输出目录、模型名、API key、`输出规格`/`4K` 等执行参数、长执行说明或营销文案。
 
-Purpose: lock the product identity before storyboard and video generation.
+比例规则：`16:9` 横版用于网站视频和产品片；`9:16` 竖版用于电商和短视频平台；`3:4` 是默认单格比例，不是默认整板比例。产品电商默认：整板 `9:16`，单格围绕 `3:4` 构图。
 
-```text
-创建一张艺术性的 16:9 产品身份板。
+专业标注允许克制使用：小号格序号、细红色运动箭头、克制蓝色虚线构图框、白色时序数字。不要廉价贴纸箭头、发光轨迹、重 HUD、蓝图风、营销文字、水印、乱码。
 
-主体：{产品名称}
-外观结构：{外观结构}
-材质颜色：{材质颜色}
+## 承接上一张故事板
 
-背景为纯白色或柔和米白色；无环境、无道具、无水印。
+依赖上一张故事板时，上一张选定的故事板图必须作为真实参考传入：
 
-创建电影感、高端、艺术书式的产品身份板，不要做机械参数表。
-布局不对称、优雅、有大片留白；避免网格、蓝图、目录式排版和重复视角。
+- 参考名 `@PREV_STORYBOARD_REF`，只控制首格的主体位置、光向、焦点、场景延续和上一板的结束状态。
+- 执行工具传不了上一张图时，不许承诺“继承上一张”；明说连续性会变弱，改写成纯文字连续性。
 
-放置一个大型产品英雄主视角作为视觉锚点。
-围绕它排列辅助研究：正面、侧面、俯视、关键结构、材质细节、开合状态、使用状态。
+## 逐格规则
 
-所有视角保持严格一致：
-相同轮廓、相同比例、相同材质、相同颜色、相同关键结构。
-不要改变：{不能改变的产品特征}
+每格必须有：主体；距离/视点/机位；镜头运动或固定状态；环境光线氛围；与上一格相比的一个可见变化。
 
-添加简约产品 ID 信息块，仅使用：名称、品类、核心卖点、视觉标志。
-风格：简约、电影感、高端、干净、适用于后续图像和视频制作。
-```
+连续性：整个序列是同一个世界，不出无关海报；产品身份、角色身份、材质、空间、光线、色调稳定；相邻格要有差异但不破坏连续；连续不等于重复。
 
-## Storyboard Image Prompt
+运动：一个主动作 + 一个辅助变化；偏好克制运动（推近、横移、滑入、掠过、轻升、减速停住、稳定悬停）；不在一格里塞多个打架的动作。
 
-This prompt is for image generation. Keep API parameters outside `final_instruction`.
+## 分镜拆解表
 
-Write in the image prompt:
-
-- Canvas / layout, such as `12 格视频故事板，3 列 × 4 行`.
-- Reference roles.
-- Visual language.
-- Frame-by-frame visible action nodes.
-- Minimal risk control.
-
-Do not write in the image prompt:
-
-- File paths, upload steps, commands, output folders, model names, API keys.
-- `输出规格`、`原生生成`、`尺寸 2160x3840`、`4K` 等 execution parameters.
-- Long execution notes or marketing copy that should be in a report, subtitle, or JSON.
-
-Storyboard ratio rules:
-
-- `16:9`: horizontal storyboard for website videos, landscape ads, product films.
-- `9:16`: vertical storyboard for ecommerce, short-video platforms, mobile.
-- `3:4`: default single-panel frame ratio; not the default whole-board ratio.
-- Product ecommerce default: whole board `9:16`, panels composed around `3:4`.
-
-Professional annotations are allowed if useful:
-
-- Small frame numbers.
-- Thin red motion arrows.
-- Restrained blue dashed composition boxes.
-- White bold timing numbers / role IDs.
-
-Avoid cheap sticker arrows, glowing trails, heavy HUD, blueprint graphics, marketing text, watermarks, or garbled text.
-
-Template:
-
-```text
-{N} 格{产品/场景/连续镜头}故事板，{列数} 列 × {行数} 行。
-
-参考图角色：@MAIN_REF 锁定主体身份；@SCENE_REF 控制场景和光线；@ACTION_REF 控制动作；@MOTION_REF 只参考镜头路径和剪辑节奏。
-
-画面表现：{一句话说明本段视频目的和可见证明}。保持主体、光线、空间逻辑连续。
-
-连续动作：
-01 {起点画面和动作节点}；
-02 {与 01 相连的变化}；
-03 {动作推进}；
-...
-{N} {结尾定格，方便接下一镜}。
-
-保留克制分镜序号，可加少量专业运动箭头和构图框。不要画营销文字、水印或乱码。
-```
-
-## Previous Storyboard Continuity
-
-If a storyboard depends on a previous storyboard, the previous selected storyboard image must be a real reference.
-
-- Reference name: `@PREV_STORYBOARD_REF`.
-- It controls only the first frame's subject position, light direction, focus, scene continuation, and ending state from the previous board.
-- Do not promise "继承上一张" unless the previous storyboard image can be passed as a reference.
-- If the execution tool cannot pass the previous image, say continuity will be weaker and rewrite as text-only continuity.
-
-Short prompt example:
-
-```text
-参考图角色：@PREV_STORYBOARD_REF 承接上一张结尾的主体位置、光线和焦点；@PRODUCT_REF 锁定产品结构；@ACTION_REF 控制手部动作。
-
-01 依据 @PREV_STORYBOARD_REF 继承上一张第 12 格的主体位置，手部从画外靠近。
-```
-
-## Sequential Frame Rules
-
-Each frame or shot must include:
-
-- Subject.
-- Distance / viewpoint / camera position.
-- Camera movement or hold state.
-- Environment, light, and atmosphere.
-- One visible change compared with the previous frame.
-
-Continuity rules:
-
-- Treat the sequence as one continuous world.
-- Do not output unrelated posters.
-- Keep product identity, character identity, material, space, light, and color stable.
-- Adjacent frames must be different without breaking continuity.
-- Continuous does not mean repetitive.
-
-Motion rules:
-
-- One main movement plus one supporting change.
-- Prefer restrained motion: push closer, drift sideways, slide in, skim across, lift slightly, decelerate into a stop, hover steadily.
-- Avoid multiple fighting actions in one frame.
-
-## Shot Breakdown Table
-
-After a storyboard is defined or generated, break each panel into executable video fields.
+故事板定稿或生成后，把每格拆成可执行字段：
 
 ```text
 镜头编号：
@@ -236,67 +111,15 @@ After a storyboard is defined or generated, break each panel into executable vid
 生视频注意事项：
 ```
 
-If a panel is unclear, write `需重画该格`; do not invent missing visual facts.
+某格看不清就写 `需重画该格`，不要编造缺失的视觉事实。
 
-## Per-Shot Video Prompt
+## 逐镜生视频提示词
 
-Write one prompt per shot. Do not put multiple unrelated shots into one video prompt.
+一镜一条提示词，不把多个无关镜头塞进一条。模板见 `references/templates.md`（product/hybrid 版和 sequential 版，外加单条线性序列写法）。
 
-Product or hybrid template:
+Dreamina / Seedance 默认：按 `seedance2.0` 的稳定性写；只有用户明确要快才用 `seedance2.0fast`；目标工具不能选模型时省略模型参数，保持工具无关。
 
-```text
-使用 @IDENTITY_REF 保持主体身份一致，使用 @STORYBOARD_REF 的第 {镜头编号} 格作为画面来源，生成 {时长} 秒视频片段。
-
-身份锚点：
-{主体 / 产品身份锚点}。不要改变 {不能改变的特征}。
-
-起始画面：
-从第 {镜头编号} 格的构图开始，主体位置是 {主体位置}，景别是 {景别}。
-
-主体动作：
-{主体动作}
-
-镜头运动：
-{镜头运动}
-
-环境变化：
-{环境变化}
-
-结束画面：
-停在 {结束画面}，方便衔接下一镜。
-
-限制：
-不新增无关部件，不切换无关场景，不改变主体身份，不出现无关文字或水印。动作克制清晰，一个主动作配一个镜头运动。
-```
-
-Sequential template:
-
-```text
-基于 @STORYBOARD_REF 的第 {镜头编号} 格生成 {时长} 秒视频片段。
-保持同一主体、同一空间逻辑、同一光线方向和色调。
-起始画面为 {起始画面}。
-主体动作是 {主体动作}。
-镜头运动是 {镜头运动}。
-环境变化是 {环境变化}。
-结束在 {结束画面}，与下一镜保持可衔接。
-不要字幕、水印、跳切、身份漂移或无关元素。
-```
-
-Dreamina / Seedance default:
-
-- Write for `seedance2.0` stability by default.
-- Use `seedance2.0fast` only when the user explicitly asks for speed, quick draft, or lower waiting time.
-- If the target tool cannot choose a model, omit forced model parameters and keep the prompt tool-agnostic.
-
-## Linear Sequence Prompt
-
-If the user wants a single continuous video-AI sequence description, write it after the frame blocks.
-
-```text
-同一主体在同一空间中连续运动：从 {起点} 开始，镜头 {镜头运动 1}，主体 {动作 1}；随后 {动作 2}，环境 {变化 2}；最后镜头 {结束运动} 停在 {结尾画面}。保持 {身份锚点}、{光线}、{材质/角色特征} 一致，不出现文字、水印或身份漂移。
-```
-
-## Revision Diagnosis
+## 返修诊断
 
 - 主体漂移：回到身份锚点 / 产品身份板。
 - 动作错误：改对应格或单镜提示词。
@@ -308,7 +131,7 @@ If the user wants a single continuous video-AI sequence description, write it af
 
 ## Guardrails
 
-- Do not submit generation tasks from this skill.
-- Do not produce API keys, file upload commands, or execution paths inside image prompts.
-- Do not promise continuity that the references cannot support.
-- Do not mix product mode and generic mode blindly; choose `product`, `sequential`, or `hybrid`.
+- 不从本 skill 提交生成任务。
+- 生图提示词里不出现 API key、上传命令、执行路径。
+- 不承诺参考图撑不住的连续性。
+- 不盲混 product 和通用模式；明确选 `product` / `sequential` / `hybrid`。

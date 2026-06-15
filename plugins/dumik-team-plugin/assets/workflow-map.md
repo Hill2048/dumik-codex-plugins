@@ -10,13 +10,13 @@ assets/agent-skill-routing.md
 
 ## 快速入口
 
+- 工作台初始化：`workspace-init`
 - 图片主线：`ecom-visual-director`
 - 图片策划：`ecom-detail-planner`
 - 四宫格抽卡：`grid-card-prompts`
 - 详情页自动串跑：`ecom-detail-autopilot`
 - 细节修复：`product-detail-repair`
-- 改图指令：`image-prompt-optimizer`
-- 视觉 brief：`super-image-prompt`
+- 改图指令 / 视觉 brief：`image-prompt-optimizer`（双模式）
 - 视频旁路：`tvc-director`
 - 图片执行：`image-batch-agent`
 - 图片后处理：`runninghub-workflow-agent`

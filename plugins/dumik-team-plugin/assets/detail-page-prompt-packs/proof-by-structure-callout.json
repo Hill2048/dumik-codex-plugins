@@ -1,17 +1,45 @@
 {
   "family_id": "proof-by-structure-callout",
+  "version": "1.0.0",
   "name_cn": "结构指示",
   "intent": "用拆解、指示线、局部特写讲清结构和设计巧思，证明「想得周到」。",
-  "suits_selling_points": ["结构设计", "细节巧思", "多功能", "易清洁结构", "人体工学握感"],
+  "suits_selling_points": [
+    "结构设计",
+    "细节巧思",
+    "多功能",
+    "易清洁结构",
+    "人体工学握感"
+  ],
   "visual_evidence": "局部放大 + 指示引线 + 关键结构特写；可拆解展开或爆炸图，让结构一目了然。",
-  "composition_variables": ["指示线密度（克制 / 详尽）", "拆解 or 整体局部放大", "机位（正面工程感 / 微俯立体）", "标注留白区位置"],
-  "common_drift": ["指示线乱、压到产品", "拆解后零件比例错", "文字标注 OCR 乱码（文字应后期叠加，AI 图不写死）"],
+  "composition_variables": [
+    "指示线密度（克制 / 详尽）",
+    "拆解 or 整体局部放大",
+    "机位（正面工程感 / 微俯立体）",
+    "标注留白区位置"
+  ],
+  "common_drift": [
+    "指示线乱、压到产品",
+    "拆解后零件比例错",
+    "文字标注 OCR 乱码（文字应后期叠加，AI 图不写死）"
+  ],
   "fits_stage1_2x2": false,
   "needs_white_bg_ref": true,
   "routes": [
-    { "route_id": "structure_callout_lines", "camera_route": "front-engineering", "note": "正面 + 指示引线，留文字位" },
-    { "route_id": "structure_exploded", "camera_route": "exploded-view", "note": "爆炸拆解图" },
-    { "route_id": "structure_local_zoom", "camera_route": "detail-zoom", "note": "关键结构局部放大" }
+    {
+      "route_id": "structure_callout_lines",
+      "camera_route": "front-engineering",
+      "note": "正面 + 指示引线，留文字位"
+    },
+    {
+      "route_id": "structure_exploded",
+      "camera_route": "exploded-view",
+      "note": "爆炸拆解图"
+    },
+    {
+      "route_id": "structure_local_zoom",
+      "camera_route": "detail-zoom",
+      "note": "关键结构局部放大"
+    }
   ],
   "card_direction_seed": "围绕结构给 3-4 个表达：换指示密度、换拆解与否。注意文字和参数留给后期确定性叠加，AI 图只画结构和留白位，不写死文字。"
 }

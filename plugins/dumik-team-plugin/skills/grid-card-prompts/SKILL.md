@@ -1,6 +1,6 @@
 ---
 name: grid-card-prompts
-version: 0.1.1
+version: 0.1.3
 description: "详情页出图的发散层，用两段式四宫格抽卡把一个卖点变成十几个可能。段一用单张 2x2 四宫格低成本探 4 个方向；段二把选中的方向展开成多行独立全幅候选。引用视觉设定，不重写 SKU 身份。默认只输出可复制提示词和批量行，不调用生图接口；实际生成交给 image-batch-agent。"
 ---
 
@@ -30,6 +30,7 @@ description: "详情页出图的发散层，用两段式四宫格抽卡把一个
 
 - 六个 family：对比证明 / 场景证明 / 材质微距 / 结构指示 / 生活方式 / 广告化。索引见该目录 `README.md`。
 - 按卖点匹配 1-2 个 family（看 family 的 `suits_selling_points`）。
+- 取 route 前先看该目录 `route-feedback.json` 的历史：同 family 下 keep 率高的 route 优先，连续翻车的降级。
 - 段一的 3-4 个方向，从选中 family 的 `composition_variables` / `routes` 里取，不再凭空想。
 - 按 family 的 `common_drift` 做风险收口；按 `needs_white_bg_ref` 决定要不要带产品白底图参考。
 - `fits_stage1_2x2=false` 的 family（如结构指示）不强塞 2x2，直接走全幅。
@@ -52,7 +53,12 @@ description: "详情页出图的发散层，用两段式四宫格抽卡把一个
 
 段一 2x2 出图后，必须先记录用户选了哪个方向，才能进段二量产。这是两段式的命脉——没有选中记录，fan-out 会退化成「生几十张靠人记」。
 
-段一出图后写 `输出\运行记录\详情页-<卖点>\selection.json`：
+记录位置按链路二选一，不要两边都写：
+
+- **手动逐步链路**：写 `输出\运行记录\详情页-<卖点>\selection.json`（下方格式）。
+- **autopilot 串跑**：方向决定由 `ecom-detail-autopilot` 记进它的 run-state（`gates.direction` / `openGate`），本 skill 不另写 selection.json，只保证段二行带 `selected_direction_id`。
+
+手动链路的 selection.json 格式：
 
 ```json
 {
@@ -119,13 +125,11 @@ description: "详情页出图的发散层，用两段式四宫格抽卡把一个
 - 不调用图片接口、不优化已有改图指令（那是 `image-prompt-optimizer` 的职责）。
 - 不在四格或多行里偷偷改产品结构、把手、盖子、五金、品牌区、轮廓或 SKU 比例。
 
-## 批量协作合同（Agent 模式）
+## 串跑溯源（Agent 模式）
 
-> 本段是**接前端/桥时**的可选合同。纯 Codex 内跑时，方向确认、选片在对话里完成，不强制写 run-state；但 `selected_direction_id` / `route_id` 这类溯源字段建议照写，便于复盘。
+在 `ecom-detail-autopilot` 串跑时，方向确认、选片都在对话里完成。本 skill 只需保证抽卡行带齐溯源字段，便于 autopilot 写进它的 run-state 和事后复盘。
 
-在 `ecom-detail-autopilot` 串跑时，本 skill 产出的抽卡行要能落进 `bridge/run-state.json` 的 `tasks[]`。合同字段见 `assets/批量协作-文件合同.md`。
-
-- 段二每行除现有字段外，带上 `selected_direction_id` 和 `route_id`，对应 run-state 里 `task.directionId` / `task.routeId`，便于复盘「哪条 route 有效」。
-- 校准后重生成：Agent 模式下，闸① 通过、视觉设定回写校准层后，本 skill 用**校准后的视觉设定**给所有卖点重写提示词，再进批量。
-- `selection.json` 已是本流程的选片合同；`selected_direction_id` 来自 `directionDecision.approvedDirectionId`，不再自己臆测方向。
-- 手动逐步链路按原规则即可，本段只在 Agent 模式生效。
+- 段二每行除现有字段外，带上 `selected_direction_id` 和 `route_id`，对应 autopilot run-state 里 `task.directionId` / `task.routeId`，便于复盘「哪条 route 有效」。
+- 校准后重生成：闸① 通过、视觉设定回写校准层后，本 skill 用**校准后的视觉设定**给所有卖点重写提示词，再进批量。
+- `selected_direction_id` 来自用户在闸① 选定的方向，不自己臆测。
+- 手动逐步链路按原规则即可，本段只在 `ecom-detail-autopilot` 串跑时生效。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "工作台初始化"
+  short_description: "新仓库/新电脑装好 DUMIK 插件后跑一次：生成入口文件（AGENTS.md、CLAUDE.md、CURRENT_PROJECT.md、CONTEXT.md），按需建第一个项目目录，初始化 API 缓存并做环境检查。只补缺不覆盖已有文件。"
+  default_prompt: "初始化这个工作台：检查仓库根缺哪些入口文件，按模板补齐（不覆盖已有的），问我要不要现在建第一个项目，跑 API 缓存初始化和轻量环境检查，最后给我一份清单：生成了什么、跳过了什么、还缺什么要我补。路由规则以插件 assets\\agent-skill-routing.md 为准。"

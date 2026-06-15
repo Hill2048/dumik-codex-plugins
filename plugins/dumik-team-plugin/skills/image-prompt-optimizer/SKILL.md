@@ -1,205 +1,113 @@
 ---
 name: image-prompt-optimizer
-version: 0.1.2
-description: "为产品视觉、场景图、海报和改图任务优化严格可复制的中文图像提示词。默认只输出文字提示词或改图 brief，不调用生图、改图接口或图片工具；只有用户明确要求生图、出图、生成图片、调用接口时才进入实际生成。"
+version: 0.2.0
+description: "图片提示词唯一入口（已合并原 super-image-prompt）。双模式：改图模式写严格可复制的中文改图指令（白底精修、多参考图融合、产品结构保护、品牌区修正）；brief 模式把模糊视觉想法写成高级美术指导语言（KV 概念、场景母体、材质光影增强、人像皮肤精修）。默认只输出文字提示词或 brief，不调用生图、改图接口或图片工具；只有用户明确要求生图、出图、调用接口时才交给 image-batch-agent。"
 ---
 
-# 图像提示词优化器
+# 图像提示词（改图 + 视觉 brief）
 
-Write copy-pasteable Chinese edit instructions for existing images. Treat this as image editing, not generic text-to-image generation.
+像美术指导一样写词，不当约束收集器。核心方法：**先让模型看见画面，再让它守规矩**——场景先行、关系第二、身份第三、风险收口最后。
 
 ## 执行边界
 
-默认只写可复制的中文提示词、改图指令或视觉 brief，不直接生成图片，不调用 `image-batch-agent`、图片 API、批量生成脚本或其他图片工具。
+默认只写可复制的中文提示词、改图指令或视觉 brief。不直接生成图片，不调用 `image-batch-agent`、图片 API、批量脚本或其他图片工具。
 
-只有用户明确说“生图 / 出图 / 生成图片 / 调用接口 / 帮我生成这张图”等实际生成意图时，才进入图片生成或改图执行；如果用户只是说“写提示词 / 优化提示词 / 改图指令 / prompt / brief”，必须停在文字交付。
+只有用户明确说“生图 / 出图 / 生成图片 / 调用接口”等实际生成意图时，才把确认后的词交给 `image-batch-agent`；用户只说“写提示词 / 优化 / 改图指令 / prompt / brief”时，必须停在文字交付。
 
-## Workflow
+如果用户给的是已有视频、录屏，要拆关键帧、提口播、做图文报告，用 `video-evidence-html-report`（本机另装技能，不在本插件内），不要改写成图片提示词。
 
-1. Internally judge the image purpose, visual lead, scene anchor, product identity, visible proof, edit mode, ratio basis, and 1 to 3 highest-risk failure points.
-2. Identify the role of every image.
-3. Convert abstract requirements and constraints into visible image language.
-4. For multi-reference or grid tasks, separate the whole-canvas ratio from the internal panel layout.
-5. Output a concise image-edit visual brief, not a checklist of constraints.
+## 模式选择
 
-Do not show the full internal analysis unless the user asks for it.
+- **改图模式**（有目标图，对现有图做修改）：默认。其下再分：
+  - 锁定：保产品结构、角度、构图、比例、SKU 不变。拿不准就用锁定。
+  - 创意：允许广告化重构、场景重建，但保产品可识别。
+  - 多参考：多张图各管一件事（结构 / 场景 / 局部 / 材质）。
+- **brief 模式**（无目标图或纯创意发散）：KV 概念、场景母体、氛围、材质光影方向。产出美术指导语言；如果最终要落成改图指令，再切回改图模式收尾。
 
-## Art Direction Method
+不要把改图任务改写成泛用文生图。
 
-Act like an art director, not a constraint collector. The goal is to help the image model see the picture, then keep it from drifting.
+## 写词顺序
 
-Before writing, internally answer:
+内部先回答：图的用途、视觉主角、场景锚点、可见证明关系、SKU 识别点、最可能崩的 1-3 个点。不展示完整内部分析。
 
-- What is this image for: product detail page, KV, white-background refinement, scene proof, comparison, grid, or iteration?
-- What is the visual lead: product, scene, product-scene relationship, text, or local detail?
-- What is the scene anchor the model should enter first?
-- What visible action or relationship proves the user's request?
-- Which product details make the SKU recognizable?
-- Which 1 to 3 risks are most likely to ruin the result?
+最终提示词按这个画面顺序写：
 
-Write the final prompt in this visual order, adapting the wording naturally:
+1. 场景锚点 + 用途：让模型先进入目标背景、画幅、版式和商业用途。
+2. 核心可见关系：把要证明的事写成画面里看得见的动作或关系。
+3. 产品身份锁：只点出能识别 SKU 的细节（轮廓比例、把手、盖子、五金、品牌区、材质、配色）。
+4. 变化计划：宫格/故事板只写机位、构图、距离的差异，不在每格重写核心关系。
+5. 收尾与风险收口：材质、光、真实感，外加最可能失败的少数负面点。
 
-1. Scene anchor plus purpose: make the model enter the target background, ratio, layout, and commercial use.
-2. Core visible relationship: describe the main action or proof as something visible in the image.
-3. Product identity lock: describe the product appearance from the references, only naming the details that identify the SKU.
-4. Variation plan: for grids/storyboards, list only camera, composition, or distance changes; do not repeat the core relationship in every panel unless needed for clarity.
-5. Finish and risk closure: add material, light, realism, and only the few negative points most likely to fail.
+约束写法：先用正向可见描述，再用硬负面词。把规则翻成画面语言（例：“必须体现兼容性”写成“一只锅在燃气灶蓝焰上、另一只在电磁炉橙红加热圈上”）。空话（更高级 / 更好看 / 更有质感）一律换成具体画面方向。迭代请求只动用户要的那个变量，其余保持稳定。
 
-Prefer natural Chinese paragraphs. Use bullets mainly for panel variations or brief image-role notes outside the final prompt. Do not force Markdown headings into the final prompt unless the user asks for structured output.
+## 比例（第一行必写）
 
-## Constraint-to-Image Translation
+最终答复第一行必须以 `比例：` 开头，优先具体数字比例。判断优先级：
 
-Turn rules into visible image language:
+1. 用户本次明确指定的比例（上一轮草稿里的比例不算用户意图）。
+2. 当前目标图（“这张图 / 目标图 / 修这张 / 沿用当前图构图”）控制整图比例。
+3. 用户明确指定的画幅控制者（“以图4为背景/场景/母版”）。
+4. 被编辑图片的真实像素比例。
+5. 场景母版参考图的比例。
+6. 平台/用途比例（仅在没有任何图片控制者时）。
+7. 默认比例池：1:1、2:3、3:2、3:4、4:3、4:5、5:4、9:16、16:9、21:9、1:4、4:1、1:8、8:1。
 
-- Instead of "must show compatibility", write "one pot sits on a gas burner with restrained blue flame; another pot sits on an induction ring with orange-red circular heating glow".
-- Instead of "keep the same product", write "both pots use the Image 2-3 appearance: cylindrical mirrored stainless-steel body, light beige lid and handles, red pressure-valve detail, side handles, top pressure structure, DUMIK logo position, and the same overall proportions".
-- Instead of "do not change the background", write "use Image 4 as the target background, keeping the soft acrylic light panel, black stone countertop, minimalist range hood, and dark premium kitchen atmosphere".
+硬规则：
 
-Use hard negative wording only after the positive visible description is clear.
+- 真实目标图比例不明时，不许编数字。能查就查图片尺寸，不能查就第一行写“比例：需先确认目标图原始比例（不可猜）”。
+- 不要因为是竖图或电商图就猜 4:5。
+- 产品白底图、结构图、材质图、logo 图不控制整图比例，除非它本身就是被编辑的目标图。
+- 宫格 / 故事板 / 2x2 抽卡：宫格只控制内部排版，不控制整图比例。两层分开写：先整图比例，再内部分区。
 
-## Image Roles
+示例：“比例：3:4，依据图4场景母版原始竖版画幅；图2-3只控制产品结构和材质，不控制整图比例。整张图内部排成 2X2 四宫格。”
 
-Always state the role of each image number:
+## 参考图角色
 
-- Target image: the one that will actually be modified.
-- Reference image: overall style, lighting, composition, tone, or atmosphere reference.
-- Local replacement source: logo, badge, handle, label, component, or other local element source.
-- Structural reference: product form, proportion, or industrial-design truth.
-- Detail reference: texture, finish, reflection, metal, glass, edge craft, or other detail evidence.
+每张图必须点名分工，禁止“参考上传图片”这种模糊说法：
 
-If the user is ambiguous, treat the sentence subject or "this one" as the target image.
+- 目标图：实际被修改的那张。用户含糊时，句子主语或“这张”就是目标图。
+- 场景母版：控制背景、光线、相机、构图，通常也控制画幅。
+- 产品结构参考：控制轮廓、比例、SKU、五金、部件、角度。
+- 材质参考：控制表面、反射、纹理、颜色。
+- 局部替换源：logo、徽标、把手、标签、部件。
+- 风格参考：氛围、色板、光线性格、摄影语言。
 
-For multi-image tasks, never write vague phrasing like "参考上传图片". Assign each image a clear job, such as:
+## 产品身份锁
 
-- Image 1: target scene
-- Image 2: product structure
-- Image 3: material/detail reference
-- Image 4: style or composition reference
+改图必须显式保护 SKU 识别点：轮廓与比例、盖子/顶部结构、把手与握柄、阀钮扣铰链等五金、品牌或 logo 区、材质工艺、配色和 SKU 专属细节，需要时含相机角度和产品姿态。氛围、光线、风格只能支撑产品，不能盖过它。不静默改动这些点。
 
-## Mode Selection
+## 品牌文字
 
-Use locked mode when the user wants to keep product structure, angle, composition, ratio, or SKU unchanged.
+- 只有原图、用户请求或画面里已出现 DUMIK 类品牌文字时，才把 **DUMIK** 当标准拼写处理；文字残缺或拼错优先纠正为 DUMIK。
+- 用户没提品牌、画面也没有品牌区时，不主动往提示词里加 DUMIK。
+- 品牌纠正写成可见文字修正，不写成新装饰元素。
 
-Use creative mode when the user allows ad-like reconstruction, scene building, or stronger storytelling while still preserving product recognizability.
+## 输出形状
 
-Use multi-reference mode when several images control different things, such as product structure, scene, local details, and material.
+1. 第一行：比例 + 比例依据（不可跳过）。
+2. 图片角色判断。
+3. 修改要点 2-4 条短句。
+4. 最终提示词放进代码块，方便整段复制。
 
-If unclear, default to locked mode.
-
-## Ratio
-
-Write the ratio first. The final answer must contain a first line beginning with `比例：`. Prefer a concrete ratio such as `9:16`, `1:1`, or `3:4`; do not omit the ratio line.
-
-For multi-reference image edits, first identify the canvas controller. The canvas controller is the image or instruction that controls the whole output ratio. Determine and state the ratio basis before writing the final prompt.
-
-Use this priority:
-
-1. Direct user ratio. Obey only when the user explicitly asks for that output ratio in the current request, such as "9:16", "4:5", or "按 1:1". Do not treat a ratio produced by a previous assistant draft as user intent.
-2. Current target image. If the user says "当前图", "这张图", "目标图", "沿用当前图构图", "修这张", "把图2改成...", or similar wording, that image controls the whole-canvas ratio.
-3. Explicit canvas controller. If the user says "use Image 4 as background/scene/target/master" or "edit Image 4 into...", that image controls the whole-canvas ratio.
-4. Target image real pixel ratio. If one uploaded image is the actual image being edited, keep that image ratio.
-5. Scene/master-background reference ratio. If a reference image provides the background, layout, camera, light panel, tabletop, or scene architecture, treat it as the scene master and keep its ratio.
-6. Platform/use-case ratio. Use this only when there is no user ratio, no target image, and no scene or canvas controller.
-7. Default ratio pool.
-
-Never invent a numeric ratio when the real target/canvas-controller dimensions are unknown. If the target image is clear but its pixel ratio is not available, do not silently output a prompt without a ratio. Either inspect the image dimensions when possible, ask the user to confirm the target ratio, or write the first line as "比例：需先确认目标图原始比例（当前不可猜 4:5 或其他数字比例）".
-
-Use non-numeric wording such as "沿用目标图原始比例" only as a fallback when the real ratio cannot be inspected. If the user or visible context already identifies the target as `9:16`, `1:1`, `4:5`, etc., write that numeric ratio.
-
-Do not choose 4:5 just because the image is portrait or ecommerce-related. Use 4:5 only when the user explicitly asks for 4:5, the target/canvas-controller image is actually 4:5, or there is no image-based controller and the platform use case clearly requires 4:5.
-
-Product, white-background, structure, material, logo, handle, and detail references do not control the whole-canvas ratio unless the user explicitly asks to match that product image ratio or the product image is the actual target being edited.
-
-For grid, storyboard, four-panel card, "2X2", or "抽卡" tasks, the grid controls only the internal layout, not the canvas ratio. Do not automatically choose 1:1 because there are four panels. Write both levels clearly: whole-canvas ratio first, internal layout second.
-
-Good ratio-basis examples:
-
-- "比例：3:4，依据图4场景母版原始竖版画幅；图2-3只控制产品结构和材质，不控制整图比例。整张图内部排成 2X2 四宫格。"
-- "比例：9:16，依据当前目标图/图2的真实竖版画幅；图1只作为产品或结构参考，不控制整图比例。"
-- "比例：需先确认目标图原始比例（当前不可猜 4:5 或其他数字比例）。"
-- "比例：9:16，用户已明确指定；图2-3只作为产品结构参考。"
-- "比例：1:1，用户要求按图2白底产品图比例改图，因此图2控制画幅。"
-
-Default ratio pool:
-
-- 1:1
-- 1:4
-- 4:1
-- 1:8
-- 8:1
-- 2:3
-- 3:2
-- 3:4
-- 4:3
-- 4:5
-- 5:4
-- 9:16
-- 16:9
-- 21:9
-
-Obey a user-provided ratio over automatic judgment.
-
-## Multi-Reference Product Scene Rules
-
-- Assign every image a job. Use "scene master" when one image controls the background, lighting, camera, and canvas ratio.
-- Keep product references separate from scene references. A product reference controls SKU shape, parts, material, logo area, and finish, not the canvas shape unless it is the target image.
-- When the user says every panel/frame must contain a repeated element, repeat that requirement before listing panel variations.
-- For compatibility or comparison scenes, keep the evidence visible in every panel, such as one product on gas flame and one product on an induction ring.
-- If the background is specified as a material or panel from a reference image, keep it across every panel instead of replacing it with a generic kitchen.
-
-## Writing Rules
-
-- Put the purpose and main subject before restrictions.
-- Start with 2 to 4 short bullets describing the main edits before the final code block.
-- Keep the product or user-specified subject as the visual lead; scene elements are supporting evidence only.
-- Keep constraints short and weighted: only name the points most likely to fail, such as repeated-element loss, SKU deformation, wrong handle/lid, wrong logo text, dirty material, or chaotic layout.
-- Express required rules as visible positive descriptions before writing negative prompts.
-- For grid prompts, state the invariant relationship once, then list only the panel-to-panel camera or composition changes.
-- If the prompt feels like a contract, rewrite it as an art-director brief: scene first, product relationship second, SKU identity third, risks last.
-- Use visible execution language instead of vague praise.
-- Never skip the explicit target image statement.
-- For existing portrait or skin refinement tasks, use `super-image-prompt`'s Portrait And Skin Refinement rules. Keep locked mode and state that the target image controls person, pose, crop, clothing, hair, background, and ratio. First law: remove oily shine and cheap smoothing before adding pores, fuzz, redness, or extra texture. Prefer local skin-material reconstruction over full-scene regeneration. Freeze identity, face structure, expression direction, pose, clothing, hair, background, product, crop, and ratio. Target high-end commercial skin: semi-matte, clean but not plastic, low-saturation natural complexion, small controlled highlights, clean shadows, no oily film, no cheap filter smoothing, no red nose or red cheeks. If the result is already close, do only small finishing.
-
-Avoid empty phrases such as "更高级", "更好看", "更有质感", or "更有广告感" by themselves. Replace them with concrete image directions, for example:
-
-- 镜面不锈钢反射干净克制，高光有秩序。
-- 白色塑料通透干净，不发灰不发黄。
-- 玻璃盖边缘反射真实，透感自然。
-- 暗部收住但不脏，轮廓清楚。
-- 产品像品牌广告主角，而不是素材拼贴。
-
-For iteration requests, change only the main requested variable and keep the rest stable.
-
-## Brand Text Correction
-
-- Treat **DUMIK** as the standard spelling only when the source image, user request, or visible brand/logo-like area already involves DUMIK-like text.
-- If visible text resembles DUMIK but appears malformed, OCR-like, or misspelled, prefer correcting it to **DUMIK**.
-- Do not proactively add **DUMIK** to prompts when the user did not mention a brand and the image does not clearly contain a brand/logo/text area.
-- When brand correction is relevant, describe it as a visible text correction, not as a new decorative element.
-
-## Output Shape
-
-Use this order:
-
-1. Image ratio and ratio basis
-2. Image-role judgment
-3. Short modification summary
-4. Final image-edit instruction as a visual brief inside the code block
-
-The first line before the final code block must always state ratio and ratio basis. Do not skip it.
-
-The final image-edit instruction must be inside a fenced code block so the user can copy it directly.
-
-When the user asks for "纯提示词", output only the final prompt body inside the code block.
+用户要“纯提示词”时，只输出代码块里的提示词正文。
 
 ## Guardrails
 
-- Do not write prompts for other platforms.
-- Do not rewrite an edit task as a generation task.
-- Do not silently change handles, lids, hardware, brand zone, outline, or SKU proportions.
-- Do not let protection text become longer than the actual edit direction.
-- Do not invent extra features or decorative clutter that the user did not ask for.
+- 不写其他平台的提示词；不把改图任务改写成生成任务。
+- 不静默改把手、盖子、五金、品牌区、轮廓或 SKU 比例。
+- 保护性文字不许比修改方向本身还长。
+- 不发明用户没要的功能和装饰。
+- 不承诺参考图撑不住的连续性。
 
-## Reference
+## 模板库（按需读）
 
-Read [references/original.md](references/original.md) when you need the full native template and edge cases.
+大块可套用模板在 [references/templates.md](references/templates.md)：抽象词翻译表、摄影 brief 顺序、材质语言与炊具材质引用块（镜面不锈钢专项）、人像与皮肤精修（含锁定修皮肤引用块）、空间融合、人手持产品、返修诊断、通用紧凑模板。遇到对应任务先读再写。
+
+完整原生模板和边角案例见 [references/original.md](references/original.md)。
+
+## 交接
+
+- 用户明确要实际生成：确认后的词交 `image-batch-agent`。
+- 详情页卖点发散、四宫格抽卡：交 `grid-card-prompts`。
+- 抽卡选片后细节漂移：交 `product-detail-repair`。
+- 路线拿不准：回 `ecom-visual-director`。

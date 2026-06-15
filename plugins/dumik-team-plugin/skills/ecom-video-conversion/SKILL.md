@@ -1,6 +1,6 @@
 ---
 name: ecom-video-conversion
-version: 0.1.2
+version: 0.1.3
 description: "在写分镜前规划中文电商视频的转化逻辑。适用于用户要做商品短视频、投放视频、种草视频、详情页视频或电商脚本，需要先明确人群、痛点、卖点顺序、证据链和转化节奏时使用。"
 ---
 
@@ -14,7 +14,7 @@ Solve message order before camera language. Decide what the viewer must understa
 
 只有用户明确说“生成视频 / 调用即梦 / 提交生成 / 跑视频任务 / 直接出片”等实际生成意图时，才进入视频生成执行；如果用户只是要“写脚本 / 写分镜 / 梳理视频 / 写提示词”，必须停在文字交付。
 
-如果用户给的是已有视频、教程、会议录屏或参考视频，并要求“转换成图文 HTML / 拆关键帧 / 提取口播 / 分析这个视频讲了什么 / 分析视频逻辑节奏与卖点”，优先使用 `video-evidence-html-report`。本 skill 只负责从目标出发设计新视频的转化结构。
+如果用户给的是已有视频、教程、会议录屏或参考视频，并要求“转换成图文 HTML / 拆关键帧 / 提取口播 / 分析这个视频讲了什么 / 分析视频逻辑节奏与卖点”，优先使用 `video-evidence-html-report`（该 skill 不在本插件内，属本机另装技能；本机没有就直说没装，不要硬套本 skill）。本 skill 只负责从目标出发设计新视频的转化结构。
 
 ## Priority
 

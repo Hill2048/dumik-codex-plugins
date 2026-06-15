@@ -1,0 +1,16 @@
+{
+  "_说明": "route 有效性台账。autopilot 闸② 选片完成后、或手动链路选片后，按本批次每条 route 追加一条记录；选方向时先看这里的历史 keep 率，优先用出片率高的 route。只追加，不改史。",
+  "_字段": {
+    "date": "YYYY-MM-DD",
+    "project": "项目名",
+    "selling_point": "卖点",
+    "family_id": "来源 family",
+    "route_id": "来源 route",
+    "candidates": "本批该 route 出了几张",
+    "keep": "直接留用几张",
+    "repair": "要修几张",
+    "reroll": "重抽几张",
+    "notes": "一句话：这条 route 崩在哪/赢在哪"
+  },
+  "records": []
+}
