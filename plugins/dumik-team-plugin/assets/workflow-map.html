@@ -544,41 +544,41 @@
             <article class="card image">
               <span class="tag">详情页策略</span>
               <h4>详情页策划</h4>
-              <p><code>ecom-detail-planner</code><br>固化视觉设定，规划卖点证据和创意方向。</p>
+              <p><code>D-detail-plan</code><br>固化视觉设定，规划卖点证据和创意方向。</p>
             </article>
 
             <article class="card image">
               <span class="tag">方向发散</span>
               <h4>四宫格抽卡</h4>
-              <p><code>grid-card-prompts</code><br>2x2 探方向，选中后展开全幅候选。</p>
+              <p><code>D-grid-prompt</code><br>2x2 探方向，选中后展开全幅候选。</p>
             </article>
 
             <article class="card image">
               <span class="tag">提示词双模式</span>
               <h4>改图指令 / 视觉 brief</h4>
-              <p><code>image-prompt-optimizer</code><br>改图：目标图、比例、参考图角色、产品保护；brief：场景、材质、光线、真实质感。</p>
+              <p><code>D-image-prompt</code><br>改图：目标图、比例、参考图角色、产品保护；brief：场景、材质、光线、真实质感。</p>
             </article>
 
             <article class="card image">
               <span class="tag">普通图片执行</span>
               <h4>生图 / 改图接口</h4>
-              <p><code>image-batch-agent</code><br>只提交已确认提示词到 Image2 / Banana，不写词。</p>
+              <p><code>D-image-run</code><br>只提交已确认提示词到 Image2 / Banana，不写词。</p>
             </article>
 
             <article class="card runninghub">
               <span class="tag">图片后处理小环</span>
               <h4>RunningHub 后处理</h4>
-              <p><code>runninghub-workflow-agent</code><br>在图片结果或指定原图之后做 SeedVR 放大、抠图，轮询并下载结果。</p>
+              <p><code>D-rh</code><br>在图片结果或指定原图之后做 SeedVR 放大、抠图，轮询并下载结果。</p>
             </article>
 
             <div class="split">
               <div class="mini">
                 <strong>自动串跑</strong>
-                <p><code>ecom-detail-autopilot</code><br>详情页批量 Agent 模式。</p>
+                <p><code>D-detail-auto</code><br>详情页批量 Agent 模式。</p>
               </div>
               <div class="mini">
                 <strong>细节修复</strong>
-                <p><code>product-detail-repair</code><br>抽卡后修产品结构漂移。</p>
+                <p><code>D-image-repair</code><br>抽卡后修产品结构漂移。</p>
               </div>
             </div>
           </div>
@@ -596,19 +596,19 @@
             <article class="card video">
               <span class="tag">转化策略</span>
               <h4>电商视频转化</h4>
-              <p><code>ecom-video-conversion</code><br>卖点顺序、证据链、开头钩子和视频结构。</p>
+              <p><code>D-video-plan</code><br>卖点顺序、证据链、开头钩子和视频结构。</p>
             </article>
 
             <article class="card video">
               <span class="tag">分镜提示词</span>
               <h4>故事板与逐镜提示词</h4>
-              <p><code>video-storyboard-prompts</code><br>产品故事板、连续分镜、关键帧和逐镜提示词。</p>
+              <p><code>D-storyboard</code><br>产品故事板、连续分镜、关键帧和逐镜提示词。</p>
             </article>
 
             <article class="card video">
               <span class="tag">视频执行</span>
               <h4>批量生视频</h4>
-              <p><code>video-batch-agent</code><br>先出确认片，确认后批量生成。</p>
+              <p><code>D-video-run</code><br>先出确认片，确认后批量生成。</p>
             </article>
           </div>
         </div>
@@ -673,17 +673,17 @@
 
         <div class="cell"><strong>改图 / 白底精修</strong><p>保结构、保角度、修品牌区。</p></div>
         <div class="cell"><strong>ecom-visual-director</strong><p>确认目标图和参考角色。</p></div>
-        <div class="cell"><strong>image-prompt-optimizer</strong><p>写可执行改图指令。</p></div>
+        <div class="cell"><strong>D-image-prompt</strong><p>写可执行改图指令。</p></div>
         <div class="cell"><strong>比例清楚</strong><p>指令可直接交给执行层。</p></div>
 
         <div class="cell"><strong>普通生图 / 改图接口</strong><p>Image2、Banana。</p></div>
         <div class="cell"><strong>ecom-visual-director</strong><p>确认已有提示词。</p></div>
-        <div class="cell"><strong>image-batch-agent</strong><p>只提交，不写词。</p></div>
+        <div class="cell"><strong>D-image-run</strong><p>只提交，不写词。</p></div>
         <div class="cell"><strong>图片保存</strong><p>确认图 / 成品 / 记录齐全。</p></div>
 
         <div class="cell"><strong>RunningHub 后处理</strong><p>超分、高清放大、抠图。</p></div>
         <div class="cell"><strong>图片主线</strong><p>作为图片后处理小环。</p></div>
-        <div class="cell"><strong>runninghub-workflow-agent</strong><p>提交 workflow / AI App 并下载结果。</p></div>
+        <div class="cell"><strong>D-rh</strong><p>提交 workflow / AI App 并下载结果。</p></div>
         <div class="cell"><strong>后处理图保存</strong><p>结果和 taskId 记录齐全。</p></div>
 
         <div class="cell"><strong>视频策略 / 分镜 / 生视频</strong><p>TVC 或动态交付。</p></div>

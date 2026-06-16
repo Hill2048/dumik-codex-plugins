@@ -10,19 +10,19 @@ assets/agent-skill-routing.md
 
 ## 快速入口
 
-- 工作台初始化：`workspace-init`
+- 工作台初始化：`D-init`
 - 图片主线：`ecom-visual-director`
-- 图片策划：`ecom-detail-planner`
-- 四宫格抽卡：`grid-card-prompts`
-- 详情页自动串跑：`ecom-detail-autopilot`
-- 细节修复：`product-detail-repair`
-- 改图指令 / 视觉 brief：`image-prompt-optimizer`（双模式）
+- 图片策划：`D-detail-plan`
+- 四宫格抽卡：`D-grid-prompt`
+- 详情页自动串跑：`D-detail-auto`
+- 细节修复：`D-image-repair`
+- 改图指令 / 视觉 brief：`D-image-prompt`（双模式）
 - 视频旁路：`tvc-director`
-- 图片执行：`image-batch-agent`
-- 图片后处理：`runninghub-workflow-agent`
-- 视频转化：`ecom-video-conversion`
-- 视频故事板：`video-storyboard-prompts`
-- 视频执行：`video-batch-agent`
+- 图片执行：`D-image-run`
+- 图片后处理：`D-rh`
+- 视频转化：`D-video-plan`
+- 视频故事板：`D-storyboard`
+- 视频执行：`D-video-run`
 
 ## 当前能力
 

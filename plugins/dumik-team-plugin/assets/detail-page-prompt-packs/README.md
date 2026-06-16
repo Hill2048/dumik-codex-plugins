@@ -1,6 +1,6 @@
 # 详情页 prompt-pack 视觉证据库
 
-沉淀详情页常用的视觉证据 family，让 `grid-card-prompts` **从 pack 里选方向**，而不是每次让模型临场想 4 个方向。这是「抽卡」从一次性发挥变成可复用系统的关键。
+沉淀详情页常用的视觉证据 family，让 `D-grid-prompt` **从 pack 里选方向**，而不是每次让模型临场想 4 个方向。这是「抽卡」从一次性发挥变成可复用系统的关键。
 
 ## 六个 family
 
@@ -26,9 +26,9 @@
 - `routes[]`：可选的机位/构图 route，每条带 `route_id` + `camera_route`，对应 autopilot run-state 里 `task.routeId`，便于复盘「哪条 route 有效」。
 - `card_direction_seed`：段一 2x2 生成 4 个方向的种子说明。
 
-## 怎么用（grid-card-prompts）
+## 怎么用（D-grid-prompt）
 
-1. 从 `ecom-detail-planner` 拿到卖点 + 视觉证据策略。
+1. 从 `D-detail-plan` 拿到卖点 + 视觉证据策略。
 2. 按卖点匹配 1-2 个 family（看 `suits_selling_points`）。
 3. 段一：从选中 family 的 `composition_variables` / `routes` 里取 3-4 个方向，组成 2x2，不再自由发挥。
 4. 段二：选中方向后展开全幅候选，每行带上 `route_id`，只在 route 内微调一个变量。
@@ -39,7 +39,7 @@
 台账：本目录 `route-feedback.json`，只追加不改史。
 
 - **什么时候写**：autopilot 闸② 选片完成后（或手动链路选完片后），按本批次每条用过的 route 追加一条记录：出了几张、keep / repair / reroll 各几张、一句话点评。
-- **什么时候读**：`grid-card-prompts` 选方向、autopilot 段二展开 route 时，先看台账历史——同 family 下 keep 率高的 route 优先，连续翻车的 route 降级或修 family。
+- **什么时候读**：`D-grid-prompt` 选方向、autopilot 段二展开 route 时，先看台账历史——同 family 下 keep 率高的 route 优先，连续翻车的 route 降级或修 family。
 - **什么时候升 family 版本**：根据台账结论改了某 family 的 routes、构图变量或收口规则，就把该 family 的 `version` 升一档，并在 notes 里写依据。
 
 ## 扩展

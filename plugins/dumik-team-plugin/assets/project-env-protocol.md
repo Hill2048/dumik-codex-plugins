@@ -14,7 +14,7 @@
 
 ## 项目目录
 
-默认根路径 `project\<项目名>\`。图片项目目录由 `image-batch-agent\scripts\init_project.py` 创建，视频项目由 `video-batch-agent\scripts\init_project.py` 创建。三大入口目录必须保持兼容底层脚本：
+默认根路径 `project\<项目名>\`。图片项目目录由 `D-image-run\scripts\init_project.py` 创建，视频项目由 `D-video-run\scripts\init_project.py` 创建。三大入口目录必须保持兼容底层脚本：
 
 ```text
 project\<项目名>\

@@ -2,17 +2,17 @@
   "plugin": "dumik-team-plugin",
   "pluginVersion": "0.3.0",
   "skills": {
-    "workspace-init": "0.2.0",
-    "ecom-detail-planner": "0.1.1",
-    "ecom-detail-autopilot": "0.2.1",
-    "grid-card-prompts": "0.1.3",
-    "product-detail-repair": "0.1.2",
-    "ecom-video-conversion": "0.1.3",
-    "image-prompt-optimizer": "0.3.1",
-    "image-repair-hd-workflow": "0.1.0",
-    "image-batch-agent": "1.3.5",
-    "runninghub-workflow-agent": "0.1.5",
-    "video-storyboard-prompts": "1.1.0",
-    "video-batch-agent": "0.1.7"
+    "D-init": "0.2.0",
+    "D-detail-plan": "0.1.1",
+    "D-detail-auto": "0.2.1",
+    "D-grid-prompt": "0.1.3",
+    "D-image-repair": "0.1.2",
+    "D-video-plan": "0.1.3",
+    "D-image-prompt": "0.3.1",
+    "D-image-HD": "0.1.0",
+    "D-image-run": "1.3.5",
+    "D-rh": "0.1.5",
+    "D-storyboard": "1.1.0",
+    "D-video-run": "0.1.7"
   }
 }

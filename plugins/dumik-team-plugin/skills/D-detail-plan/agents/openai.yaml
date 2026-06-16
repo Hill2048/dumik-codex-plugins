@@ -1,0 +1,4 @@
+interface:
+  display_name: "详情页出图策划"
+  short_description: "按 assets/agent-skill-routing.md 固化视觉设定，规划详情页结构、每卖点视觉证据和创意方向，不写最终提示词、不调用生成接口"
+  default_prompt: "先固化视觉设定，再吃运营卖点清单，输出详情页结构、每卖点视觉证据和创意方向；抽卡发散交给 D-grid-prompt。"

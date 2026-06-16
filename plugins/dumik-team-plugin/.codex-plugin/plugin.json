@@ -1,20 +1,30 @@
 {
   "name": "dumik-team-plugin",
   "version": "0.3.0",
-  "description": "DUMIK 团队电商视觉总监、TVC 总导演、项目环境部署、已检查清单、详情页出图策划、四宫格抽卡、产品细节修复、图片提示词、单图生图改图、RunningHub 后处理执行、明确批量时的批量改图、统一视频故事板、视频写作与批量生视频核心流程插件。",
+  "description": "DUMIK 团队短名技能包：D-init、D-image-prompt、D-image-run、D-image-HD、D-image-repair、D-rh、D-detail-plan、D-detail-auto、D-grid-prompt、D-video-plan、D-storyboard、D-video-run。",
   "author": {
     "name": "DUMIK Team"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "DUMIK Team Plugin",
-    "shortDescription": "电商视觉总监、TVC 总导演、项目环境部署、图片提示词、生图改图、RunningHub 后处理、视频故事板和批量生视频。",
-    "longDescription": "面向 DUMIK 团队的视觉工作流插件。两个顶层调度入口负责项目环境部署、目录分类、工具检查和底层技能调度，并可复用已检查清单，避免每次调用重复全量检查。电商视觉总监统筹图片、电商视觉和生图改图链路；TVC 总导演统筹视频策略、故事板、连续分镜和批量生视频链路。底层保留改图提示词优化、高级图像提示词、默认单图的图像生成编辑、RunningHub 放大和抠图后处理、明确批量时的项目制批量改图、统一视频故事板与分镜提示词、电商视频转化策划和项目制批量生视频。",
+    "shortDescription": "DUMIK 短名视觉技能：初始化、图片提示词、生图改图、高清修复、RunningHub、详情页、故事板和视频执行。",
+    "longDescription": "面向 DUMIK 团队的视觉工作流插件。当前技能统一使用 D-* 短名：D-init 负责工作台初始化和入口文件；D-image-prompt 负责图片提示词、改图和视觉 brief；D-image-run 负责普通图片生成；D-image-HD 负责整图高清修复；D-image-repair 负责产品局部细节修复；D-rh 负责 RunningHub 后处理；D-detail-plan、D-detail-auto、D-grid-prompt 负责详情页策略、自动串跑和抽卡发散；D-video-plan、D-storyboard、D-video-run 负责视频转化、故事板和批量生视频。",
     "developerName": "DUMIK Team",
     "category": "创意工具",
     "capabilities": [
-      "电商视觉总监",
-      "TVC 总导演",
+      "D-init",
+      "D-image-prompt",
+      "D-image-run",
+      "D-image-HD",
+      "D-image-repair",
+      "D-rh",
+      "D-detail-plan",
+      "D-detail-auto",
+      "D-grid-prompt",
+      "D-video-plan",
+      "D-storyboard",
+      "D-video-run",
       "项目环境部署",
       "已检查清单",
       "详情页出图策划",
@@ -30,7 +40,7 @@
       "逐镜提示词",
       "批量生视频"
     ],
-    "defaultPrompt": "按 DUMIK 团队流程帮我判断该走电商视觉总监还是 TVC 总导演，并调度对应技能。",
+    "defaultPrompt": "按 DUMIK 团队流程判断任务路线，并调度对应 D-* 短名技能。",
     "brandColor": "#2F4534",
     "composerIcon": "./assets/logo.svg",
     "logo": "./assets/logo.svg"

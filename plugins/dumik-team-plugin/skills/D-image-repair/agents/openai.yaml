@@ -1,0 +1,4 @@
+interface:
+  display_name: "产品细节修复"
+  short_description: "按 assets/agent-skill-routing.md 诊断抽卡图漂移的产品细节，给局部切图指引，再用 banana2 加产品白底图作参考写局部修复提示词，不调用生成接口"
+  default_prompt: "对照产品白底图诊断漂移的细节，给局部切图指引，再写 banana2 局部修复提示词配产品白底图作参考；生成交给 D-image-run。"

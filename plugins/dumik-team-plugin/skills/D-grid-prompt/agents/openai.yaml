@@ -1,0 +1,4 @@
+interface:
+  display_name: "四宫格抽卡提示词"
+  short_description: "按 assets/agent-skill-routing.md 用两段式四宫格抽卡发散单个卖点：段一 2x2 探方向，段二选中后展开全幅候选，引用视觉设定不重写身份，不调用生成接口"
+  default_prompt: "把一个卖点两段式抽卡：先出 2x2 四宫格探 4 个方向，选中后再展开多行独立全幅候选；引用视觉设定，生图交给 D-image-run。"
