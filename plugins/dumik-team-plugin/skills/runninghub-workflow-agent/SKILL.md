@@ -30,6 +30,7 @@ Use this skill only when the user explicitly asks for RunningHub / RH / 放大 /
 - `--reduce-size`：放大 AI App 的缩小尺寸，默认由 preset 决定
 - `--upscale-size`：放大 AI App 的放大尺寸，默认由 preset 决定
 - `--set-node`：临时覆盖其它节点参数
+- 默认输出目录：`%USERPROFILE%\Downloads\runninghub\upscale-<timestamp>`
 
 ## One-line Run
 
@@ -60,7 +61,7 @@ python scripts\run_runninghub_workflow.py --preset upscale --image "<要放大�
 scripts\run-upscale.ps1 "<要放大的图片路径>"
 ```
 
-默认锁定：`preset = upscale`、`reduce-size = 1500`、`upscale-size = 4000`；输出目录自动从仓库根 `CURRENT_PROJECT.md` 解析当前项目，落 `<项目路径>\输出\成品\runninghub-upscale`。要改尺寸传 `-ReduceSize` / `-UpscaleSize`，要改输出传 `-OutDir`。
+默认锁定：`preset = upscale`、`reduce-size = 1500`、`upscale-size = 4000`；输出目录默认落 `%USERPROFILE%\Downloads\runninghub\upscale-<timestamp>`。要改尺寸传 `-ReduceSize` / `-UpscaleSize`，要改输出传 `-OutDir`。
 
 临时指定尺寸：
 

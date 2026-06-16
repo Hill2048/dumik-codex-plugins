@@ -567,7 +567,8 @@ def resolve_output_dir(args: argparse.Namespace) -> Path:
     if args.out_dir:
         return Path(args.out_dir).expanduser()
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return Path.cwd() / "outputs" / "runninghub" / f"{args.preset}-{stamp}"
+    downloads = Path(os.getenv("USERPROFILE", str(Path.home()))) / "Downloads"
+    return downloads / "runninghub" / f"{args.preset}-{stamp}"
 
 
 def run(args: argparse.Namespace) -> None:
