@@ -252,6 +252,31 @@
     return opts;
   }
 
+  function saveActiveDocumentAsPsb(target) {
+    var oldCompatibility = null;
+    var changedCompatibility = false;
+
+    try {
+      oldCompatibility = app.preferences.maximizeCompatibility;
+      app.preferences.maximizeCompatibility = QueryStateType.NEVER;
+      changedCompatibility = true;
+    } catch (e) {}
+
+    try {
+      var desc = new ActionDescriptor();
+      var options = new ActionDescriptor();
+      try { options.putBoolean(stringIDToTypeID("maximizeCompatibility"), false); } catch (optionError) {}
+      desc.putObject(charIDToTypeID("As  "), charIDToTypeID("Pht8"), options);
+      desc.putPath(charIDToTypeID("In  "), target);
+      desc.putBoolean(charIDToTypeID("LwCs"), true);
+      executeAction(charIDToTypeID("save"), desc, DialogModes.NO);
+    } finally {
+      if (changedCompatibility) {
+        try { app.preferences.maximizeCompatibility = oldCompatibility; } catch (restoreError) {}
+      }
+    }
+  }
+
   function repairImportFileToPsb(source, target) {
     var kind = importKind(source);
     if (!kind || kind === "unknown") throw new Error("不支持自动修复的文件内容");
@@ -265,10 +290,10 @@
       if (!source.copy(temp)) throw new Error("创建临时导入文件失败");
       app.displayDialogs = DialogModes.NO;
       opened = app.open(temp, kind === "eps" ? epsOpenOptions() : pdfOpenOptions());
-      var saveOptions = new LargeDocumentSaveOptions();
-      opened.saveAs(target, saveOptions, true, Extension.LOWERCASE);
+      saveActiveDocumentAsPsb(target);
       opened.close(SaveOptions.DONOTSAVECHANGES);
       opened = null;
+      target = File(target.fsName);
       if (!target.exists) throw new Error("修复后 PSB 文件不存在");
       app.activeDocument = mainDoc;
       return target;
