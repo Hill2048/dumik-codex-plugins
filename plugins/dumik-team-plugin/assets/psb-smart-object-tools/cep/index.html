@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PSB 智能对象工具</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <main class="panel">
+    <header class="header">
+      <div>
+        <h1>PSB 智能对象工具</h1>
+        <p>智能对象整理</p>
+      </div>
+    </header>
+
+    <section class="actions">
+      <button id="run-link" class="primary">
+        <b class="icon">↗</b>
+        <span>转链接</span>
+        <small>导出到 _links</small>
+      </button>
+
+      <button id="run-collect" class="secondary">
+        <b class="icon">⇥</b>
+        <span>收集链接</span>
+        <small>拷到 _links 并重链</small>
+      </button>
+
+      <button id="run-relink-missing" class="secondary">
+        <b class="icon">⛓</b>
+        <span>找回丢失链接</span>
+        <small>选文件夹，按名匹配</small>
+      </button>
+
+      <button id="run-embed" class="secondary">
+        <b class="icon">⇣</b>
+        <span>嵌回文件</span>
+        <small>链接 SO 变内嵌</small>
+      </button>
+
+      <button id="run-text" class="secondary">
+        <b class="icon">T</b>
+        <span>提取文字</span>
+        <small>当前 SO 拆文案</small>
+      </button>
+    </section>
+    <div id="status" hidden></div>
+  </main>
+  <script src="./js/main.js"></script>
+</body>
+</html>
