@@ -202,6 +202,17 @@
     return ext || DEFAULT_EXTENSION;
   }
 
+  function importStyleExtension(name) {
+    var m = String(name || "").match(/(\.[^\.\\\/]+)$/);
+    var ext = m ? m[1].toLowerCase() : "";
+    return /^\.(pdf|ai|eps)$/i.test(ext);
+  }
+
+  function shouldSkipImportStyleSmartObject(meta, layerName) {
+    if (!meta) return false;
+    return importStyleExtension(meta.fileReference) || importStyleExtension(layerName);
+  }
+
   function uniqueFile(folder, baseName, index, layerIdValue, extension) {
     var ext = extension || DEFAULT_EXTENSION;
     var stem = safeName(docBaseName()) + "__" + pad(index, 3) + "__" + safeName(baseName) + "__id" + layerIdValue;
@@ -316,7 +327,7 @@
 
     var embeddedCount = 0;
     for (var i = 0; i < items.length; i++) {
-      if (!items[i].meta || !items[i].meta.linked) embeddedCount++;
+      if ((!items[i].meta || !items[i].meta.linked) && !shouldSkipImportStyleSmartObject(items[i].meta, items[i].name)) embeddedCount++;
     }
 
     var ok = confirm(
@@ -342,6 +353,11 @@
       if (SKIP_LINKED && freshMeta.linked) {
         skippedCount++;
         log("跳过已链接: " + item.path + " | " + freshMeta.fileReference);
+        continue;
+      }
+      if (shouldSkipImportStyleSmartObject(freshMeta, item.name)) {
+        skippedCount++;
+        log("跳过导入型智能对象，不导出外链: " + item.path + " | " + (freshMeta.fileReference || item.name));
         continue;
       }
 
