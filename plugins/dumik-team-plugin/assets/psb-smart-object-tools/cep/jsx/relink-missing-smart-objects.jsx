@@ -18,6 +18,7 @@
   }
 
   var doc = app.activeDocument;
+  var MAX_SEARCH_DEPTH = 30;
   var logLines = [];
   var relinkedCount = 0;
   var repairedCount = 0;
@@ -309,29 +310,108 @@
     return String(name || "").replace(/\.[^\.]+$/, "");
   }
 
+  function pushIndex(map, key, file) {
+    key = normalizeFileKey(key);
+    if (!key) return;
+    if (!map[key]) map[key] = [];
+    map[key].push(file);
+  }
+
+  function idFromName(name) {
+    var m = String(name || "").match(/__id(\d+)/i);
+    return m ? m[1] : "";
+  }
+
+  function generatedCoreName(name) {
+    var stem = stemOf(name);
+    stem = stem.replace(/^.*__\d{3}__/, "");
+    stem = stem.replace(/__id\d+(?:_\d+)?$/i, "");
+    return stem;
+  }
+
+  function addFileToIndex(file, index) {
+    var name = file.name;
+    pushIndex(index.exact, name, file);
+    pushIndex(index.stem, stemOf(name), file);
+    pushIndex(index.core, generatedCoreName(name), file);
+    var id = idFromName(name);
+    if (id) pushIndex(index.id, id, file);
+  }
+
   function scanFolder(folder, index) {
-    var files = folder.getFiles();
-    for (var i = 0; i < files.length; i++) {
-      var entry = files[i];
-      if (entry instanceof Folder) {
-        scanFolder(entry, index);
-      } else if (entry instanceof File) {
-        var key = normalizeFileKey(entry.name);
-        if (!index[key]) index[key] = [];
-        index[key].push(entry);
+    var queue = [{ folder: folder, depth: 0 }];
+    while (queue.length) {
+      var current = queue.shift();
+      if (current.depth > MAX_SEARCH_DEPTH) {
+        index.stats.tooDeep++;
+        log("跳过过深目录: " + current.folder.fsName);
+        continue;
+      }
+
+      var files = [];
+      try {
+        files = current.folder.getFiles();
+      } catch (e) {
+        index.stats.folderErrors++;
+        log("扫描目录失败: " + current.folder.fsName + " | " + e);
+        continue;
+      }
+
+      index.stats.folders++;
+      for (var i = 0; i < files.length; i++) {
+        var entry = files[i];
+        if (entry instanceof Folder) {
+          queue.push({ folder: entry, depth: current.depth + 1 });
+        } else if (entry instanceof File) {
+          index.stats.files++;
+          addFileToIndex(entry, index);
+        }
       }
     }
   }
 
   function stemCandidates(index, expected) {
     var targetStem = normalizeFileKey(stemOf(expected));
-    var matches = [];
-    for (var key in index) {
-      if (index.hasOwnProperty(key) && stemOf(key) === targetStem) {
-        for (var i = 0; i < index[key].length; i++) matches.push(index[key][i]);
+    return index.stem[targetStem] || [];
+  }
+
+  function uniqueByPath(files) {
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < files.length; i++) {
+      var key = "";
+      try {
+        key = files[i].fsName.toLowerCase();
+      } catch (e) {
+        key = String(files[i]);
       }
+      if (seen[key]) continue;
+      seen[key] = true;
+      out.push(files[i]);
     }
-    return matches;
+    return out;
+  }
+
+  function candidatePaths(files) {
+    var out = [];
+    for (var i = 0; i < files.length; i++) out.push("  候选: " + files[i].fsName);
+    return out;
+  }
+
+  function relinkCandidates(index, item, expected) {
+    var groups = [];
+    groups.push({ reason: "精确文件名", files: index.exact[normalizeFileKey(expected)] || [] });
+    groups.push({ reason: "同名 stem", files: stemCandidates(index, expected) });
+    groups.push({ reason: "当前 layer id", files: index.id[String(item.id)] || [] });
+    groups.push({ reason: "导出文件核心名", files: index.core[normalizeFileKey(generatedCoreName(expected))] || [] });
+    groups.push({ reason: "图层名核心名", files: index.core[normalizeFileKey(generatedCoreName(item.name))] || [] });
+
+    for (var i = 0; i < groups.length; i++) {
+      var files = uniqueByPath(groups[i].files);
+      if (files.length === 1) return { files: files, reason: groups[i].reason };
+      if (files.length > 1) return { files: files, reason: groups[i].reason, ambiguous: true };
+    }
+    return { files: [], reason: "" };
   }
 
   function failureSummary(maxLines) {
@@ -404,9 +484,15 @@
     if (!ok) return;
 
     log("搜索目录: " + searchFolder.fsName);
-    var fileIndex = {};
+    var fileIndex = {
+      exact: {},
+      stem: {},
+      core: {},
+      id: {},
+      stats: { folders: 0, files: 0, tooDeep: 0, folderErrors: 0 }
+    };
     scanFolder(searchFolder, fileIndex);
-    log("已扫描文件名数量: " + countKeys(fileIndex));
+    log("已扫描目录: " + fileIndex.stats.folders + " | 文件: " + fileIndex.stats.files + " | 最大深度: " + MAX_SEARCH_DEPTH);
 
     function relinkAllMissingSmartObjects() {
       for (var j = 0; j < missing.length; j++) {
@@ -418,21 +504,24 @@
         continue;
       }
 
-      var matches = fileIndex[normalizeFileKey(expected)] || [];
+      var resolved = relinkCandidates(fileIndex, item, expected);
+      var matches = resolved.files;
       if (matches.length === 0) {
         failedCount++;
         log("失败，未找到同名文件: " + item.path + " | " + expected);
         var loose = stemCandidates(fileIndex, expected);
         if (loose.length) {
           log("  找到同名不同扩展候选，未自动重链:");
-          for (var looseIndex = 0; looseIndex < loose.length; looseIndex++) log("  候选: " + loose[looseIndex].fsName);
+          var looseLines = candidatePaths(loose);
+          for (var looseIndex = 0; looseIndex < looseLines.length; looseIndex++) log(looseLines[looseIndex]);
         }
         continue;
       }
-      if (matches.length > 1) {
+      if (matches.length > 1 || resolved.ambiguous) {
         skippedCount++;
-        log("跳过，同名候选多个: " + item.path + " | " + expected + " | 数量 " + matches.length);
-        for (var m = 0; m < matches.length; m++) log("  候选: " + matches[m].fsName);
+        log("跳过，候选多个: " + item.path + " | " + expected + " | 规则 " + resolved.reason + " | 数量 " + matches.length);
+        var lines = candidatePaths(matches);
+        for (var m = 0; m < lines.length; m++) log(lines[m]);
         continue;
       }
 
@@ -446,7 +535,7 @@
         selectLayerById(item.id);
         relinkSelectedSmartObject(matches[0]);
         relinkedCount++;
-        log("已重链: " + item.path + " | " + expected + " -> " + matches[0].fsName);
+        log("已重链: " + item.path + " | " + expected + " -> " + matches[0].fsName + " | 规则: " + resolved.reason);
       } catch (eRelink) {
         failedCount++;
         log("重链失败: " + item.path + " | " + expected + " | " + eRelink);
