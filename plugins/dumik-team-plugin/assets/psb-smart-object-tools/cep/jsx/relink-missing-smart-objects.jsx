@@ -197,13 +197,24 @@
     return importKind(file) !== "";
   }
 
+  function imageKindFromHeader(header) {
+    if (header.substring(0, 3) === "\xFF\xD8\xFF") return "jpeg";
+    if (header.substring(0, 8) === "\x89PNG\r\n\x1A\n") return "png";
+    if (header.substring(0, 4) === "GIF8") return "gif";
+    if (header.substring(0, 4) === "II*\x00" || header.substring(0, 4) === "MM\x00*") return "tiff";
+    if (header.substring(0, 4) === "RIFF" && header.substring(8, 12) === "WEBP") return "webp";
+    return "";
+  }
+
   function importKind(file) {
     var ext = extensionOf(file);
-    var header = fileHeader(file, 8);
+    var header = fileHeader(file, 16);
     if (ext === ".psb" || ext === ".psd" || ext === ".psdt") {
       if (header.substring(0, 4) === "8BPS") return "";
       if (header.substring(0, 4) === "%PDF") return "pdf";
       if (header.substring(0, 4) === "%!PS") return "eps";
+      var imageKind = imageKindFromHeader(header);
+      if (imageKind) return imageKind;
       return "unknown";
     }
     if (header.substring(0, 4) === "%PDF") return "pdf";
@@ -227,7 +238,16 @@
   function uniqueTempImportFile(source, kind) {
     var folder = Folder(Folder.temp.fsName + "/psb-smart-object-import-fix");
     if (!folder.exists) folder.create();
-    var ext = kind === "eps" ? ".eps" : ".pdf";
+    var extMap = {
+      eps: ".eps",
+      pdf: ".pdf",
+      jpeg: ".jpg",
+      png: ".png",
+      tiff: ".tif",
+      gif: ".gif",
+      webp: ".webp"
+    };
+    var ext = extMap[kind] || ".psb";
     var stem = safeName(String(source.name || "import").replace(/\.[^\.]+$/, "")) + "_" + timestamp();
     return File(folder.fsName + "/" + stem + ext);
   }
@@ -277,6 +297,12 @@
     }
   }
 
+  function openImportFile(file, kind) {
+    if (kind === "eps") return app.open(file, epsOpenOptions());
+    if (kind === "pdf") return app.open(file, pdfOpenOptions());
+    return app.open(file);
+  }
+
   function repairImportFileToPsb(source, target) {
     var kind = importKind(source);
     if (!kind || kind === "unknown") throw new Error("不支持自动修复的文件内容");
@@ -289,7 +315,7 @@
     try {
       if (!source.copy(temp)) throw new Error("创建临时导入文件失败");
       app.displayDialogs = DialogModes.NO;
-      opened = app.open(temp, kind === "eps" ? epsOpenOptions() : pdfOpenOptions());
+      opened = openImportFile(temp, kind);
       saveActiveDocumentAsPsb(target);
       opened.close(SaveOptions.DONOTSAVECHANGES);
       opened = null;
