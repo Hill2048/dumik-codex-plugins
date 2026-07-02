@@ -20,6 +20,7 @@
   var doc = app.activeDocument;
   var logLines = [];
   var relinkedCount = 0;
+  var repairedCount = 0;
   var skippedCount = 0;
   var failedCount = 0;
 
@@ -192,15 +193,90 @@
   }
 
   function relinkWouldShowImportDialog(file) {
+    return importKind(file) !== "";
+  }
+
+  function importKind(file) {
     var ext = extensionOf(file);
     var header = fileHeader(file, 8);
     if (ext === ".psb" || ext === ".psd" || ext === ".psdt") {
-      return header.substring(0, 4) !== "8BPS";
+      if (header.substring(0, 4) === "8BPS") return "";
+      if (header.substring(0, 4) === "%PDF") return "pdf";
+      if (header.substring(0, 4) === "%!PS") return "eps";
+      return "unknown";
     }
-    if (header.substring(0, 4) === "%PDF") return true;
-    if (header.substring(0, 4) === "%!PS") return true;
-    if (/^\.(pdf|ai|eps)$/i.test(ext)) return true;
-    return false;
+    if (header.substring(0, 4) === "%PDF") return "pdf";
+    if (header.substring(0, 4) === "%!PS") return "eps";
+    if (/^\.(pdf|ai)$/i.test(ext)) return "pdf";
+    if (/^\.(eps)$/i.test(ext)) return "eps";
+    return "";
+  }
+
+  function uniqueFixedPsb(source) {
+    var stem = String(source.name || "fixed").replace(/\.[^\.]+$/, "");
+    var file = File(source.parent.fsName + "/" + safeName(stem) + "__fixed.psb");
+    var n = 2;
+    while (file.exists) {
+      file = File(source.parent.fsName + "/" + safeName(stem) + "__fixed_" + n + ".psb");
+      n++;
+    }
+    return file;
+  }
+
+  function uniqueTempImportFile(source, kind) {
+    var folder = Folder(Folder.temp.fsName + "/psb-smart-object-import-fix");
+    if (!folder.exists) folder.create();
+    var ext = kind === "eps" ? ".eps" : ".pdf";
+    var stem = safeName(String(source.name || "import").replace(/\.[^\.]+$/, "")) + "_" + timestamp();
+    return File(folder.fsName + "/" + stem + ext);
+  }
+
+  function pdfOpenOptions() {
+    var opts = new PDFOpenOptions();
+    try { opts.antiAlias = true; } catch (e) {}
+    try { opts.resolution = 300; } catch (e) {}
+    try { opts.mode = OpenDocumentMode.RGB; } catch (e) {}
+    try { opts.bitsPerChannel = BitsPerChannelType.EIGHT; } catch (e) {}
+    try { opts.page = 1; } catch (e) {}
+    try { opts.cropPage = CropToType.BOUNDINGBOX; } catch (e) {}
+    return opts;
+  }
+
+  function epsOpenOptions() {
+    var opts = new EPSOpenOptions();
+    try { opts.antiAlias = true; } catch (e) {}
+    try { opts.resolution = 300; } catch (e) {}
+    try { opts.mode = OpenDocumentMode.RGB; } catch (e) {}
+    try { opts.bitsPerChannel = BitsPerChannelType.EIGHT; } catch (e) {}
+    return opts;
+  }
+
+  function repairImportFileToPsb(source, target) {
+    var kind = importKind(source);
+    if (!kind || kind === "unknown") throw new Error("不支持自动修复的文件内容");
+
+    var oldDialogs = app.displayDialogs;
+    var mainDoc = doc;
+    var temp = uniqueTempImportFile(source, kind);
+    var opened = null;
+
+    try {
+      if (!source.copy(temp)) throw new Error("创建临时导入文件失败");
+      app.displayDialogs = DialogModes.NO;
+      opened = app.open(temp, kind === "eps" ? epsOpenOptions() : pdfOpenOptions());
+      var saveOptions = new LargeDocumentSaveOptions();
+      opened.saveAs(target, saveOptions, true, Extension.LOWERCASE);
+      opened.close(SaveOptions.DONOTSAVECHANGES);
+      opened = null;
+      if (!target.exists) throw new Error("修复后 PSB 文件不存在");
+      app.activeDocument = mainDoc;
+      return target;
+    } finally {
+      try { if (opened) opened.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+      try { if (temp.exists) temp.remove(); } catch (removeError) {}
+      app.displayDialogs = oldDialogs;
+      try { app.activeDocument = mainDoc; } catch (activeError) {}
+    }
   }
 
   function basenameFromPath(path) {
@@ -293,6 +369,7 @@
       f.writeln("时间: " + new Date());
       f.writeln("");
       f.writeln("重链: " + relinkedCount);
+      f.writeln("自动修复: " + repairedCount);
       f.writeln("跳过: " + skippedCount);
       f.writeln("失败: " + failedCount);
       f.writeln("");
@@ -361,9 +438,10 @@
 
       try {
         if (relinkWouldShowImportDialog(matches[0])) {
-          skippedCount++;
-          log("跳过，文件会触发导入窗口，请手动重链: " + item.path + " | " + expected + " -> " + matches[0].fsName);
-          continue;
+          log("检测到非原生 PSB，自动包一层修复: " + matches[0].fsName);
+          matches[0] = repairImportFileToPsb(matches[0], uniqueFixedPsb(matches[0]));
+          repairedCount++;
+          log("已生成真 PSB: " + matches[0].fsName);
         }
         selectLayerById(item.id);
         relinkSelectedSmartObject(matches[0]);
@@ -380,7 +458,7 @@
 
     var logFile = writeLog();
     var summary = failureSummary(6);
-    alert("完成。\n\n已重链：" + relinkedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (summary ? "\n\n失败摘要：\n" + summary : "") + (logFile ? "\n\n日志：" + logFile.fsName : ""));
+    alert("完成。\n\n已重链：" + relinkedCount + "\n自动修复：" + repairedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (summary ? "\n\n失败摘要：\n" + summary : "") + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {
     alert("脚本出错: " + e + (e && e.line ? "\n行: " + e.line : ""));
   }
