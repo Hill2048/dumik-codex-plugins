@@ -1,0 +1,82 @@
+(function () {
+  var statusEl = document.getElementById("status");
+  var linkButton = document.getElementById("run-link");
+  var collectButton = document.getElementById("run-collect");
+  var relinkMissingButton = document.getElementById("run-relink-missing");
+  var embedButton = document.getElementById("run-embed");
+  var textButton = document.getElementById("run-text");
+
+  var scripts = {
+    link: "link-smart-objects.jsx",
+    collect: "collect-linked-smart-objects.jsx",
+    relinkMissing: "relink-missing-smart-objects.jsx",
+    embed: "embed-linked-smart-objects.jsx",
+    text: "extract-smart-object-text.jsx"
+  };
+
+  function setStatus(message) {
+    statusEl.textContent = message;
+  }
+
+  function setBusy(isBusy) {
+    linkButton.disabled = isBusy;
+    collectButton.disabled = isBusy;
+    relinkMissingButton.disabled = isBusy;
+    embedButton.disabled = isBusy;
+    textButton.disabled = isBusy;
+  }
+
+  function extensionRoot() {
+    if (!window.__adobe_cep__ || !window.__adobe_cep__.getSystemPath) {
+      throw new Error("没有检测到 CEP 环境。请在 Photoshop 插件面板里运行。");
+    }
+    return window.__adobe_cep__.getSystemPath("extension").replace(/\\/g, "/");
+  }
+
+  function jsxQuote(value) {
+    return '"' + String(value).replace(/\\/g, "/").replace(/"/g, '\\"') + '"';
+  }
+
+  function runJsxFile(fileName, label) {
+    setBusy(true);
+    setStatus("正在执行：" + label);
+
+    try {
+      var path = extensionRoot() + "/jsx/" + fileName;
+      var script = "$.evalFile(" + jsxQuote(path) + ")";
+      window.__adobe_cep__.evalScript(script, function (result) {
+        setBusy(false);
+        if (result && /^EvalScript error\./.test(result)) {
+          setStatus("执行失败：" + result);
+          return;
+        }
+        setStatus("已触发：" + label + "。请看 Photoshop 弹窗和脚本日志。");
+      });
+    } catch (error) {
+      setBusy(false);
+      setStatus("执行失败：" + error.message);
+    }
+  }
+
+  linkButton.addEventListener("click", function () {
+    runJsxFile(scripts.link, "批量转链接智能对象");
+  });
+
+  collectButton.addEventListener("click", function () {
+    runJsxFile(scripts.collect, "收集链接对象到主文件目录");
+  });
+
+  relinkMissingButton.addEventListener("click", function () {
+    runJsxFile(scripts.relinkMissing, "批量重新链接丢失智能对象");
+  });
+
+  embedButton.addEventListener("click", function () {
+    runJsxFile(scripts.embed, "批量嵌入链接智能对象");
+  });
+
+  textButton.addEventListener("click", function () {
+    runJsxFile(scripts.text, "只提取当前 SO 文字");
+  });
+
+  setStatus("准备就绪");
+})();

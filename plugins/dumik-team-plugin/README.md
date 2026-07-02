@@ -5,6 +5,7 @@
 ## 已收纳流程
 
 - `D-init`：工作台初始化。新仓库/新电脑装好插件后跑一次，按模板生成入口文件（AGENTS.md、CLAUDE.md、CURRENT_PROJECT.md、CONTEXT.md），按需建第一个项目目录并做环境检查；只补缺不覆盖。
+- `D-psb-install`：安装 PSB 智能对象工具。把内置 CEP 稳定版复制到 Adobe CEP 扩展目录，重启 Photoshop 后从「窗口 > 扩展功能（旧版）」打开。
 - `ecom-visual-director`：电商视觉总监顶层入口，先按统一路由判断是否进入项目制，再统筹主图、详情页、白底精修、产品改图、KV、批量图片和实际生图链路。
 - `tvc-director`：TVC 总导演顶层入口，先按统一路由判断是否进入项目制，再统筹电商视频、TVC、卖点顺序、故事板、连续分镜、逐镜提示词和批量生视频链路。
 - `D-detail-plan`：详情页出图策略层，固化视觉设定，规划详情页结构、每卖点视觉证据和创意方向，是图片线对称于视频线 `D-video-plan` 的转化策划入口。
@@ -24,6 +25,7 @@
 - Agent 路由：`assets/agent-skill-routing.md`
 - 项目入口与环境协议（唯一来源）：`assets/project-env-protocol.md`
 - 已检查清单：`assets/verified-environment-checklist.md`
+- PSB 智能对象工具：`assets/psb-smart-object-tools/`
 
 ## 团队使用建议
 
