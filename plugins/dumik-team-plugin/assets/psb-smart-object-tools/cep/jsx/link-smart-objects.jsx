@@ -23,7 +23,7 @@
     return;
   }
 
-  var EXTENSION = ".psb";
+  var DEFAULT_EXTENSION = ".psb";
   var LINKS_FOLDER_SUFFIX = "_links";
   var DISABLE_MAX_COMPATIBILITY_DURING_RUN = true;
   var SAVE_MAIN_DOCUMENT = false;
@@ -190,12 +190,25 @@
     executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
   }
 
-  function uniqueFile(folder, baseName, index, layerIdValue) {
+  function extensionFromName(name) {
+    var m = String(name || "").match(/(\.[^\.\\\/]+)$/);
+    var ext = m ? m[1].toLowerCase() : "";
+    if (/^\.(psb|psd|psdt|pdf|ai|eps|tif|tiff|jpg|jpeg|png)$/i.test(ext)) return ext;
+    return DEFAULT_EXTENSION;
+  }
+
+  function outputExtensionForSmartObject(meta) {
+    var ext = extensionFromName(meta && meta.fileReference);
+    return ext || DEFAULT_EXTENSION;
+  }
+
+  function uniqueFile(folder, baseName, index, layerIdValue, extension) {
+    var ext = extension || DEFAULT_EXTENSION;
     var stem = safeName(docBaseName()) + "__" + pad(index, 3) + "__" + safeName(baseName) + "__id" + layerIdValue;
-    var file = File(folder.fsName + "/" + stem + EXTENSION);
+    var file = File(folder.fsName + "/" + stem + ext);
     var n = 2;
     while (file.exists) {
-      file = File(folder.fsName + "/" + stem + "_" + n + EXTENSION);
+      file = File(folder.fsName + "/" + stem + "_" + n + ext);
       n++;
     }
     return file;
@@ -332,7 +345,7 @@
         continue;
       }
 
-      var outFile = uniqueFile(outputFolder, item.name, j + 1, item.id);
+      var outFile = uniqueFile(outputFolder, item.name, j + 1, item.id, outputExtensionForSmartObject(freshMeta));
       try {
         convertActiveEmbeddedToLinked(outFile);
         convertedCount++;
