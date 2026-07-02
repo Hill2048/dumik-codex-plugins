@@ -186,6 +186,10 @@
     }
   }
 
+  function shouldWriteLog() {
+    return failedCount > 0;
+  }
+
   try {
     var items = [];
     collectSmartObjects(items);
@@ -226,7 +230,7 @@
 
     runAsOneHistory("批量嵌入链接智能对象", embedAllLinkedSmartObjects);
 
-    var logFile = writeLog();
+    var logFile = shouldWriteLog() ? writeLog() : null;
     alert("完成。\n\n已嵌入：" + embeddedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {
     alert("脚本出错: " + e + (e && e.line ? "\n行: " + e.line : ""));

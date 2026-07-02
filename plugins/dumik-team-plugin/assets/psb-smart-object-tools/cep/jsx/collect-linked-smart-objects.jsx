@@ -358,6 +358,10 @@
     }
   }
 
+  function shouldWriteLog() {
+    return failedCount > 0;
+  }
+
   try {
     var folder = outputFolder();
     if (!folder) return;
@@ -436,7 +440,7 @@
 
     runAsOneHistory("收集链接对象并重链", collectAndRelinkAll);
 
-    var logFile = writeLog(folder);
+    var logFile = shouldWriteLog() ? writeLog(folder) : null;
     alert("完成。\n\n已收集并重链：" + collectedCount + "\n自动修复：" + repairedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {
     alert("脚本出错: " + e + (e && e.line ? "\n行: " + e.line : ""));
