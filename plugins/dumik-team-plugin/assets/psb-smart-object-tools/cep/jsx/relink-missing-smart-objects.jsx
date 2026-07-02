@@ -173,6 +173,36 @@
     executeAction(stringIDToTypeID("placedLayerRelinkToFile"), desc, DialogModes.NO);
   }
 
+  function extensionOf(file) {
+    var m = String(file && file.name || "").match(/(\.[^\.]+)$/);
+    return m ? m[1].toLowerCase() : "";
+  }
+
+  function fileHeader(file, count) {
+    try {
+      file.encoding = "BINARY";
+      if (!file.open("r")) return "";
+      var s = file.read(count || 8);
+      file.close();
+      return s || "";
+    } catch (e) {
+      try { file.close(); } catch (closeError) {}
+      return "";
+    }
+  }
+
+  function relinkWouldShowImportDialog(file) {
+    var ext = extensionOf(file);
+    var header = fileHeader(file, 8);
+    if (ext === ".psb" || ext === ".psd" || ext === ".psdt") {
+      return header.substring(0, 4) !== "8BPS";
+    }
+    if (header.substring(0, 4) === "%PDF") return true;
+    if (header.substring(0, 4) === "%!PS") return true;
+    if (/^\.(pdf|ai|eps)$/i.test(ext)) return true;
+    return false;
+  }
+
   function basenameFromPath(path) {
     var s = String(path || "");
     try {
@@ -330,6 +360,11 @@
       }
 
       try {
+        if (relinkWouldShowImportDialog(matches[0])) {
+          skippedCount++;
+          log("跳过，文件会触发导入窗口，请手动重链: " + item.path + " | " + expected + " -> " + matches[0].fsName);
+          continue;
+        }
         selectLayerById(item.id);
         relinkSelectedSmartObject(matches[0]);
         relinkedCount++;

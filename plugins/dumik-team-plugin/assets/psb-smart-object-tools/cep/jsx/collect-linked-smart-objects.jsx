@@ -175,6 +175,31 @@
     executeAction(stringIDToTypeID("placedLayerRelinkToFile"), desc, DialogModes.NO);
   }
 
+  function fileHeader(file, count) {
+    try {
+      file.encoding = "BINARY";
+      if (!file.open("r")) return "";
+      var s = file.read(count || 8);
+      file.close();
+      return s || "";
+    } catch (e) {
+      try { file.close(); } catch (closeError) {}
+      return "";
+    }
+  }
+
+  function relinkWouldShowImportDialog(file) {
+    var ext = extensionOf(file).toLowerCase();
+    var header = fileHeader(file, 8);
+    if (ext === ".psb" || ext === ".psd" || ext === ".psdt") {
+      return header.substring(0, 4) !== "8BPS";
+    }
+    if (header.substring(0, 4) === "%PDF") return true;
+    if (header.substring(0, 4) === "%!PS") return true;
+    if (/^\.(pdf|ai|eps)$/i.test(ext)) return true;
+    return false;
+  }
+
   function outputFolder() {
     try {
       if (!doc.path) {
@@ -303,6 +328,11 @@
       if (!source.exists) {
         failedCount++;
         log("失败，源文件不存在: " + item.path + " | " + item.meta.linkPath);
+        continue;
+      }
+      if (relinkWouldShowImportDialog(source)) {
+        skippedCount++;
+        log("跳过，文件会触发导入窗口，请手动收集/重链: " + item.path + " | " + source.fsName);
         continue;
       }
       if (isInsideFolder(source, folder)) {
