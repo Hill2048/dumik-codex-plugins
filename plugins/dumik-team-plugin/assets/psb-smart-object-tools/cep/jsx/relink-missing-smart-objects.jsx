@@ -425,6 +425,14 @@
     return out.join("\n");
   }
 
+  function shouldWriteLog() {
+    if (failedCount > 0) return true;
+    for (var i = 0; i < logLines.length; i++) {
+      if (/失败|候选多个|扫描目录失败|跳过过深目录|不支持自动修复/.test(logLines[i])) return true;
+    }
+    return false;
+  }
+
   function timestamp() {
     var d = new Date();
     function p(n) { return n < 10 ? "0" + n : String(n); }
@@ -545,7 +553,7 @@
 
     runAsOneHistory("批量重新链接丢失智能对象", relinkAllMissingSmartObjects);
 
-    var logFile = writeLog();
+    var logFile = shouldWriteLog() ? writeLog() : null;
     var summary = failureSummary(6);
     alert("完成。\n\n已重链：" + relinkedCount + "\n自动修复：" + repairedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (summary ? "\n\n失败摘要：\n" + summary : "") + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {

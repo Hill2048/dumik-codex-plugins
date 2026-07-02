@@ -314,6 +314,10 @@
     }
   }
 
+  function shouldWriteLog() {
+    return failedCount > 0;
+  }
+
   try {
     log("脚本启动");
     var outputFolder = chooseOutputFolder();
@@ -389,7 +393,7 @@
       log("主文档未自动保存，请检查后手动保存。");
     }
 
-    var logFile = writeLog(outputFolder);
+    var logFile = shouldWriteLog() ? writeLog(outputFolder) : null;
     alert(
       "完成。\n\n" +
       "已转换：" + convertedCount + "\n" +
