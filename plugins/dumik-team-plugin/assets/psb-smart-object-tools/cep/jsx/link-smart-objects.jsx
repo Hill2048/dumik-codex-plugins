@@ -24,6 +24,7 @@
   }
 
   var DEFAULT_EXTENSION = ".psb";
+  var LINKS_ROOT_FOLDER = "links";
   var LINKS_FOLDER_SUFFIX = "_links";
   var DISABLE_MAX_COMPATIBILITY_DURING_RUN = true;
   var SAVE_MAIN_DOCUMENT = false;
@@ -244,15 +245,17 @@
   function chooseOutputFolder() {
     try {
       if (!doc.path) {
-        alert("请先保存主 PSB，再运行脚本。\n\n链接文件会统一放到主文件旁边的“主文件名_links”文件夹。");
+        alert("请先保存主 PSB，再运行脚本。\n\n链接文件会统一放到主文件旁边的 links\\主文件名_links 文件夹。");
         return null;
       }
 
-      var folder = Folder(doc.path.fsName + "/" + safeName(docBaseName()) + LINKS_FOLDER_SUFFIX);
+      var root = Folder(doc.path.fsName + "/" + LINKS_ROOT_FOLDER);
+      if (!root.exists) root.create();
+      var folder = Folder(root.fsName + "/" + safeName(docBaseName()) + LINKS_FOLDER_SUFFIX);
       if (!folder.exists) folder.create();
       return folder;
     } catch (e) {
-      alert("创建“主文件名_links”文件夹失败：\n" + e);
+      alert("创建 links\\主文件名_links 文件夹失败：\n" + e);
       return null;
     }
   }

@@ -4,7 +4,7 @@
   collect-linked-smart-objects.jsx
 
   批量收集当前文档里的链接智能对象源文件：
-  - 复制源文件到主 PSB 同级的“主文件名_links”文件夹。
+  - 复制源文件到主 PSB 同级的 links\主文件名_links 文件夹。
   - 重新链接图层到复制后的文件。
   - 已经在目标文件夹里的链接跳过。
   - 不自动保存主文档。
@@ -17,6 +17,7 @@
   }
 
   var LINKS_FOLDER_SUFFIX = "_links";
+  var LINKS_ROOT_FOLDER = "links";
   var doc = app.activeDocument;
   var logLines = [];
   var collectedCount = 0;
@@ -268,14 +269,16 @@
   function outputFolder() {
     try {
       if (!doc.path) {
-        alert("请先保存主 PSB，再运行脚本。\n\n链接文件会收集到主文件旁边的“主文件名_links”文件夹。");
+        alert("请先保存主 PSB，再运行脚本。\n\n链接文件会收集到主文件旁边的 links\\主文件名_links 文件夹。");
         return null;
       }
-      var folder = Folder(doc.path.fsName + "/" + safeName(docBaseName()) + LINKS_FOLDER_SUFFIX);
+      var root = Folder(doc.path.fsName + "/" + LINKS_ROOT_FOLDER);
+      if (!root.exists) root.create();
+      var folder = Folder(root.fsName + "/" + safeName(docBaseName()) + LINKS_FOLDER_SUFFIX);
       if (!folder.exists) folder.create();
       return folder;
     } catch (e) {
-      alert("创建“主文件名_links”文件夹失败：\n" + e);
+      alert("创建 links\\主文件名_links 文件夹失败：\n" + e);
       return null;
     }
   }
