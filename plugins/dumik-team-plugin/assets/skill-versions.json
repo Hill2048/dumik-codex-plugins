@@ -1,6 +1,6 @@
 {
   "plugin": "dumik-team-plugin",
-  "pluginVersion": "0.3.9",
+  "pluginVersion": "0.4.1",
   "skills": {
     "D-init": "0.2.0",
     "D-psb-install": "0.1.0",

@@ -22,11 +22,24 @@
   var logLines = [];
   var relinkedCount = 0;
   var repairedCount = 0;
+  var reusedFixedCount = 0;
   var skippedCount = 0;
   var failedCount = 0;
+  var repairCache = {};
+  var importKindCache = {};
+  var successLogCount = 0;
 
   function log(msg) {
     logLines.push(msg);
+  }
+
+  function logSuccess(msg) {
+    if (successLogCount < 20) {
+      log(msg);
+    } else if (successLogCount === 20) {
+      log("已省略后续成功重链记录。");
+    }
+    successLogCount++;
   }
 
   function runAsOneHistory(name, fn) {
@@ -207,21 +220,35 @@
   }
 
   function importKind(file) {
+    var cacheKey = "";
+    try {
+      cacheKey = String(file.fsName || file.name).toLowerCase();
+      if (importKindCache.hasOwnProperty(cacheKey)) return importKindCache[cacheKey];
+    } catch (cacheError) {}
+
     var ext = extensionOf(file);
     var header = fileHeader(file, 16);
+    var kind = "";
     if (ext === ".psb" || ext === ".psd" || ext === ".psdt") {
-      if (header.substring(0, 4) === "8BPS") return "";
-      if (header.substring(0, 4) === "%PDF") return "pdf";
-      if (header.substring(0, 4) === "%!PS") return "eps";
+      if (header.substring(0, 4) === "8BPS") kind = "";
+      else if (header.substring(0, 4) === "%PDF") kind = "pdf";
+      else if (header.substring(0, 4) === "%!PS") kind = "eps";
+      else {
       var imageKind = imageKindFromHeader(header);
-      if (imageKind) return imageKind;
-      return "unknown";
+        kind = imageKind || "unknown";
+      }
+    } else if (header.substring(0, 4) === "%PDF") {
+      kind = "pdf";
+    } else if (header.substring(0, 4) === "%!PS") {
+      kind = "eps";
+    } else if (/^\.(pdf|ai)$/i.test(ext)) {
+      kind = "pdf";
+    } else if (/^\.(eps)$/i.test(ext)) {
+      kind = "eps";
     }
-    if (header.substring(0, 4) === "%PDF") return "pdf";
-    if (header.substring(0, 4) === "%!PS") return "eps";
-    if (/^\.(pdf|ai)$/i.test(ext)) return "pdf";
-    if (/^\.(eps)$/i.test(ext)) return "eps";
-    return "";
+
+    if (cacheKey) importKindCache[cacheKey] = kind;
+    return kind;
   }
 
   function uniqueFixedPsb(source) {
@@ -233,6 +260,19 @@
       n++;
     }
     return file;
+  }
+
+  function existingFixedPsb(source) {
+    var stem = safeName(String(source.name || "fixed").replace(/\.[^\.]+$/, ""));
+    var file = File(source.parent.fsName + "/" + stem + "__fixed.psb");
+    if (file.exists && importKind(file) === "") return file;
+
+    for (var n = 2; n <= 200; n++) {
+      file = File(source.parent.fsName + "/" + stem + "__fixed_" + n + ".psb");
+      if (file.exists && importKind(file) === "") return file;
+      if (!file.exists) break;
+    }
+    return null;
   }
 
   function uniqueTempImportFile(source, kind) {
@@ -368,6 +408,11 @@
     map[key].push(file);
   }
 
+  function wantedKey(set, key) {
+    key = normalizeFileKey(key);
+    return !!(key && set && set[key]);
+  }
+
   function idFromName(name) {
     var m = String(name || "").match(/__id(\d+)/i);
     return m ? m[1] : "";
@@ -380,19 +425,24 @@
     return stem;
   }
 
-  function addFileToIndex(file, index) {
+  function addFileToIndex(file, index, targets) {
     var name = file.name;
-    pushIndex(index.exact, name, file);
-    pushIndex(index.stem, stemOf(name), file);
-    pushIndex(index.core, generatedCoreName(name), file);
+    var exact = normalizeFileKey(name);
+    var stem = normalizeFileKey(stemOf(name));
+    var core = normalizeFileKey(generatedCoreName(name));
     var id = idFromName(name);
-    if (id) pushIndex(index.id, id, file);
+
+    if (!targets || wantedKey(targets.exact, exact)) pushIndex(index.exact, name, file);
+    if (!targets || wantedKey(targets.stem, stem)) pushIndex(index.stem, stemOf(name), file);
+    if (!targets || wantedKey(targets.core, core)) pushIndex(index.core, generatedCoreName(name), file);
+    if (id && (!targets || wantedKey(targets.id, id))) pushIndex(index.id, id, file);
   }
 
-  function scanFolder(folder, index) {
+  function scanFolder(folder, index, targets) {
     var queue = [{ folder: folder, depth: 0 }];
-    while (queue.length) {
-      var current = queue.shift();
+    var q = 0;
+    while (q < queue.length) {
+      var current = queue[q++];
       if (current.depth > MAX_SEARCH_DEPTH) {
         index.stats.tooDeep++;
         log("跳过过深目录: " + current.folder.fsName);
@@ -415,10 +465,31 @@
           queue.push({ folder: entry, depth: current.depth + 1 });
         } else if (entry instanceof File) {
           index.stats.files++;
-          addFileToIndex(entry, index);
+          addFileToIndex(entry, index, targets);
         }
       }
     }
+  }
+
+  function markTarget(set, key) {
+    key = normalizeFileKey(key);
+    if (key) set[key] = true;
+  }
+
+  function targetKeysForMissing(missingItems) {
+    var targets = { exact: {}, stem: {}, core: {}, id: {} };
+    for (var i = 0; i < missingItems.length; i++) {
+      var item = missingItems[i];
+      var expected = expectedFileName(item);
+      if (expected) {
+        markTarget(targets.exact, expected);
+        markTarget(targets.stem, stemOf(expected));
+        markTarget(targets.core, generatedCoreName(expected));
+      }
+      if (item && item.id) markTarget(targets.id, String(item.id));
+      if (item && item.name) markTarget(targets.core, generatedCoreName(item.name));
+    }
+    return targets;
   }
 
   function stemCandidates(index, expected) {
@@ -465,6 +536,88 @@
     return { files: [], reason: "" };
   }
 
+  function cacheKeyForFile(file) {
+    try {
+      return String(file.fsName || file.name).toLowerCase();
+    } catch (e) {
+      return String(file);
+    }
+  }
+
+  function repairedPsbFor(source) {
+    var key = cacheKeyForFile(source);
+    if (repairCache[key] && repairCache[key].exists) return repairCache[key];
+
+    var fixed = existingFixedPsb(source);
+    if (fixed) {
+      repairCache[key] = fixed;
+      reusedFixedCount++;
+      return fixed;
+    }
+
+    fixed = repairImportFileToPsb(source, uniqueFixedPsb(source));
+    repairCache[key] = fixed;
+    repairedCount++;
+    return fixed;
+  }
+
+  function prepareRelinkTasks(missingItems, fileIndex) {
+    var tasks = [];
+
+    for (var j = 0; j < missingItems.length; j++) {
+      var item = missingItems[j];
+      var expected = expectedFileName(item);
+      if (!expected) {
+        failedCount++;
+        log("失败，无法读取原文件名: " + item.path + " | " + item.meta.fileReference);
+        continue;
+      }
+
+      var resolved = relinkCandidates(fileIndex, item, expected);
+      var matches = resolved.files;
+      if (matches.length === 0) {
+        failedCount++;
+        log("失败，未找到同名文件: " + item.path + " | " + expected);
+        var loose = stemCandidates(fileIndex, expected);
+        if (loose.length) {
+          log("  找到同名不同扩展候选，未自动重链:");
+          var looseLines = candidatePaths(loose);
+          for (var looseIndex = 0; looseIndex < looseLines.length; looseIndex++) log(looseLines[looseIndex]);
+        }
+        continue;
+      }
+
+      if (matches.length > 1 || resolved.ambiguous) {
+        skippedCount++;
+        log("跳过，候选多个: " + item.path + " | " + expected + " | 规则 " + resolved.reason + " | 数量 " + matches.length);
+        var lines = candidatePaths(matches);
+        for (var m = 0; m < lines.length; m++) log(lines[m]);
+        continue;
+      }
+
+      try {
+        var target = matches[0];
+        if (relinkWouldShowImportDialog(target)) {
+          log("检测到非原生 PSB，准备修复: " + target.fsName);
+          target = repairedPsbFor(target);
+          logSuccess("可用真 PSB: " + target.fsName);
+        }
+
+        tasks.push({
+          item: item,
+          expected: expected,
+          target: target,
+          reason: resolved.reason
+        });
+      } catch (ePrepare) {
+        failedCount++;
+        log("准备重链失败: " + item.path + " | " + expected + " | " + ePrepare);
+      }
+    }
+
+    return tasks;
+  }
+
   function failureSummary(maxLines) {
     var out = [];
     for (var i = 0; i < logLines.length; i++) {
@@ -509,6 +662,7 @@
       f.writeln("");
       f.writeln("重链: " + relinkedCount);
       f.writeln("自动修复: " + repairedCount);
+      f.writeln("复用修复: " + reusedFixedCount);
       f.writeln("跳过: " + skippedCount);
       f.writeln("失败: " + failedCount);
       f.writeln("");
@@ -550,54 +704,23 @@
       id: {},
       stats: { folders: 0, files: 0, tooDeep: 0, folderErrors: 0 }
     };
-    scanFolder(searchFolder, fileIndex);
+    var targetKeys = targetKeysForMissing(missing);
+    scanFolder(searchFolder, fileIndex, targetKeys);
     log("已扫描目录: " + fileIndex.stats.folders + " | 文件: " + fileIndex.stats.files + " | 最大深度: " + MAX_SEARCH_DEPTH);
 
+    var relinkTasks = prepareRelinkTasks(missing, fileIndex);
+
     function relinkAllMissingSmartObjects() {
-      for (var j = 0; j < missing.length; j++) {
-      var item = missing[j];
-      var expected = expectedFileName(item);
-      if (!expected) {
-        failedCount++;
-        log("失败，无法读取原文件名: " + item.path + " | " + item.meta.fileReference);
-        continue;
-      }
-
-      var resolved = relinkCandidates(fileIndex, item, expected);
-      var matches = resolved.files;
-      if (matches.length === 0) {
-        failedCount++;
-        log("失败，未找到同名文件: " + item.path + " | " + expected);
-        var loose = stemCandidates(fileIndex, expected);
-        if (loose.length) {
-          log("  找到同名不同扩展候选，未自动重链:");
-          var looseLines = candidatePaths(loose);
-          for (var looseIndex = 0; looseIndex < looseLines.length; looseIndex++) log(looseLines[looseIndex]);
-        }
-        continue;
-      }
-      if (matches.length > 1 || resolved.ambiguous) {
-        skippedCount++;
-        log("跳过，候选多个: " + item.path + " | " + expected + " | 规则 " + resolved.reason + " | 数量 " + matches.length);
-        var lines = candidatePaths(matches);
-        for (var m = 0; m < lines.length; m++) log(lines[m]);
-        continue;
-      }
-
+      for (var j = 0; j < relinkTasks.length; j++) {
+      var task = relinkTasks[j];
       try {
-        if (relinkWouldShowImportDialog(matches[0])) {
-          log("检测到非原生 PSB，自动包一层修复: " + matches[0].fsName);
-          matches[0] = repairImportFileToPsb(matches[0], uniqueFixedPsb(matches[0]));
-          repairedCount++;
-          log("已生成真 PSB: " + matches[0].fsName);
-        }
-        selectLayerById(item.id);
-        relinkSelectedSmartObject(matches[0]);
+        selectLayerById(task.item.id);
+        relinkSelectedSmartObject(task.target);
         relinkedCount++;
-        log("已重链: " + item.path + " | " + expected + " -> " + matches[0].fsName + " | 规则: " + resolved.reason);
+        logSuccess("已重链: " + task.item.path + " | " + task.expected + " -> " + task.target.fsName + " | 规则: " + task.reason);
       } catch (eRelink) {
         failedCount++;
-        log("重链失败: " + item.path + " | " + expected + " | " + eRelink);
+        log("重链失败: " + task.item.path + " | " + task.expected + " | " + eRelink);
       }
     }
     }
@@ -606,7 +729,7 @@
 
     var logFile = shouldWriteLog() ? writeLog() : null;
     var summary = failureSummary(6);
-    alert("完成。\n\n已重链：" + relinkedCount + "\n自动修复：" + repairedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (summary ? "\n\n失败摘要：\n" + summary : "") + (logFile ? "\n\n日志：" + logFile.fsName : ""));
+    alert("完成。\n\n已重链：" + relinkedCount + "\n自动修复：" + repairedCount + "\n复用修复：" + reusedFixedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n主文档未自动保存，请检查后手动保存。" + (summary ? "\n\n失败摘要：\n" + summary : "") + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {
     alert("脚本出错: " + e + (e && e.line ? "\n行: " + e.line : ""));
   }

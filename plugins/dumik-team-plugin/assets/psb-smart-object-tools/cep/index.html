@@ -15,34 +15,76 @@
     </header>
 
     <section class="actions">
-      <button id="run-link" class="primary">
-        <b class="icon">↗</b>
+      <div class="group-title">链接整理</div>
+
+      <button id="run-link" class="primary action-link">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </span>
         <span>转链接</span>
-        <small>导出到 _links</small>
+        <small>导出</small>
       </button>
 
-      <button id="run-collect" class="secondary">
-        <b class="icon">⇥</b>
+      <button id="run-collect" class="secondary action-collect">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6"/><path d="m15 13-3 3-3-3"/></svg>
+        </span>
         <span>收集链接</span>
-        <small>拷到 _links 并重链</small>
+        <small>拷贝重链</small>
       </button>
 
-      <button id="run-relink-missing" class="secondary">
-        <b class="icon">⛓</b>
-        <span>找回丢失链接</span>
-        <small>选文件夹，按名匹配</small>
+      <button id="run-relink-missing" class="secondary action-relink">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+        </span>
+        <span>找回链接</span>
+        <small>按名匹配</small>
       </button>
 
-      <button id="run-embed" class="secondary">
-        <b class="icon">⇣</b>
-        <span>嵌回文件</span>
-        <small>链接 SO 变内嵌</small>
+      <button id="run-embed" class="secondary action-embed">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M12 12v5"/><path d="m9 14 3 3 3-3"/></svg>
+        </span>
+        <span>嵌回</span>
+        <small>转内嵌</small>
       </button>
 
-      <button id="run-text" class="secondary">
-        <b class="icon">T</b>
+      <div class="group-title">内容处理</div>
+
+      <button id="run-text" class="secondary action-text">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+        </span>
         <span>提取文字</span>
-        <small>当前 SO 拆文案</small>
+        <small>拆文案</small>
+      </button>
+
+      <button id="run-clean-metadata" class="secondary action-clean">
+        <span id="clean-metadata-options-toggle" class="option-badge" role="button" tabindex="0" title="清理选项" aria-label="清理选项">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+        </span>
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+        </span>
+        <span>清元数据</span>
+        <small>瘦文件</small>
+      </button>
+
+      <div id="clean-metadata-options" class="option-popover" hidden>
+        <label class="option-row" title="关闭后只清当前主文件">
+          <input id="clean-embedded-so" type="checkbox" checked>
+          <span>清理智能对象</span>
+        </label>
+      </div>
+
+      <div class="group-title">画板处理</div>
+
+      <button id="run-stamp-usm" class="secondary action-sharpen">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0Z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+        </span>
+        <span>锐化导出</span>
+        <small>画板JPG</small>
       </button>
     </section>
     <div id="status" hidden></div>

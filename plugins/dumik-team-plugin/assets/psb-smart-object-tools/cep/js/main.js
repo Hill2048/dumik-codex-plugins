@@ -5,13 +5,20 @@
   var relinkMissingButton = document.getElementById("run-relink-missing");
   var embedButton = document.getElementById("run-embed");
   var textButton = document.getElementById("run-text");
+  var cleanMetadataButton = document.getElementById("run-clean-metadata");
+  var cleanMetadataOptionsToggle = document.getElementById("clean-metadata-options-toggle");
+  var cleanMetadataOptions = document.getElementById("clean-metadata-options");
+  var cleanEmbeddedSoToggle = document.getElementById("clean-embedded-so");
+  var stampUsmButton = document.getElementById("run-stamp-usm");
 
   var scripts = {
     link: "link-smart-objects.jsx",
     collect: "collect-linked-smart-objects.jsx",
     relinkMissing: "relink-missing-smart-objects.jsx",
     embed: "embed-linked-smart-objects.jsx",
-    text: "extract-smart-object-text.jsx"
+    text: "extract-smart-object-text.jsx",
+    cleanMetadata: "clean-ps-metadata.jsx",
+    stampUsm: "stamp-usm-sharpen-documents.jsx"
   };
 
   function setStatus(message) {
@@ -24,6 +31,20 @@
     relinkMissingButton.disabled = isBusy;
     embedButton.disabled = isBusy;
     textButton.disabled = isBusy;
+    cleanMetadataButton.disabled = isBusy;
+    cleanMetadataOptionsToggle.classList.toggle("disabled", isBusy);
+    cleanEmbeddedSoToggle.disabled = isBusy;
+    stampUsmButton.disabled = isBusy;
+  }
+
+  function toggleCleanMetadataOptions(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (cleanMetadataButton.disabled) return;
+    cleanMetadataOptions.hidden = !cleanMetadataOptions.hidden;
+    cleanMetadataOptionsToggle.classList.toggle("open", !cleanMetadataOptions.hidden);
   }
 
   function extensionRoot() {
@@ -37,13 +58,13 @@
     return '"' + String(value).replace(/\\/g, "/").replace(/"/g, '\\"') + '"';
   }
 
-  function runJsxFile(fileName, label) {
+  function runJsxFile(fileName, label, prefixScript) {
     setBusy(true);
     setStatus("正在执行：" + label);
 
     try {
       var path = extensionRoot() + "/jsx/" + fileName;
-      var script = "$.evalFile(" + jsxQuote(path) + ")";
+      var script = (prefixScript || "") + "$.evalFile(" + jsxQuote(path) + ")";
       window.__adobe_cep__.evalScript(script, function (result) {
         setBusy(false);
         if (result && /^EvalScript error\./.test(result)) {
@@ -76,6 +97,24 @@
 
   textButton.addEventListener("click", function () {
     runJsxFile(scripts.text, "只提取当前 SO 文字");
+  });
+
+  cleanMetadataOptionsToggle.addEventListener("click", toggleCleanMetadataOptions);
+  cleanMetadataOptionsToggle.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") toggleCleanMetadataOptions(event);
+  });
+
+  cleanMetadataButton.addEventListener("click", function () {
+    var includeEmbedded = cleanEmbeddedSoToggle ? cleanEmbeddedSoToggle.checked : true;
+    runJsxFile(
+      scripts.cleanMetadata,
+      "清理 PS 元数据",
+      "$.global.__psbCleanMetadataIncludeEmbedded = " + (includeEmbedded ? "true;" : "false;")
+    );
+  });
+
+  stampUsmButton.addEventListener("click", function () {
+    runJsxFile(scripts.stampUsm, "锐化并导出 JPG");
   });
 
   setStatus("准备就绪");
