@@ -1,6 +1,6 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "DUMIK 团队短名技能包：D-init、D-psb-install、D-image-prompt、D-image-run、D-image-HD、D-image-repair、D-rh、D-detail-plan、D-detail-auto、D-grid-prompt、D-video-plan、D-storyboard、D-video-run。视频线已补充 Seedance / Dreamina 方法论参考。",
   "author": {
     "name": "DUMIK Team"
