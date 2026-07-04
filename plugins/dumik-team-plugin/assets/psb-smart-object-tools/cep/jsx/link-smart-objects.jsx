@@ -29,6 +29,7 @@
   var DISABLE_MAX_COMPATIBILITY_DURING_RUN = true;
   var SAVE_MAIN_DOCUMENT = false;
   var SKIP_LINKED = true;
+  var MIN_LAYERS_TO_LINK = 5;
 
   var doc = app.activeDocument;
   var originalRulerUnits = app.preferences.rulerUnits;
@@ -39,6 +40,7 @@
   var logLines = [];
   var convertedCount = 0;
   var skippedCount = 0;
+  var skippedSmallCount = 0;
   var failedCount = 0;
 
   function log(msg) {
@@ -242,6 +244,36 @@
     executeAction(idplacedLayerConvertToLinked, desc, DialogModes.NO);
   }
 
+  function editSmartObjectContents() {
+    executeAction(stringIDToTypeID("placedLayerEditContents"), new ActionDescriptor(), DialogModes.NO);
+  }
+
+  function closeUnexpectedChild(parentDoc) {
+    try {
+      if (app.documents.length && app.activeDocument !== parentDoc) {
+        app.activeDocument.close(SaveOptions.DONOTSAVECHANGES);
+      }
+    } catch (closeError) {}
+  }
+
+  function activeSmartObjectLayerCount() {
+    var parentDoc = app.activeDocument;
+    var childDoc = null;
+    try {
+      editSmartObjectContents();
+      childDoc = app.activeDocument;
+      if (childDoc === parentDoc) throw new Error("智能对象没有打开");
+      var count = layerCount();
+      childDoc.close(SaveOptions.DONOTSAVECHANGES);
+      app.activeDocument = parentDoc;
+      return count;
+    } catch (e) {
+      closeUnexpectedChild(parentDoc);
+      try { app.activeDocument = parentDoc; } catch (activeError) {}
+      throw e;
+    }
+  }
+
   function chooseOutputFolder() {
     try {
       if (!doc.path) {
@@ -368,6 +400,20 @@
         continue;
       }
 
+      try {
+        var innerLayerCount = activeSmartObjectLayerCount();
+        if (innerLayerCount < MIN_LAYERS_TO_LINK) {
+          skippedCount++;
+          skippedSmallCount++;
+          log("跳过低层数智能对象: " + item.path + " | " + innerLayerCount + " 层");
+          continue;
+        }
+      } catch (inspectError) {
+        skippedCount++;
+        log("跳过，无法检查智能对象层数: " + item.path + " | " + inspectError);
+        continue;
+      }
+
       var outFile = uniqueFile(outputFolder, item.name, j + 1, item.id, outputExtensionForSmartObject(freshMeta));
       try {
         convertActiveEmbeddedToLinked(outFile);
@@ -398,6 +444,7 @@
       "完成。\n\n" +
       "已转换：" + convertedCount + "\n" +
       "已跳过：" + skippedCount + "\n" +
+      "低于5层跳过：" + skippedSmallCount + "\n" +
       "失败：" + failedCount + "\n\n" +
       "主文档没有自动保存，确认没问题后你再手动保存。\n" +
       (logFile ? "\n日志：" + logFile.fsName : "")
