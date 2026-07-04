@@ -29,7 +29,6 @@
   var DISABLE_MAX_COMPATIBILITY_DURING_RUN = true;
   var SAVE_MAIN_DOCUMENT = false;
   var SKIP_LINKED = true;
-  var MIN_LAYERS_TO_LINK = 5;
 
   var doc = app.activeDocument;
   var originalRulerUnits = app.preferences.rulerUnits;
@@ -40,7 +39,7 @@
   var logLines = [];
   var convertedCount = 0;
   var skippedCount = 0;
-  var skippedSmallCount = 0;
+  var skippedSingleFileCount = 0;
   var failedCount = 0;
 
   function log(msg) {
@@ -211,9 +210,15 @@
     return /^\.(pdf|ai|eps)$/i.test(ext);
   }
 
-  function shouldSkipImportStyleSmartObject(meta, layerName) {
+  function singleFileExtension(name) {
+    var m = String(name || "").match(/(\.[^\.\\\/]+)$/);
+    var ext = m ? m[1].toLowerCase() : "";
+    return /^\.(pdf|ai|eps|png|jpg|jpeg|tif|tiff|webp|gif|bmp|svg)$/i.test(ext);
+  }
+
+  function shouldSkipSingleFileSmartObject(meta, layerName) {
     if (!meta) return false;
-    return importStyleExtension(meta.fileReference) || importStyleExtension(layerName);
+    return singleFileExtension(meta.fileReference) || singleFileExtension(layerName);
   }
 
   function uniqueFile(folder, baseName, index, layerIdValue, extension) {
@@ -242,36 +247,6 @@
     desc.putReference(charIDToTypeID("null"), ref);
     desc.putPath(charIDToTypeID("Usng"), file);
     executeAction(idplacedLayerConvertToLinked, desc, DialogModes.NO);
-  }
-
-  function editSmartObjectContents() {
-    executeAction(stringIDToTypeID("placedLayerEditContents"), new ActionDescriptor(), DialogModes.NO);
-  }
-
-  function closeUnexpectedChild(parentDoc) {
-    try {
-      if (app.documents.length && app.activeDocument !== parentDoc) {
-        app.activeDocument.close(SaveOptions.DONOTSAVECHANGES);
-      }
-    } catch (closeError) {}
-  }
-
-  function activeSmartObjectLayerCount() {
-    var parentDoc = app.activeDocument;
-    var childDoc = null;
-    try {
-      editSmartObjectContents();
-      childDoc = app.activeDocument;
-      if (childDoc === parentDoc) throw new Error("智能对象没有打开");
-      var count = layerCount();
-      childDoc.close(SaveOptions.DONOTSAVECHANGES);
-      app.activeDocument = parentDoc;
-      return count;
-    } catch (e) {
-      closeUnexpectedChild(parentDoc);
-      try { app.activeDocument = parentDoc; } catch (activeError) {}
-      throw e;
-    }
   }
 
   function chooseOutputFolder() {
@@ -366,7 +341,7 @@
 
     var embeddedCount = 0;
     for (var i = 0; i < items.length; i++) {
-      if ((!items[i].meta || !items[i].meta.linked) && !shouldSkipImportStyleSmartObject(items[i].meta, items[i].name)) embeddedCount++;
+      if ((!items[i].meta || !items[i].meta.linked) && !shouldSkipSingleFileSmartObject(items[i].meta, items[i].name)) embeddedCount++;
     }
 
     var ok = confirm(
@@ -394,23 +369,10 @@
         log("跳过已链接: " + item.path + " | " + freshMeta.fileReference);
         continue;
       }
-      if (shouldSkipImportStyleSmartObject(freshMeta, item.name)) {
+      if (shouldSkipSingleFileSmartObject(freshMeta, item.name)) {
         skippedCount++;
-        log("跳过导入型智能对象，不导出外链: " + item.path + " | " + (freshMeta.fileReference || item.name));
-        continue;
-      }
-
-      try {
-        var innerLayerCount = activeSmartObjectLayerCount();
-        if (innerLayerCount < MIN_LAYERS_TO_LINK) {
-          skippedCount++;
-          skippedSmallCount++;
-          log("跳过低层数智能对象: " + item.path + " | " + innerLayerCount + " 层");
-          continue;
-        }
-      } catch (inspectError) {
-        skippedCount++;
-        log("跳过，无法检查智能对象层数: " + item.path + " | " + inspectError);
+        skippedSingleFileCount++;
+        log("跳过单文件智能对象: " + item.path + " | " + (freshMeta.fileReference || item.name));
         continue;
       }
 
@@ -444,7 +406,7 @@
       "完成。\n\n" +
       "已转换：" + convertedCount + "\n" +
       "已跳过：" + skippedCount + "\n" +
-      "低于5层跳过：" + skippedSmallCount + "\n" +
+      "单文件跳过：" + skippedSingleFileCount + "\n" +
       "失败：" + failedCount + "\n\n" +
       "主文档没有自动保存，确认没问题后你再手动保存。\n" +
       (logFile ? "\n日志：" + logFile.fsName : "")
