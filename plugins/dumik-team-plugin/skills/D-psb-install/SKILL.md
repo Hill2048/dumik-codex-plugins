@@ -1,6 +1,6 @@
 ---
 name: D-psb-install
-version: 0.1.0
+version: 0.1.1
 description: "安装 PSB 智能对象工具。把插件内置的 CEP 稳定版复制到 Adobe CEP extensions 目录，适合触发词：安装 PSB 插件、安装智能对象工具、装 PSB 智能对象工具、分享来的插件怎么装。"
 ---
 
