@@ -9,25 +9,77 @@ let activeRunStartedAt = 0;
 
 const ui = {
   link: document.getElementById("run-link"),
+  linkOptionsToggle: document.getElementById("link-options-toggle"),
+  linkOptions: document.getElementById("link-options"),
+  linkRewriteCompatible: document.getElementById("link-rewrite-compatible"),
+  linkRepairExisting: document.getElementById("link-repair-existing"),
+  selectedProxy: document.getElementById("run-selected-proxy"),
   collect: document.getElementById("run-collect"),
   relinkMissing: document.getElementById("run-relink-missing"),
   embed: document.getElementById("run-embed"),
   text: document.getElementById("run-text"),
   cleanMeta: document.getElementById("run-clean-meta"),
+  cleanMetaOptionsToggle: document.getElementById("clean-metadata-options-toggle"),
+  cleanMetaOptions: document.getElementById("clean-metadata-options"),
+  cleanEmbeddedSo: document.getElementById("clean-embedded-so"),
   cleanupLinks: document.getElementById("run-cleanup-links"),
   stampUsm: document.getElementById("run-stamp-usm"),
   status: document.getElementById("status")
 };
 
+function setControlDisabled(element, value) {
+  if (!element) return;
+  const isOptionInput = element.classList && element.classList.contains("option-input");
+  element.disabled = value;
+  element.setAttribute("aria-disabled", value ? "true" : "false");
+  const optionRow = isOptionInput ? element.parentElement : null;
+  if (optionRow) {
+    optionRow.setAttribute("aria-disabled", value ? "true" : "false");
+  }
+  if (value) {
+    element.classList.add("is-disabled");
+    element.removeAttribute("tabindex");
+    if (optionRow) {
+      optionRow.classList.add("is-disabled");
+      optionRow.removeAttribute("tabindex");
+    }
+  } else {
+    element.classList.remove("is-disabled");
+    if (!isOptionInput) {
+      element.setAttribute("tabindex", "0");
+    }
+    if (optionRow) {
+      optionRow.classList.remove("is-disabled");
+      optionRow.setAttribute("tabindex", "0");
+    }
+  }
+}
+
 function setBusy(value) {
-  ui.link.disabled = value;
-  ui.collect.disabled = value;
-  ui.relinkMissing.disabled = value;
-  ui.embed.disabled = value;
-  ui.text.disabled = value;
-  ui.cleanMeta.disabled = value;
-  ui.cleanupLinks.disabled = value;
-  ui.stampUsm.disabled = value;
+  setControlDisabled(ui.link, value);
+  setControlDisabled(ui.linkOptionsToggle, value);
+  setControlDisabled(ui.linkRewriteCompatible, value);
+  setControlDisabled(ui.linkRepairExisting, value);
+  setControlDisabled(ui.selectedProxy, value);
+  setControlDisabled(ui.collect, value);
+  setControlDisabled(ui.relinkMissing, value);
+  setControlDisabled(ui.embed, value);
+  setControlDisabled(ui.text, value);
+  setControlDisabled(ui.cleanMeta, value);
+  setControlDisabled(ui.cleanMetaOptionsToggle, value);
+  setControlDisabled(ui.cleanEmbeddedSo, value);
+  setControlDisabled(ui.cleanupLinks, value);
+  setControlDisabled(ui.stampUsm, value);
+}
+
+function toggleOptions(popover, toggle, disabledControl, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (!popover || !toggle || (disabledControl && disabledControl.classList.contains("is-disabled"))) return;
+  popover.hidden = !popover.hidden;
+  toggle.classList.toggle("open", !popover.hidden);
 }
 
 function setStatus(message) {
@@ -922,8 +974,14 @@ async function runLink() {
     const folderPath = await linksFolder();
     const docBase = stripExtension(activeDocumentName());
     const layers = await smartObjectLayers();
-    const todo = layers.filter((item) => !item.meta.linked && !isProxySmartObject(item) && !singleFileSmartObject(item));
-    if (!todo.length) throw new Error("没有内嵌智能对象。");
+    const repairExisting = ui.linkRepairExisting ? ui.linkRepairExisting.checked : false;
+    const rewriteCompatible = ui.linkRewriteCompatible ? ui.linkRewriteCompatible.checked : false;
+    const todo = layers.filter((item) => {
+      if (isProxySmartObject(item) || singleFileSmartObject(item)) return false;
+      if (!item.meta.linked) return true;
+      return repairExisting && !item.meta.linkMissing;
+    });
+    if (!todo.length) throw new Error(repairExisting ? "没有可转换的智能对象。" : "没有内嵌智能对象。");
     if (!(await confirmRun("转链接", `将 ${todo.length} 个对象转成内部代理结构，链接文件放到 links。`))) return;
 
     let ok = 0;
@@ -932,7 +990,13 @@ async function runLink() {
       const item = todo[i];
       try {
         await selectLayer(item.id);
-        const target = await uniqueFile(folderPath, docBase, item.name, i + 1, item.id, ".psb");
+        let target = null;
+        if (item.meta.linked) {
+          target = await getEntry(sourcePath(item.meta));
+          if (rewriteCompatible) target = await repairedPsbFor(target);
+        } else {
+          target = await uniqueFile(folderPath, docBase, item.name, i + 1, item.id, ".psb");
+        }
         await proxySelectedSmartObjectInternally(target, item.id);
         ok += 1;
       } catch (error) {
@@ -941,6 +1005,28 @@ async function runLink() {
       }
     }
     await showAlert("完成", `已转代理链接：${ok}\n失败：${fail}`);
+  });
+}
+
+async function runSelectedProxy() {
+  await runModal("单个代理", async () => {
+    if (!(await selectedIsSmartObject())) throw new Error("请先选中一个智能对象。");
+    const folderPath = await linksFolder();
+    const selected = await activeLayerDescriptor();
+    const meta = smartMeta(selected);
+    const layerName = selected.name || "smart_object";
+    let target = null;
+    if (meta.linked && !meta.linkMissing) {
+      target = await getEntry(sourcePath(meta));
+      if (ui.linkRewriteCompatible && ui.linkRewriteCompatible.checked) {
+        target = await repairedPsbFor(target);
+      }
+    } else {
+      const docBase = stripExtension(activeDocumentName());
+      target = await uniqueFile(folderPath, docBase, layerName, 1, selected.layerID || selected.itemIndex || 0, ".psb");
+    }
+    await proxySelectedSmartObjectInternally(target, selected.layerID || selected.itemIndex || 0);
+    await showAlert("完成", `已转换：${layerName}`);
   });
 }
 
@@ -1162,9 +1248,10 @@ async function deleteDocumentMetadata() {
   return removed;
 }
 
-async function cleanMetadataDeep() {
+async function cleanMetadataDeep(includeEmbedded) {
   let cleaned = await deleteDocumentMetadata();
   let failed = 0;
+  if (!includeEmbedded) return { cleaned, failed };
   const layers = await smartObjectLayers();
   for (const item of layers) {
     if (item.meta.linked || item.meta.linkMissing || isProxySmartObject(item)) continue;
@@ -1192,7 +1279,8 @@ async function cleanMetadataDeep() {
 
 async function runCleanMeta() {
   await runModal("清元数据", async () => {
-    const result = await cleanMetadataDeep();
+    const includeEmbedded = ui.cleanEmbeddedSo ? ui.cleanEmbeddedSo.checked : true;
+    const result = await cleanMetadataDeep(includeEmbedded);
     await showAlert("完成", `已清理元数据项：${result.cleaned}\n内部失败：${result.failed}\n文件不会自动保存。`);
   });
 }
@@ -1226,11 +1314,67 @@ async function runExtractText() {
   });
 }
 
-ui.link.addEventListener("click", runLink);
-ui.collect.addEventListener("click", runCollect);
-ui.relinkMissing.addEventListener("click", runRelinkMissing);
-ui.embed.addEventListener("click", runEmbed);
-ui.text.addEventListener("click", runExtractText);
-ui.cleanMeta.addEventListener("click", runCleanMeta);
-ui.cleanupLinks.addEventListener("click", runCleanupLinks);
-ui.stampUsm.addEventListener("click", runStampUsm);
+function bindRun(element, handler) {
+  if (!element) return;
+  element.addEventListener("click", () => {
+    if (element.classList.contains("is-disabled")) return;
+    handler();
+  });
+  element.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    if (element.classList.contains("is-disabled")) return;
+    handler();
+  });
+}
+
+function bindToggle(element, popover, owner) {
+  if (!element) return;
+  element.addEventListener("click", (event) => toggleOptions(popover, element, owner, event));
+  element.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    toggleOptions(popover, element, owner, event);
+  });
+}
+
+function syncOptionRow(input) {
+  if (!input || !input.parentElement) return;
+  input.parentElement.classList.toggle("is-checked", input.checked);
+  input.parentElement.setAttribute("aria-checked", input.checked ? "true" : "false");
+}
+
+function bindOptionInput(input) {
+  if (!input || !input.parentElement) return;
+  const row = input.parentElement;
+  syncOptionRow(input);
+  row.addEventListener("click", () => {
+    if (input.disabled) return;
+    input.checked = !input.checked;
+    syncOptionRow(input);
+    input.dispatchEvent(new Event("change"));
+  });
+  row.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    if (input.disabled) return;
+    input.checked = !input.checked;
+    syncOptionRow(input);
+    input.dispatchEvent(new Event("change"));
+  });
+  input.addEventListener("change", () => syncOptionRow(input));
+}
+
+bindToggle(ui.linkOptionsToggle, ui.linkOptions, ui.link);
+bindToggle(ui.cleanMetaOptionsToggle, ui.cleanMetaOptions, ui.cleanMeta);
+bindOptionInput(ui.linkRewriteCompatible);
+bindOptionInput(ui.linkRepairExisting);
+bindOptionInput(ui.cleanEmbeddedSo);
+bindRun(ui.link, runLink);
+bindRun(ui.selectedProxy, runSelectedProxy);
+bindRun(ui.collect, runCollect);
+bindRun(ui.relinkMissing, runRelinkMissing);
+bindRun(ui.embed, runEmbed);
+bindRun(ui.text, runExtractText);
+bindRun(ui.cleanMeta, runCleanMeta);
+bindRun(ui.cleanupLinks, runCleanupLinks);
+bindRun(ui.stampUsm, runStampUsm);

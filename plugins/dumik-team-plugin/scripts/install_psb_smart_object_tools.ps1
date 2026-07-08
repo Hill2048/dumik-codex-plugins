@@ -338,6 +338,20 @@ function Get-UxpVersion {
   }
 }
 
+function Get-UxpManifestValue {
+  param(
+    [string]$SourceRoot,
+    [string]$Name
+  )
+
+  try {
+    $manifest = Get-Content -LiteralPath (Join-Path $SourceRoot "manifest.json") -Raw | ConvertFrom-Json
+    return [string]$manifest.$Name
+  } catch {
+    return ""
+  }
+}
+
 function New-UxpPackage {
   param([string]$SourceRoot)
 
@@ -380,7 +394,10 @@ function Find-Upia {
 }
 
 function Install-UxpPackage {
-  param([string]$PackagePath)
+  param(
+    [string]$PackagePath,
+    [string]$SourceRoot
+  )
 
   $upia = Find-Upia
   if (!$upia) {
@@ -389,9 +406,23 @@ function Install-UxpPackage {
     return $false
   }
 
+  $pluginName = Get-UxpManifestValue -SourceRoot $SourceRoot -Name "name"
+  $pluginId = Get-UxpManifestValue -SourceRoot $SourceRoot -Name "id"
   if ($IsMacOS) {
+    if ($pluginName) {
+      & $upia --remove $pluginName | Out-Null
+    }
+    if ($pluginId) {
+      & $upia --remove $pluginId | Out-Null
+    }
     & $upia --install $PackagePath
   } else {
+    if ($pluginName) {
+      & $upia /remove $pluginName | Out-Null
+    }
+    if ($pluginId) {
+      & $upia /remove $pluginId | Out-Null
+    }
     & $upia /install $PackagePath
   }
   if ($LASTEXITCODE -ne 0) {
@@ -418,7 +449,7 @@ if ($ResolvedFlavor -eq "UXP") {
     exit 0
   }
 
-  $installed = Install-UxpPackage -PackagePath $packagePath
+  $installed = Install-UxpPackage -PackagePath $packagePath -SourceRoot $Source
   Write-Host "Install OK."
   Write-Host "Flavor: UXP"
   Write-Host "Source: $Source"

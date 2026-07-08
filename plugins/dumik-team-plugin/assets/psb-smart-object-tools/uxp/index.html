@@ -6,58 +6,115 @@
   <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-  <main class="panel">
-    <section class="actions">
-      <button id="run-link">
-        <b class="icon">↗</b>
-        <span>转链接</span>
-        <small>导出到 _links</small>
-      </button>
+  <div class="panel">
+    <div class="actions">
+      <div class="group-title">链接整理</div>
 
-      <button id="run-collect">
-        <b class="icon">⇥</b>
-        <span>收集链接</span>
-        <small>拷到 _links 并重链</small>
-      </button>
+      <div id="run-link" class="tool-button action-link" role="button" tabindex="0">
+        <span id="link-options-toggle" class="option-badge" role="button" tabindex="0" title="转链接选项" aria-label="转链接选项">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+        </span>
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </span>
+        <span class="label">转链接</span>
+        <span class="hint">导出</span>
+      </div>
 
-      <button id="run-relink-missing">
-        <b class="icon">⛓</b>
-        <span>找回丢失链接</span>
-        <small>选文件夹，按名匹配</small>
-      </button>
+      <div id="link-options" class="option-popover" hidden>
+        <div class="option-row" role="checkbox" tabindex="0" title="重存已有链接 PSD/PSB，让预览更完整">
+          <input id="link-rewrite-compatible" class="option-input" type="checkbox" aria-hidden="true">
+          <span class="option-box" aria-hidden="true"></span>
+          <span class="option-text">重存兼容</span>
+        </div>
+        <div class="option-row" role="checkbox" tabindex="0" title="把旧链接包成小的内嵌代理，里面保留原链接">
+          <input id="link-repair-existing" class="option-input" type="checkbox" aria-hidden="true">
+          <span class="option-box" aria-hidden="true"></span>
+          <span class="option-text">修复旧链接</span>
+        </div>
+      </div>
 
-      <button id="run-embed">
-        <b class="icon">⇣</b>
-        <span>嵌回文件</span>
-        <small>链接 SO 变内嵌</small>
-      </button>
+      <div id="run-selected-proxy" class="tool-button action-selected-proxy" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M9 9h6v6H9z"/><path d="M15 4v5"/><path d="M20 9h-5"/><path d="M9 20v-5"/><path d="M4 15h5"/></svg>
+        </span>
+        <span class="label">单个代理</span>
+        <span class="hint">选中SO</span>
+      </div>
 
-      <button id="run-text">
-        <b class="icon">T</b>
-        <span>提取文字</span>
-        <small>当前 SO 拆文案</small>
-      </button>
+      <div id="run-collect" class="tool-button action-collect" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6"/><path d="m15 13-3 3-3-3"/></svg>
+        </span>
+        <span class="label">收集链接</span>
+        <span class="hint">拷贝重链</span>
+      </div>
 
-      <button id="run-clean-meta">
-        <b class="icon">⌫</b>
-        <span>清元数据</span>
-        <small>清 PS 垃圾</small>
-      </button>
+      <div id="run-relink-missing" class="tool-button action-relink" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+        </span>
+        <span class="label">找回链接</span>
+        <span class="hint">按名匹配</span>
+      </div>
 
-      <button id="run-cleanup-links">
-        <b class="icon">◎</b>
-        <span>清废链接</span>
-        <small>移到 unused</small>
-      </button>
+      <div id="run-embed" class="tool-button action-embed" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M12 12v5"/><path d="m9 14 3 3 3-3"/></svg>
+        </span>
+        <span class="label">嵌回</span>
+        <span class="hint">转内嵌</span>
+      </div>
 
-      <button id="run-stamp-usm">
-        <b class="icon">✦</b>
-        <span>锐化导出</span>
-        <small>USM + JPG</small>
-      </button>
-    </section>
+      <div id="run-cleanup-links" class="tool-button action-cleanup-links" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+        </span>
+        <span class="label">清废链接</span>
+        <span class="hint">移到备份</span>
+      </div>
+
+      <div class="group-title">内容处理</div>
+
+      <div id="run-text" class="tool-button action-text" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+        </span>
+        <span class="label">提取文字</span>
+        <span class="hint">拆文案</span>
+      </div>
+
+      <div id="run-clean-meta" class="tool-button action-clean" role="button" tabindex="0">
+        <span id="clean-metadata-options-toggle" class="option-badge" role="button" tabindex="0" title="清理选项" aria-label="清理选项">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+        </span>
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+        </span>
+        <span class="label">清元数据</span>
+        <span class="hint">瘦文件</span>
+      </div>
+
+      <div id="clean-metadata-options" class="option-popover" hidden>
+        <div class="option-row" role="checkbox" tabindex="0" title="关闭后只清当前主文件">
+          <input id="clean-embedded-so" class="option-input" type="checkbox" checked aria-hidden="true">
+          <span class="option-box" aria-hidden="true"></span>
+          <span class="option-text">清理智能对象</span>
+        </div>
+      </div>
+
+      <div class="group-title">画板处理</div>
+
+      <div id="run-stamp-usm" class="tool-button action-sharpen" role="button" tabindex="0">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0Z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+        </span>
+        <span class="label">锐化导出</span>
+        <span class="hint">画板JPG</span>
+      </div>
+    </div>
     <div id="status" hidden></div>
-  </main>
+  </div>
   <script src="./js/main.js"></script>
 </body>
 </html>

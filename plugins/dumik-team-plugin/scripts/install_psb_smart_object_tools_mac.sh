@@ -88,6 +88,18 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
     print(json.load(f).get('version', 'dev'))
 PY
 )"
+PLUGIN_ID="$(python3 - <<'PY' "$SOURCE/manifest.json"
+import json, sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    print(json.load(f).get('id', ''))
+PY
+)"
+PLUGIN_NAME="$(python3 - <<'PY' "$SOURCE/manifest.json"
+import json, sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    print(json.load(f).get('name', ''))
+PY
+)"
 
 mkdir -p "$DIST"
 PACKAGE="$DIST/psb-smart-object-tools-uxp-$VERSION.ccx"
@@ -106,6 +118,12 @@ UPIA_CANDIDATES=(
 INSTALLED="false"
 for UPIA in "${UPIA_CANDIDATES[@]}"; do
   if [[ -x "$UPIA" ]]; then
+    if [[ -n "$PLUGIN_NAME" ]]; then
+      "$UPIA" --remove "$PLUGIN_NAME" >/dev/null 2>&1 || true
+    fi
+    if [[ -n "$PLUGIN_ID" ]]; then
+      "$UPIA" --remove "$PLUGIN_ID" >/dev/null 2>&1 || true
+    fi
     "$UPIA" --install "$PACKAGE"
     INSTALLED="true"
     break
