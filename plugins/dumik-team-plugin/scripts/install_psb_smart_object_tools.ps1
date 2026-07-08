@@ -2,6 +2,8 @@ param(
   [switch]$CheckOnly,
   [ValidateSet("Install", "Update")]
   [string]$Mode = "Install",
+  [ValidateSet("Auto", "CEP", "UXP")]
+  [string]$Flavor = "Auto",
   [switch]$Update
 )
 
@@ -13,6 +15,7 @@ $PluginName = "psb-smart-object-tools"
 $TargetRoot = Join-Path $env:APPDATA "Adobe\CEP\extensions"
 $Target = Join-Path $TargetRoot $PluginName
 $BackupPattern = "psb-smart-object-tools.bak-*"
+$UxpPackageRoot = Join-Path $PluginRoot "dist"
 $RequiredFiles = @(
   "index.html",
   "js\main.js",
@@ -45,6 +48,20 @@ function Test-PsbCepSource {
     return $false
   }
   foreach ($file in @("index.html", "js\main.js", "CSXS\manifest.xml", "jsx\link-smart-objects.jsx")) {
+    if (!(Test-Path -LiteralPath (Join-Path $Path $file) -PathType Leaf)) {
+      return $false
+    }
+  }
+  return $true
+}
+
+function Test-PsbUxpSource {
+  param([string]$Path)
+
+  if (!(Test-Path -LiteralPath $Path -PathType Container)) {
+    return $false
+  }
+  foreach ($file in @("manifest.json", "index.html", "js\main.js")) {
     if (!(Test-Path -LiteralPath (Join-Path $Path $file) -PathType Leaf)) {
       return $false
     }
@@ -97,6 +114,38 @@ function Find-PsbCepSource {
   }
 
   throw "PSB plugin source not found. Need a folder named like psb-smart-object-tools with index.html, js\main.js, CSXS\manifest.xml and jsx\link-smart-objects.jsx."
+}
+
+function Find-PsbUxpSource {
+  $candidates = @()
+  $candidates += Join-Path $PluginRoot "assets\psb-smart-object-tools\uxp"
+  $candidates += Join-Path $PluginRoot "assets\psb-smart-object-tools\uxp-preview"
+
+  try {
+    $cwd = (Get-Location).Path
+    if ($cwd) {
+      $candidates += Join-Path $cwd "plugins\dumik-team-plugin\assets\psb-smart-object-tools\uxp"
+      $candidates += Join-Path $cwd "assets\psb-smart-object-tools\uxp"
+    }
+  } catch {}
+
+  foreach ($candidate in $candidates) {
+    if (Test-PsbUxpSource -Path $candidate) {
+      return (Resolve-Path -LiteralPath $candidate).Path
+    }
+  }
+
+  throw "PSB UXP source not found. Need assets\psb-smart-object-tools\uxp with manifest.json, index.html and js\main.js."
+}
+
+function Resolve-Flavor {
+  if ($Flavor -ne "Auto") {
+    return $Flavor
+  }
+  if ($IsMacOS) {
+    return "UXP"
+  }
+  return "CEP"
 }
 
 function Assert-SafeCepPath {
@@ -175,12 +224,121 @@ function Enable-CepDebugMode {
   return $updated
 }
 
-$Source = Find-PsbCepSource
+function Assert-UxpFiles {
+  param([string]$Root)
 
+  foreach ($file in @("manifest.json", "index.html", "js\main.js")) {
+    $path = Join-Path $Root $file
+    if (!(Test-Path -LiteralPath $path -PathType Leaf)) {
+      throw "Required UXP file missing: $path"
+    }
+  }
+}
+
+function Get-UxpVersion {
+  param([string]$SourceRoot)
+  try {
+    $manifest = Get-Content -LiteralPath (Join-Path $SourceRoot "manifest.json") -Raw | ConvertFrom-Json
+    return [string]$manifest.version
+  } catch {
+    return "dev"
+  }
+}
+
+function New-UxpPackage {
+  param([string]$SourceRoot)
+
+  New-Item -ItemType Directory -Force -Path $UxpPackageRoot | Out-Null
+  $version = Get-UxpVersion -SourceRoot $SourceRoot
+  $package = Join-Path $UxpPackageRoot ("psb-smart-object-tools-uxp-$version.ccx")
+  if (Test-Path -LiteralPath $package) {
+    Remove-Item -LiteralPath $package -Force
+  }
+
+  $tempZip = Join-Path $UxpPackageRoot ("psb-smart-object-tools-uxp-$version.zip")
+  if (Test-Path -LiteralPath $tempZip) {
+    Remove-Item -LiteralPath $tempZip -Force
+  }
+
+  Compress-Archive -Path (Join-Path $SourceRoot "*") -DestinationPath $tempZip -Force
+  Move-Item -LiteralPath $tempZip -Destination $package -Force
+  return $package
+}
+
+function Find-Upia {
+  $candidates = @()
+  if ($IsMacOS) {
+    $candidates += "/Library/Application Support/Adobe/Adobe Desktop Common/RemoteComponents/UPI/UnifiedPluginInstallerAgent/UnifiedPluginInstallerAgent.app/Contents/MacOS/UnifiedPluginInstallerAgent"
+    $candidates += "/Library/Application Support/Adobe/Adobe Desktop Common/UPI/AdobePluginInstallerAgent"
+  } else {
+    $programFiles = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) | Where-Object { $_ }
+    foreach ($root in $programFiles) {
+      $candidates += Join-Path $root "Common Files\Adobe\Adobe Desktop Common\RemoteComponents\UPI\UnifiedPluginInstallerAgent\UnifiedPluginInstallerAgent.exe"
+      $candidates += Join-Path $root "Common Files\Adobe\Adobe Desktop Common\UPI\AdobePluginInstallerAgent.exe"
+    }
+  }
+
+  foreach ($candidate in $candidates) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+      return $candidate
+    }
+  }
+  return $null
+}
+
+function Install-UxpPackage {
+  param([string]$PackagePath)
+
+  $upia = Find-Upia
+  if (!$upia) {
+    Write-Host "UPIA not found. CCX package created only."
+    Write-Host "Package: $PackagePath"
+    return $false
+  }
+
+  if ($IsMacOS) {
+    & $upia --install $PackagePath
+  } else {
+    & $upia /install $PackagePath
+  }
+  if ($LASTEXITCODE -ne 0) {
+    throw "UPIA install failed. Exit code: $LASTEXITCODE"
+  }
+  return $true
+}
+
+$ResolvedFlavor = Resolve-Flavor
+
+if ($ResolvedFlavor -eq "UXP") {
+  $Source = Find-PsbUxpSource
+  Assert-UxpFiles -Root $Source
+  $packagePath = New-UxpPackage -SourceRoot $Source
+
+  if ($CheckOnly) {
+    Write-Host "Check OK."
+    Write-Host "Flavor: UXP"
+    Write-Host "Source: $Source"
+    Write-Host "Package: $packagePath"
+    Write-Host "Install: CCX via UPIA or double click"
+    exit 0
+  }
+
+  $installed = Install-UxpPackage -PackagePath $packagePath
+  Write-Host "Install OK."
+  Write-Host "Flavor: UXP"
+  Write-Host "Source: $Source"
+  Write-Host "Package: $packagePath"
+  Write-Host "Installed by UPIA: $installed"
+  Write-Host "Validation: passed"
+  exit 0
+}
+
+$Source = Find-PsbCepSource
 Assert-RequiredFiles -Root $Source
 
 if ($CheckOnly) {
   Write-Host "Check OK."
+  Write-Host "Flavor: CEP"
   Write-Host "Source: $Source"
   Write-Host "Target: $Target"
   Write-Host "Mode: $Mode"
@@ -206,6 +364,7 @@ Assert-KeyFileHashes -SourceRoot $Source -TargetRootPath $Target
 $debugVersions = Enable-CepDebugMode
 
 Write-Host "Install OK."
+Write-Host "Flavor: CEP"
 Write-Host "Source: $Source"
 Write-Host "Target: $Target"
 Write-Host "Removed old version count: $removedCount"
