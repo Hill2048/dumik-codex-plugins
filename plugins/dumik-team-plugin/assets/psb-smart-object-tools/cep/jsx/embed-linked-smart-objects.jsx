@@ -48,6 +48,16 @@
     return s || "document";
   }
 
+  function isProxyName(name) {
+    return /(^|[_\-\s])proxy(\.psb)?$/i.test(String(name || "").replace(/\.[^\.\\\/]+$/, ""));
+  }
+
+  function isProxySmartObject(meta, layerName) {
+    if (isProxyName(layerName)) return true;
+    if (meta && isProxyName(meta.fileReference)) return true;
+    return false;
+  }
+
   function smartObjectMetaFromDescriptor(desc) {
     var meta = {
       linked: false,
@@ -196,7 +206,7 @@
 
     var linkedCount = 0;
     for (var i = 0; i < items.length; i++) {
-      if (items[i].meta && items[i].meta.linked) linkedCount++;
+      if (items[i].meta && items[i].meta.linked && !isProxySmartObject(items[i].meta, items[i].name)) linkedCount++;
     }
 
     if (!items.length || !linkedCount) {
@@ -213,6 +223,11 @@
       if (!item.meta || !item.meta.linked) {
         skippedCount++;
         log("跳过内嵌: " + item.path);
+        continue;
+      }
+      if (isProxySmartObject(item.meta, item.name)) {
+        skippedCount++;
+        log("跳过代理对象: " + item.path + " | " + item.meta.fileReference);
         continue;
       }
 

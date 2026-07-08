@@ -94,6 +94,7 @@ button {
   justify-items: start;
 }
 
+.action-link,
 .action-clean {
   padding-right: 40px;
 }
@@ -250,6 +251,10 @@ button small {
   background: #4f7db8;
 }
 
+.action-selected-proxy .icon {
+  background: #497f8f;
+}
+
 .action-collect .icon {
   background: #4c8f6a;
 }
@@ -260,6 +265,10 @@ button small {
 
 .action-embed .icon {
   background: #8c7a45;
+}
+
+.action-cleanup-links .icon {
+  background: #80645b;
 }
 
 .action-text .icon {

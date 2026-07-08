@@ -26,9 +26,13 @@
   var DEFAULT_EXTENSION = ".psb";
   var LINKS_ROOT_FOLDER = "links";
   var LINKS_FOLDER_SUFFIX = "_links";
-  var DISABLE_MAX_COMPATIBILITY_DURING_RUN = true;
+  var MAX_OPEN_PROXY_BATCH = 4;
+  var FORCE_MAX_COMPATIBILITY_DURING_RUN = true;
   var SAVE_MAIN_DOCUMENT = false;
   var SKIP_LINKED = true;
+  var REWRITE_LINKED_COMPATIBLE = !!$.global.__psbLinkRewriteCompatible;
+  var REPAIR_EXISTING_LINKS = !!$.global.__psbLinkRepairExisting;
+  var SELECTED_PROXY_ONLY = !!$.global.__psbLinkSelectedProxy;
 
   var doc = app.activeDocument;
   var originalRulerUnits = app.preferences.rulerUnits;
@@ -40,7 +44,13 @@
   var convertedCount = 0;
   var skippedCount = 0;
   var skippedSingleFileCount = 0;
+  var rewrittenCompatibleCount = 0;
+  var renamedLayerCount = 0;
+  var wrappedProxyCount = 0;
+  var embeddedOuterProxyCount = 0;
+  var skippedProxyCount = 0;
   var failedCount = 0;
+  var linkedPsdPsbIndex = null;
 
   function log(msg) {
     logLines.push(msg);
@@ -87,12 +97,20 @@
     return executeActionGet(ref);
   }
 
+  function descriptorPath(desc, key) {
+    try {
+      if (desc.hasKey(key)) return desc.getPath(key).fsName;
+    } catch (e) {}
+    return "";
+  }
+
   function smartObjectMetaFromDescriptor(desc) {
     var meta = {
       isSmart: false,
       linked: false,
       linkMissing: false,
       fileReference: "",
+      linkPath: "",
       ok: false,
       error: ""
     };
@@ -107,10 +125,12 @@
       var linkedKey = stringIDToTypeID("linked");
       var linkMissingKey = stringIDToTypeID("linkMissing");
       var fileReferenceKey = stringIDToTypeID("fileReference");
+      var linkKey = stringIDToTypeID("link");
 
       if (so.hasKey(linkedKey)) meta.linked = so.getBoolean(linkedKey);
       if (so.hasKey(linkMissingKey)) meta.linkMissing = so.getBoolean(linkMissingKey);
       if (so.hasKey(fileReferenceKey)) meta.fileReference = so.getString(fileReferenceKey);
+      meta.linkPath = descriptorPath(so, linkKey);
       meta.ok = true;
     } catch (e) {
       meta.error = String(e);
@@ -183,6 +203,32 @@
     }
   }
 
+  function collectSelectedSmartObject(items) {
+    try {
+      var desc = activeLayerDescriptor();
+      if (!desc.hasKey(stringIDToTypeID("smartObject"))) {
+        alert("请先选中一个智能对象图层。");
+        return false;
+      }
+      var name = descriptorString(desc, "name", "选中智能对象");
+      var id = descriptorInteger(desc, "layerID", null);
+      if (id === null) {
+        alert("无法读取当前图层 ID。");
+        return false;
+      }
+      items.push({
+        id: id,
+        name: name,
+        path: name,
+        meta: smartObjectMetaFromDescriptor(desc)
+      });
+      return true;
+    } catch (e) {
+      alert("读取当前选中图层失败：\n" + e);
+      return false;
+    }
+  }
+
   function selectLayerById(id) {
     var desc = new ActionDescriptor();
     var ref = new ActionReference();
@@ -221,6 +267,140 @@
     return singleFileExtension(meta.fileReference) || singleFileExtension(layerName);
   }
 
+  function isProxyName(name) {
+    return /(^|[_\-\s])proxy(\.psb)?$/i.test(String(name || "").replace(/\.[^\.\\\/]+$/, ""));
+  }
+
+  function isProxySmartObject(meta, layerName) {
+    if (isProxyName(layerName)) return true;
+    if (meta && isProxyName(meta.fileReference)) return true;
+    if (meta && isProxyName(meta.linkPath)) return true;
+    return false;
+  }
+
+  function nativePsdPsbExtension(name) {
+    var m = String(name || "").match(/(\.[^\.\\\/]+)$/);
+    var ext = m ? m[1].toLowerCase() : "";
+    return /^\.(psd|psb)$/i.test(ext);
+  }
+
+  function basenameFromPath(path) {
+    var s = String(path || "").replace(/\\/g, "/");
+    var parts = s.split("/");
+    var name = parts.length ? parts[parts.length - 1] : s;
+    try {
+      name = decodeURI(name);
+    } catch (e) {}
+    return name;
+  }
+
+  function normalizeFileName(name) {
+    try {
+      name = decodeURI(String(name || ""));
+    } catch (e) {
+      name = String(name || "");
+    }
+    return name.toLowerCase();
+  }
+
+  function stripExtension(name) {
+    return String(name || "").replace(/\.[^\.]+$/, "");
+  }
+
+  function layerNameFromFile(file) {
+    var name = stripExtension(basenameFromPath(file && file.name ? file.name : file));
+    if (!name) name = "linked_smart_object";
+    if (name.length > 120) name = name.substring(0, 120);
+    return name;
+  }
+
+  function renameActiveLayerToName(nextName) {
+    try {
+      if (app.activeDocument.activeLayer.name !== nextName) {
+        app.activeDocument.activeLayer.name = nextName;
+        renamedLayerCount++;
+        return true;
+      }
+    } catch (e) {
+      log("图层改名失败: " + nextName + " | " + e);
+    }
+    return false;
+  }
+
+  function renameActiveLayerToFile(file) {
+    return renameActiveLayerToName(layerNameFromFile(file));
+  }
+
+  function renameActiveLayerToProxyFile(file) {
+    return renameActiveLayerToName(layerNameFromFile(file) + "_proxy");
+  }
+
+  function pushIndex(map, file) {
+    var key = normalizeFileName(file.name);
+    if (!map[key]) map[key] = [];
+    map[key].push(file);
+  }
+
+  function scanPsdPsbFolder(folder, map, depth) {
+    if (!folder || !folder.exists || depth < 0) return;
+    var files;
+    try {
+      files = folder.getFiles();
+    } catch (e) {
+      return;
+    }
+
+    for (var i = 0; i < files.length; i++) {
+      var item = files[i];
+      if (item instanceof Folder) {
+        scanPsdPsbFolder(item, map, depth - 1);
+      } else if (item instanceof File && nativePsdPsbExtension(item.name)) {
+        pushIndex(map, item);
+      }
+    }
+  }
+
+  function buildLinkedPsdPsbIndex() {
+    if (linkedPsdPsbIndex) return linkedPsdPsbIndex;
+    linkedPsdPsbIndex = {};
+
+    try {
+      var linksRoot = Folder(doc.path.fsName + "/" + LINKS_ROOT_FOLDER);
+      scanPsdPsbFolder(linksRoot, linkedPsdPsbIndex, 30);
+    } catch (linksError) {}
+
+    try {
+      var nearFiles = Folder(doc.path.fsName).getFiles(function (item) {
+        return item instanceof File && nativePsdPsbExtension(item.name);
+      });
+      for (var i = 0; i < nearFiles.length; i++) pushIndex(linkedPsdPsbIndex, nearFiles[i]);
+    } catch (nearError) {}
+
+    return linkedPsdPsbIndex;
+  }
+
+  function uniqueFileFromList(files) {
+    if (!files || files.length !== 1) return null;
+    return files[0];
+  }
+
+  function resolveLinkedPsdPsbFile(meta) {
+    if (!meta) return null;
+    var path = meta.linkPath || meta.fileReference || "";
+    if (!nativePsdPsbExtension(path)) return null;
+
+    try {
+      var direct = File(path);
+      if (direct.exists) return direct;
+    } catch (directError) {}
+
+    var name = basenameFromPath(path);
+    if (!nativePsdPsbExtension(name)) return null;
+
+    var index = buildLinkedPsdPsbIndex();
+    return uniqueFileFromList(index[normalizeFileName(name)]);
+  }
+
   function uniqueFile(folder, baseName, index, layerIdValue, extension) {
     var ext = extension || DEFAULT_EXTENSION;
     var stem = safeName(docBaseName()) + "__" + pad(index, 3) + "__" + safeName(baseName) + "__id" + layerIdValue;
@@ -249,6 +429,172 @@
     executeAction(idplacedLayerConvertToLinked, desc, DialogModes.NO);
   }
 
+  function convertSelectedLayersToSmartObject() {
+    executeAction(stringIDToTypeID("newPlacedLayer"), new ActionDescriptor(), DialogModes.NO);
+  }
+
+  function embedActiveLinkedSmartObjectIfNeeded() {
+    var meta = smartObjectMetaFromDescriptor(activeLayerDescriptor());
+    if (!meta || !meta.linked) return false;
+    executeAction(stringIDToTypeID("placedLayerConvertToEmbedded"), undefined, DialogModes.NO);
+    embeddedOuterProxyCount++;
+    return true;
+  }
+
+  function editSmartObjectContents() {
+    executeAction(stringIDToTypeID("placedLayerEditContents"), new ActionDescriptor(), DialogModes.NO);
+  }
+
+  function selectAllLayers() {
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+    desc.putReference(charIDToTypeID("null"), ref);
+    executeAction(stringIDToTypeID("selectAllLayers"), desc, DialogModes.NO);
+  }
+
+  function makePreviewLayerFromOriginal(originalLayer) {
+    var preview = originalLayer.duplicate();
+    try {
+      preview.move(originalLayer, ElementPlacement.PLACEBEFORE);
+    } catch (moveError) {}
+    app.activeDocument.activeLayer = preview;
+    try {
+      preview.rasterize(RasterizeType.ENTIRELAYER);
+    } catch (rasterError) {
+      executeAction(stringIDToTypeID("rasterizeLayer"), new ActionDescriptor(), DialogModes.NO);
+    }
+    preview.name = "__PROXY_PREVIEW__";
+    originalLayer.visible = false;
+    return preview;
+  }
+
+  function proxyActiveSmartObjectInternally(linkedFile) {
+    var mainDoc = doc;
+    var childDoc = null;
+    var originalLayer = null;
+
+    try {
+      editSmartObjectContents();
+      childDoc = app.activeDocument;
+      if (childDoc === mainDoc) throw new Error("智能对象没有打开");
+
+      selectAllLayers();
+      convertSelectedLayersToSmartObject();
+      convertActiveEmbeddedToLinked(linkedFile);
+      originalLayer = childDoc.activeLayer;
+      originalLayer.name = "__ORIGINAL_LINK__";
+
+      makePreviewLayerFromOriginal(originalLayer);
+      childDoc.close(SaveOptions.SAVECHANGES);
+      childDoc = null;
+      app.activeDocument = mainDoc;
+      embedActiveLinkedSmartObjectIfNeeded();
+      renameActiveLayerToProxyFile(linkedFile);
+      wrappedProxyCount++;
+    } finally {
+      try { if (childDoc) childDoc.close(SaveOptions.SAVECHANGES); } catch (closeError) {}
+      try { app.activeDocument = mainDoc; } catch (activeError) {}
+    }
+  }
+
+  function finishProxyChildDocument(task) {
+    var childDoc = task.childDoc;
+    var originalLayer = null;
+
+    app.activeDocument = childDoc;
+    selectAllLayers();
+    convertSelectedLayersToSmartObject();
+    convertActiveEmbeddedToLinked(task.linkedFile);
+    originalLayer = childDoc.activeLayer;
+    originalLayer.name = "__ORIGINAL_LINK__";
+
+    makePreviewLayerFromOriginal(originalLayer);
+    childDoc.close(SaveOptions.SAVECHANGES);
+    task.childDoc = null;
+
+    app.activeDocument = doc;
+    selectLayerById(task.item.id);
+    embedActiveLinkedSmartObjectIfNeeded();
+    renameActiveLayerToProxyFile(task.linkedFile);
+    wrappedProxyCount++;
+    if (task.countAsConverted !== false) convertedCount++;
+    log((task.logPrefix || "已内部代理") + ": " + task.item.path + " -> " + task.linkedFile.fsName);
+  }
+
+  function flushProxyBatch(batch) {
+    if (!batch.length) return;
+
+    var opened = [];
+    for (var i = 0; i < batch.length; i++) {
+      var task = batch[i];
+      try {
+        app.activeDocument = doc;
+        selectLayerById(task.item.id);
+        editSmartObjectContents();
+        task.childDoc = app.activeDocument;
+        if (task.childDoc === doc) throw new Error("智能对象没有打开");
+        opened.push(task);
+      } catch (openError) {
+        failedCount++;
+        log("打开智能对象失败: " + task.item.path + " -> " + task.linkedFile.fsName + " | " + openError);
+        try { app.activeDocument = doc; } catch (activeError) {}
+      }
+    }
+
+    for (var j = 0; j < opened.length; j++) {
+      var openedTask = opened[j];
+      try {
+        finishProxyChildDocument(openedTask);
+      } catch (convertError) {
+        failedCount++;
+        log("失败: " + openedTask.item.path + " -> " + openedTask.linkedFile.fsName + " | " + convertError);
+      } finally {
+        try { if (openedTask.childDoc) openedTask.childDoc.close(SaveOptions.SAVECHANGES); } catch (closeError) {}
+        try { app.activeDocument = doc; } catch (activeError2) {}
+      }
+    }
+
+    batch.length = 0;
+  }
+
+  function findOpenDocumentByFile(file) {
+    try {
+      var target = File(file.fsName);
+      for (var i = 0; i < app.documents.length; i++) {
+        try {
+          if (File(app.documents[i].fullName).fsName === target.fsName) return app.documents[i];
+        } catch (docError) {}
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function saveLinkedFileWithMaxCompatibility(file) {
+    var mainDoc = doc;
+    var oldDialogs = app.displayDialogs;
+    var openedByScript = false;
+    var linkedDoc = null;
+
+    try {
+      app.displayDialogs = DialogModes.NO;
+      linkedDoc = findOpenDocumentByFile(file);
+      if (!linkedDoc) {
+        linkedDoc = app.open(file);
+        openedByScript = true;
+      }
+      app.activeDocument = linkedDoc;
+      linkedDoc.save();
+      if (openedByScript) linkedDoc.close(SaveOptions.DONOTSAVECHANGES);
+      linkedDoc = null;
+      app.activeDocument = mainDoc;
+    } finally {
+      try { if (openedByScript && linkedDoc) linkedDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+      app.displayDialogs = oldDialogs;
+      try { app.activeDocument = mainDoc; } catch (activeError) {}
+    }
+  }
+
   function chooseOutputFolder() {
     try {
       if (!doc.path) {
@@ -267,15 +613,15 @@
     }
   }
 
-  function disableMaxCompatibility() {
-    if (!DISABLE_MAX_COMPATIBILITY_DURING_RUN) return;
+  function forceMaxCompatibility() {
+    if (!FORCE_MAX_COMPATIBILITY_DURING_RUN) return;
     try {
       originalMaximizeCompatibility = app.preferences.maximizeCompatibility;
       hasOriginalMaximizeCompatibility = true;
-      app.preferences.maximizeCompatibility = QueryStateType.NEVER;
-      log("运行期间已关闭最大兼容性保存。");
+      app.preferences.maximizeCompatibility = QueryStateType.ALWAYS;
+      log("运行期间已开启最大兼容性保存。");
     } catch (e) {
-      log("关闭最大兼容性保存失败，继续执行: " + e);
+      log("开启最大兼容性保存失败，继续执行: " + e);
     }
   }
 
@@ -309,7 +655,12 @@
       f.writeln("时间: " + new Date());
       f.writeln("输出目录: " + folder.fsName);
       f.writeln("");
-      f.writeln("转换: " + convertedCount);
+      f.writeln("新转兼容: " + convertedCount);
+      f.writeln("已有重存: " + rewrittenCompatibleCount);
+      f.writeln("内部代理: " + wrappedProxyCount);
+      f.writeln("外层嵌入: " + embeddedOuterProxyCount);
+      f.writeln("图层改名: " + renamedLayerCount);
+      f.writeln("代理跳过: " + skippedProxyCount);
       f.writeln("跳过: " + skippedCount);
       f.writeln("失败: " + failedCount);
       f.writeln("");
@@ -329,10 +680,14 @@
     log("脚本启动");
     var outputFolder = chooseOutputFolder();
     if (!outputFolder) return;
-    disableMaxCompatibility();
+    forceMaxCompatibility();
 
     var items = [];
-    collectSmartObjects(items);
+    if (SELECTED_PROXY_ONLY) {
+      if (!collectSelectedSmartObject(items)) return;
+    } else {
+      collectSmartObjects(items);
+    }
 
     if (!items.length) {
       alert("当前文档没有找到智能对象。");
@@ -340,19 +695,24 @@
     }
 
     var embeddedCount = 0;
+    var linkedRewriteCount = 0;
     for (var i = 0; i < items.length; i++) {
-      if ((!items[i].meta || !items[i].meta.linked) && !shouldSkipSingleFileSmartObject(items[i].meta, items[i].name)) embeddedCount++;
+      if ((!items[i].meta || !items[i].meta.linked) && !shouldSkipSingleFileSmartObject(items[i].meta, items[i].name) && !isProxySmartObject(items[i].meta, items[i].name)) embeddedCount++;
+      if ((REWRITE_LINKED_COMPATIBLE || REPAIR_EXISTING_LINKS || SELECTED_PROXY_ONLY) && items[i].meta && items[i].meta.linked && !isProxySmartObject(items[i].meta, items[i].name) && resolveLinkedPsdPsbFile(items[i].meta)) linkedRewriteCount++;
     }
 
     var ok = confirm(
-      "找到智能对象：" + items.length + " 个\n" +
+      (SELECTED_PROXY_ONLY ? "选中智能对象：1 个\n" : "找到智能对象：" + items.length + " 个\n") +
       "其中内嵌待转换：" + embeddedCount + " 个\n\n" +
+      ((REWRITE_LINKED_COMPATIBLE || REPAIR_EXISTING_LINKS || SELECTED_PROXY_ONLY) ? "已有链接可处理：" + linkedRewriteCount + " 个\n\n" : "") +
+      "新转链接会按 " + MAX_OPEN_PROXY_BATCH + " 个一批处理。\n\n" +
       "链接文件夹：\n" + outputFolder.fsName + "\n\n" +
       "脚本会修改当前文档，但不会自动保存主文档。\n请确认你正在副本文件上测试。"
     );
     if (!ok) return;
 
     function convertAllEmbeddedToLinked() {
+      var proxyBatch = [];
       for (var j = 0; j < items.length; j++) {
       var item = items[j];
       try {
@@ -365,6 +725,38 @@
 
       var freshMeta = smartObjectMetaFromDescriptor(activeLayerDescriptor());
       if (SKIP_LINKED && freshMeta.linked) {
+        if (isProxySmartObject(freshMeta, item.name)) {
+          skippedCount++;
+          skippedProxyCount++;
+          log("跳过代理对象: " + item.path + " | " + (freshMeta.linkPath || freshMeta.fileReference));
+          continue;
+        }
+        if (REWRITE_LINKED_COMPATIBLE || REPAIR_EXISTING_LINKS || SELECTED_PROXY_ONLY) {
+          var linkedFile = resolveLinkedPsdPsbFile(freshMeta);
+          if (linkedFile) {
+            if (REPAIR_EXISTING_LINKS || SELECTED_PROXY_ONLY) {
+              var repairFile = uniqueFile(outputFolder, item.name, j + 1, item.id, DEFAULT_EXTENSION);
+              proxyBatch.push({
+                item: item,
+                linkedFile: repairFile,
+                childDoc: null,
+                countAsConverted: false,
+                logPrefix: "已内部代理修复"
+              });
+              if (proxyBatch.length >= MAX_OPEN_PROXY_BATCH) flushProxyBatch(proxyBatch);
+            } else {
+              try {
+                saveLinkedFileWithMaxCompatibility(linkedFile);
+                rewrittenCompatibleCount++;
+                log("已重存兼容: " + item.path + " | " + linkedFile.fsName);
+              } catch (rewriteError) {
+                failedCount++;
+                log("重存兼容失败: " + item.path + " | " + linkedFile.fsName + " | " + rewriteError);
+              }
+            }
+            continue;
+          }
+        }
         skippedCount++;
         log("跳过已链接: " + item.path + " | " + freshMeta.fileReference);
         continue;
@@ -375,17 +767,18 @@
         log("跳过单文件智能对象: " + item.path + " | " + (freshMeta.fileReference || item.name));
         continue;
       }
+      if (isProxySmartObject(freshMeta, item.name)) {
+        skippedCount++;
+        skippedProxyCount++;
+        log("跳过代理对象: " + item.path + " | " + (freshMeta.fileReference || item.name));
+        continue;
+      }
 
       var outFile = uniqueFile(outputFolder, item.name, j + 1, item.id, outputExtensionForSmartObject(freshMeta));
-      try {
-        convertActiveEmbeddedToLinked(outFile);
-        convertedCount++;
-        log("已转换: " + item.path + " -> " + outFile.fsName);
-      } catch (convertError) {
-        failedCount++;
-        log("失败: " + item.path + " -> " + outFile.fsName + " | " + convertError);
-      }
+      proxyBatch.push({ item: item, linkedFile: outFile, childDoc: null });
+      if (proxyBatch.length >= MAX_OPEN_PROXY_BATCH) flushProxyBatch(proxyBatch);
     }
+      flushProxyBatch(proxyBatch);
     }
 
     runAsOneHistory("批量转链接智能对象", convertAllEmbeddedToLinked);
@@ -404,9 +797,14 @@
     var logFile = shouldWriteLog() ? writeLog(outputFolder) : null;
     alert(
       "完成。\n\n" +
-      "已转换：" + convertedCount + "\n" +
+      "新转兼容：" + convertedCount + "\n" +
+      "已有重存：" + rewrittenCompatibleCount + "\n" +
+      "内部代理：" + wrappedProxyCount + "\n" +
+      "外层嵌入：" + embeddedOuterProxyCount + "\n" +
+      "图层改名：" + renamedLayerCount + "\n" +
       "已跳过：" + skippedCount + "\n" +
       "单文件跳过：" + skippedSingleFileCount + "\n" +
+      "代理跳过：" + skippedProxyCount + "\n" +
       "失败：" + failedCount + "\n\n" +
       "主文档没有自动保存，确认没问题后你再手动保存。\n" +
       (logFile ? "\n日志：" + logFile.fsName : "")

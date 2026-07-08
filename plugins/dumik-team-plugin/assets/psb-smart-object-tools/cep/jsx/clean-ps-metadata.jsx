@@ -13,6 +13,7 @@
   var removedBytes = 0;
   var smartObjectsOpened = 0;
   var linkedSkipped = 0;
+  var proxySkipped = 0;
   var formatSkipped = 0;
   var simpleSkipped = 0;
   var unopenableSkipped = 0;
@@ -83,6 +84,16 @@
   function isPsdOrPsbName(name) {
     var ext = extensionFromName(name);
     return ext === "psd" || ext === "psb";
+  }
+
+  function isProxyName(name) {
+    return /(^|[_\-\s])proxy(\.psb)?$/i.test(String(name || "").replace(/\.[^\.\\\/]+$/, ""));
+  }
+
+  function isProxySmartObject(meta, layerName) {
+    if (isProxyName(layerName)) return true;
+    if (meta && isProxyName(meta.fileReference)) return true;
+    return false;
   }
 
   function documentName(doc) {
@@ -258,6 +269,11 @@
         continue;
       }
 
+      if (isProxySmartObject(item.meta, item.name)) {
+        proxySkipped++;
+        continue;
+      }
+
       if (!isPsdOrPsbName(item.meta.fileReference || item.name)) {
         formatSkipped++;
         continue;
@@ -333,6 +349,7 @@
     "估算减少：" + formatBytes(removedBytes) + "\n" +
     "打开内嵌 SO：" + smartObjectsOpened + "\n" +
     "跳过链接 SO：" + linkedSkipped + "\n" +
+    "跳过代理 SO：" + proxySkipped + "\n" +
     "跳过非PSD/PSB：" + formatSkipped + "\n" +
     "跳过少层文件：" + simpleSkipped + "\n" +
     "跳过打不开 SO：" + unopenableSkipped + "\n" +

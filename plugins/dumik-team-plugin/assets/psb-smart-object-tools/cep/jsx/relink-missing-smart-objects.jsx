@@ -18,6 +18,8 @@
   }
 
   var doc = app.activeDocument;
+  var LINKS_ROOT_FOLDER = "links";
+  var MAX_OPEN_PROXY_BATCH = 4;
   var MAX_SEARCH_DEPTH = 30;
   var logLines = [];
   var relinkedCount = 0;
@@ -62,6 +64,17 @@
     } catch (e) {
       return "[无法读取文件名]";
     }
+  }
+
+  function isProxyName(name) {
+    return /(^|[_\-\s])proxy(\.psb)?$/i.test(String(name || "").replace(/\.[^\.\\\/]+$/, ""));
+  }
+
+  function isProxySmartObject(meta, layerName) {
+    if (isProxyName(layerName)) return true;
+    if (meta && isProxyName(meta.fileReference)) return true;
+    if (meta && isProxyName(meta.linkPath)) return true;
+    return false;
   }
 
   function descriptorPath(desc, key) {
@@ -186,6 +199,10 @@
     var desc = new ActionDescriptor();
     desc.putPath(charIDToTypeID("null"), file);
     executeAction(stringIDToTypeID("placedLayerRelinkToFile"), desc, DialogModes.NO);
+  }
+
+  function editSmartObjectContents() {
+    executeAction(stringIDToTypeID("placedLayerEditContents"), new ActionDescriptor(), DialogModes.NO);
   }
 
   function extensionOf(file) {
@@ -318,14 +335,14 @@
 
     try {
       oldCompatibility = app.preferences.maximizeCompatibility;
-      app.preferences.maximizeCompatibility = QueryStateType.NEVER;
+      app.preferences.maximizeCompatibility = QueryStateType.ALWAYS;
       changedCompatibility = true;
     } catch (e) {}
 
     try {
       var desc = new ActionDescriptor();
       var options = new ActionDescriptor();
-      try { options.putBoolean(stringIDToTypeID("maximizeCompatibility"), false); } catch (optionError) {}
+      try { options.putBoolean(stringIDToTypeID("maximizeCompatibility"), true); } catch (optionError) {}
       desc.putObject(charIDToTypeID("As  "), charIDToTypeID("Pht8"), options);
       desc.putPath(charIDToTypeID("In  "), target);
       desc.putBoolean(charIDToTypeID("LwCs"), true);
@@ -618,6 +635,171 @@
     return tasks;
   }
 
+  function collectProxyMissingItems(proxyItems) {
+    var out = [];
+    var mainDoc = doc;
+    for (var i = 0; i < proxyItems.length; i++) {
+      var proxy = proxyItems[i];
+      var childDoc = null;
+      try {
+        app.activeDocument = mainDoc;
+        selectLayerById(proxy.id);
+        editSmartObjectContents();
+        childDoc = app.activeDocument;
+        if (childDoc === mainDoc) throw new Error("代理智能对象没有打开");
+
+        var childItems = [];
+        collectSmartObjects(childItems);
+        for (var j = 0; j < childItems.length; j++) {
+          var child = childItems[j];
+          if (child.meta && child.meta.linked && child.meta.linkMissing) {
+            child.path = proxy.path + " / " + child.name;
+            out.push({
+              proxy: proxy,
+              childId: child.id,
+              childName: child.name,
+              path: child.path,
+              name: child.name,
+              meta: child.meta
+            });
+          }
+        }
+        childDoc.close(SaveOptions.DONOTSAVECHANGES);
+        childDoc = null;
+      } catch (eProxy) {
+        failedCount++;
+        log("代理内部扫描失败: " + proxy.path + " | " + eProxy);
+      } finally {
+        try { if (childDoc) childDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+        try { app.activeDocument = mainDoc; } catch (activeError) {}
+      }
+    }
+    return out;
+  }
+
+  function prepareProxyRelinkTasks(proxyMissingItems, fileIndex) {
+    var tasks = [];
+    for (var i = 0; i < proxyMissingItems.length; i++) {
+      var item = proxyMissingItems[i];
+      var prepared = prepareRelinkTasks([item], fileIndex);
+      for (var j = 0; j < prepared.length; j++) {
+        prepared[j].proxy = item.proxy;
+        prepared[j].childId = item.childId;
+        prepared[j].childName = item.childName;
+        tasks.push(prepared[j]);
+      }
+    }
+    return tasks;
+  }
+
+  function relinkInsideProxy(task) {
+    var mainDoc = doc;
+    var childDoc = null;
+    try {
+      app.activeDocument = mainDoc;
+      selectLayerById(task.proxy.id);
+      editSmartObjectContents();
+      childDoc = app.activeDocument;
+      if (childDoc === mainDoc) throw new Error("代理智能对象没有打开");
+
+      var childItems = [];
+      collectSmartObjects(childItems);
+      var found = null;
+      for (var i = 0; i < childItems.length; i++) {
+        if (childItems[i].id === task.childId || childItems[i].name === task.childName) {
+          found = childItems[i];
+          break;
+        }
+      }
+      if (!found || !found.id) throw new Error("找不到代理内部链接层: " + task.childName);
+
+      selectLayerById(found.id);
+      relinkSelectedSmartObject(task.target);
+      childDoc.close(SaveOptions.SAVECHANGES);
+      childDoc = null;
+      app.activeDocument = mainDoc;
+      relinkedCount++;
+      logSuccess("已重链代理内部: " + task.item.path + " | " + task.expected + " -> " + task.target.fsName + " | 规则: " + task.reason);
+    } finally {
+      try { if (childDoc) childDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+      try { app.activeDocument = mainDoc; } catch (activeError) {}
+    }
+  }
+
+  function flushProxyRelinkBatch(batch) {
+    if (!batch.length) return;
+
+    var mainDoc = doc;
+    var jobs = [];
+    var jobByProxyId = {};
+    for (var i = 0; i < batch.length; i++) {
+      var task = batch[i];
+      var proxyId = String(task.proxy.id);
+      if (!jobByProxyId[proxyId]) {
+        jobByProxyId[proxyId] = { proxy: task.proxy, tasks: [], childDoc: null };
+        jobs.push(jobByProxyId[proxyId]);
+      }
+      jobByProxyId[proxyId].tasks.push(task);
+    }
+
+    var opened = [];
+    for (var j = 0; j < jobs.length; j++) {
+      var job = jobs[j];
+      try {
+        app.activeDocument = mainDoc;
+        selectLayerById(job.proxy.id);
+        editSmartObjectContents();
+        job.childDoc = app.activeDocument;
+        if (job.childDoc === mainDoc) throw new Error("代理智能对象没有打开");
+        opened.push(job);
+      } catch (openError) {
+        failedCount += job.tasks.length;
+        log("代理内部打开失败: " + job.proxy.path + " | " + openError);
+        try { app.activeDocument = mainDoc; } catch (activeError) {}
+      }
+    }
+
+    for (var k = 0; k < opened.length; k++) {
+      var openedJob = opened[k];
+      try {
+        app.activeDocument = openedJob.childDoc;
+        var childItems = [];
+        collectSmartObjects(childItems);
+        for (var t = 0; t < openedJob.tasks.length; t++) {
+          var relinkTask = openedJob.tasks[t];
+          try {
+            var found = null;
+            for (var c = 0; c < childItems.length; c++) {
+              if (childItems[c].id === relinkTask.childId || childItems[c].name === relinkTask.childName) {
+                found = childItems[c];
+                break;
+              }
+            }
+            if (!found || !found.id) throw new Error("找不到代理内部链接层: " + relinkTask.childName);
+
+            selectLayerById(found.id);
+            relinkSelectedSmartObject(relinkTask.target);
+            relinkedCount++;
+            logSuccess("已重链代理内部: " + relinkTask.item.path + " | " + relinkTask.expected + " -> " + relinkTask.target.fsName + " | 规则: " + relinkTask.reason);
+          } catch (oneError) {
+            failedCount++;
+            log("代理内部重链失败: " + relinkTask.item.path + " | " + relinkTask.expected + " | " + oneError);
+          }
+        }
+        openedJob.childDoc.close(SaveOptions.SAVECHANGES);
+        openedJob.childDoc = null;
+      } catch (jobError) {
+        failedCount += openedJob.tasks.length;
+        log("代理内部批量重链失败: " + openedJob.proxy.path + " | " + jobError);
+      } finally {
+        try { if (openedJob.childDoc) openedJob.childDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+        try { app.activeDocument = mainDoc; } catch (activeError2) {}
+      }
+    }
+
+    batch.length = 0;
+  }
+
   function failureSummary(maxLines) {
     var out = [];
     for (var i = 0; i < logLines.length; i++) {
@@ -651,6 +833,17 @@
     }
   }
 
+  function defaultSearchFolder() {
+    try {
+      if (!doc.path) return null;
+      var links = Folder(doc.path.fsName + "/" + LINKS_ROOT_FOLDER);
+      if (links.exists) return links;
+      return doc.path;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function writeLog() {
     try {
       var f = File(logFolder().fsName + "/" + safeName(docBaseName()) + "_重新链接丢失对象日志_" + timestamp() + ".txt");
@@ -679,21 +872,30 @@
     collectSmartObjects(items);
 
     var missing = [];
+    var proxies = [];
     for (var i = 0; i < items.length; i++) {
-      if (items[i].meta && items[i].meta.linked && items[i].meta.linkMissing) {
+      if (items[i].meta && items[i].meta.linked && items[i].meta.linkMissing && !isProxySmartObject(items[i].meta, items[i].name)) {
         missing.push(items[i]);
+      } else if (isProxySmartObject(items[i].meta, items[i].name)) {
+        proxies.push(items[i]);
       }
     }
 
-    if (!missing.length) {
+    var proxyMissing = collectProxyMissingItems(proxies);
+
+    if (!missing.length && !proxyMissing.length) {
       alert("当前文档没有找到丢失的链接智能对象。");
       return;
     }
 
-    var searchFolder = Folder.selectDialog("选择用于查找丢失链接文件的文件夹");
-    if (!searchFolder) return;
+    var searchFolder = defaultSearchFolder();
+    var autoSearch = !!searchFolder;
+    if (!searchFolder) {
+      searchFolder = Folder.selectDialog("选择用于查找丢失链接文件的文件夹");
+      if (!searchFolder) return;
+    }
 
-    var ok = confirm("找到丢失链接智能对象：" + missing.length + " 个\n\n将在这个文件夹内递归查找同名文件：\n" + searchFolder.fsName + "\n\n只按文件名精确匹配；同名多个会跳过。\n脚本不会自动保存主 PSB。");
+    var ok = confirm("找到丢失链接智能对象：" + (missing.length + proxyMissing.length) + " 个\n其中代理内部：" + proxyMissing.length + " 个\n\n代理内部会按 " + MAX_OPEN_PROXY_BATCH + " 个一批处理。\n\n" + (autoSearch ? "会优先按主文件旁边的 links 自动查找：\n" : "将在这个文件夹内递归查找同名文件：\n") + searchFolder.fsName + "\n\n只按文件名匹配；同名多个会跳过。\n脚本不会自动保存主 PSB。");
     if (!ok) return;
 
     log("搜索目录: " + searchFolder.fsName);
@@ -704,11 +906,12 @@
       id: {},
       stats: { folders: 0, files: 0, tooDeep: 0, folderErrors: 0 }
     };
-    var targetKeys = targetKeysForMissing(missing);
+    var targetKeys = targetKeysForMissing(missing.concat(proxyMissing));
     scanFolder(searchFolder, fileIndex, targetKeys);
     log("已扫描目录: " + fileIndex.stats.folders + " | 文件: " + fileIndex.stats.files + " | 最大深度: " + MAX_SEARCH_DEPTH);
 
     var relinkTasks = prepareRelinkTasks(missing, fileIndex);
+    var proxyRelinkTasks = prepareProxyRelinkTasks(proxyMissing, fileIndex);
 
     function relinkAllMissingSmartObjects() {
       for (var j = 0; j < relinkTasks.length; j++) {
@@ -723,6 +926,13 @@
         log("重链失败: " + task.item.path + " | " + task.expected + " | " + eRelink);
       }
     }
+      var proxyBatch = [];
+      for (var k = 0; k < proxyRelinkTasks.length; k++) {
+      var proxyTask = proxyRelinkTasks[k];
+      proxyBatch.push(proxyTask);
+      if (proxyBatch.length >= MAX_OPEN_PROXY_BATCH) flushProxyRelinkBatch(proxyBatch);
+    }
+      flushProxyRelinkBatch(proxyBatch);
     }
 
     runAsOneHistory("批量重新链接丢失智能对象", relinkAllMissingSmartObjects);

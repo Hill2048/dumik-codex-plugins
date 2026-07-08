@@ -18,11 +18,33 @@
       <div class="group-title">链接整理</div>
 
       <button id="run-link" class="primary action-link">
+        <span id="link-options-toggle" class="option-badge" role="button" tabindex="0" title="转链接选项" aria-label="转链接选项">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+        </span>
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
         </span>
         <span>转链接</span>
         <small>导出</small>
+      </button>
+
+      <div id="link-options" class="option-popover" hidden>
+        <label class="option-row" title="重存已有链接 PSD/PSB，让预览更完整">
+          <input id="link-rewrite-compatible" type="checkbox">
+          <span>重存兼容</span>
+        </label>
+        <label class="option-row" title="把旧链接包成小的内嵌代理，里面保留原链接">
+          <input id="link-repair-existing" type="checkbox">
+          <span>修复旧链接</span>
+        </label>
+      </div>
+
+      <button id="run-selected-proxy" class="secondary action-selected-proxy">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M9 9h6v6H9z"/><path d="M15 4v5"/><path d="M20 9h-5"/><path d="M9 20v-5"/><path d="M4 15h5"/></svg>
+        </span>
+        <span>单个代理</span>
+        <small>选中SO</small>
       </button>
 
       <button id="run-collect" class="secondary action-collect">
@@ -47,6 +69,14 @@
         </span>
         <span>嵌回</span>
         <small>转内嵌</small>
+      </button>
+
+      <button id="run-cleanup-links" class="secondary action-cleanup-links">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/><path d="M4 20h16"/></svg>
+        </span>
+        <span>清废链接</span>
+        <small>移到备份</small>
       </button>
 
       <div class="group-title">内容处理</div>

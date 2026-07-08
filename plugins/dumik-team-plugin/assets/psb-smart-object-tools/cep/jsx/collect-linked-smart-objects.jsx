@@ -18,6 +18,7 @@
 
   var LINKS_FOLDER_SUFFIX = "_links";
   var LINKS_ROOT_FOLDER = "links";
+  var MAX_OPEN_PROXY_BATCH = 4;
   var doc = app.activeDocument;
   var logLines = [];
   var collectedCount = 0;
@@ -51,6 +52,17 @@
     } catch (e) {
       return "[无法读取文件名]";
     }
+  }
+
+  function isProxyName(name) {
+    return /(^|[_\-\s])proxy(\.psb)?$/i.test(String(name || "").replace(/\.[^\.\\\/]+$/, ""));
+  }
+
+  function isProxySmartObject(meta, layerName) {
+    if (isProxyName(layerName)) return true;
+    if (meta && isProxyName(meta.fileReference)) return true;
+    if (meta && isProxyName(meta.linkPath)) return true;
+    return false;
   }
 
   function descriptorPath(desc, key) {
@@ -177,6 +189,10 @@
     executeAction(stringIDToTypeID("placedLayerRelinkToFile"), desc, DialogModes.NO);
   }
 
+  function editSmartObjectContents() {
+    executeAction(stringIDToTypeID("placedLayerEditContents"), new ActionDescriptor(), DialogModes.NO);
+  }
+
   function fileHeader(file, count) {
     try {
       file.encoding = "BINARY";
@@ -264,14 +280,14 @@
 
     try {
       oldCompatibility = app.preferences.maximizeCompatibility;
-      app.preferences.maximizeCompatibility = QueryStateType.NEVER;
+      app.preferences.maximizeCompatibility = QueryStateType.ALWAYS;
       changedCompatibility = true;
     } catch (e) {}
 
     try {
       var desc = new ActionDescriptor();
       var options = new ActionDescriptor();
-      try { options.putBoolean(stringIDToTypeID("maximizeCompatibility"), false); } catch (optionError) {}
+      try { options.putBoolean(stringIDToTypeID("maximizeCompatibility"), true); } catch (optionError) {}
       desc.putObject(charIDToTypeID("As  "), charIDToTypeID("Pht8"), options);
       desc.putPath(charIDToTypeID("In  "), target);
       desc.putBoolean(charIDToTypeID("LwCs"), true);
@@ -413,6 +429,132 @@
     return failedCount > 0;
   }
 
+  function collectOneLinkedItem(item, folder, index) {
+    if (item.meta.linkMissing) {
+      failedCount++;
+      log("失败，链接缺失: " + item.path + " | " + item.meta.fileReference);
+      return;
+    }
+    if (!item.meta.linkPath) {
+      failedCount++;
+      log("失败，无法读取源路径: " + item.path + " | " + item.meta.fileReference);
+      return;
+    }
+
+    var source = File(item.meta.linkPath);
+    if (!source.exists) {
+      failedCount++;
+      log("失败，源文件不存在: " + item.path + " | " + item.meta.linkPath);
+      return;
+    }
+    if (isInsideFolder(source, folder)) {
+      skippedCount++;
+      log("跳过，已经在目标目录: " + item.path + " | " + source.fsName);
+      return;
+    }
+
+    var needsRepair = relinkWouldShowImportDialog(source);
+    var target = needsRepair ? uniqueFileWithExtension(folder, ".psb", item.name, index + 1, item.id) : uniqueFile(folder, source, item.name, index + 1, item.id);
+    try {
+      if (needsRepair) {
+        log("检测到非原生 PSB，自动包一层修复: " + source.fsName);
+        repairImportFileToPsb(source, target);
+        repairedCount++;
+      } else {
+        source.copy(target);
+      }
+      if (!target.exists) throw new Error("复制后目标文件不存在");
+      selectLayerById(item.id);
+      relinkSelectedSmartObject(target);
+      collectedCount++;
+      log("已收集并重链: " + item.path + " | " + source.fsName + " -> " + target.fsName);
+    } catch (eCollect) {
+      failedCount++;
+      try {
+        if (target.exists && !sameFile(source, target)) target.remove();
+      } catch (cleanupError) {}
+      log("收集失败: " + item.path + " | " + eCollect);
+    }
+  }
+
+  function collectProxyInternalLinks(item, folder) {
+    var parentDoc = app.activeDocument;
+    var childDoc = null;
+    try {
+      selectLayerById(item.id);
+      editSmartObjectContents();
+      childDoc = app.activeDocument;
+      if (childDoc === parentDoc) throw new Error("代理智能对象没有打开");
+
+      var childItems = [];
+      collectSmartObjects(childItems);
+      for (var i = 0; i < childItems.length; i++) {
+        var child = childItems[i];
+        child.path = item.path + " / " + child.name;
+        if (child.meta && child.meta.linked) {
+          collectOneLinkedItem(child, folder, i);
+        }
+      }
+      childDoc.close(SaveOptions.SAVECHANGES);
+      childDoc = null;
+      app.activeDocument = parentDoc;
+    } catch (eProxy) {
+      failedCount++;
+      log("代理内部收集失败: " + item.path + " | " + eProxy);
+    } finally {
+      try { if (childDoc) childDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+      try { app.activeDocument = parentDoc; } catch (activeError) {}
+    }
+  }
+
+  function flushProxyCollectBatch(batch, folder) {
+    if (!batch.length) return;
+
+    var parentDoc = app.activeDocument;
+    var opened = [];
+    for (var i = 0; i < batch.length; i++) {
+      var item = batch[i];
+      try {
+        app.activeDocument = parentDoc;
+        selectLayerById(item.id);
+        editSmartObjectContents();
+        var childDoc = app.activeDocument;
+        if (childDoc === parentDoc) throw new Error("代理智能对象没有打开");
+        opened.push({ item: item, childDoc: childDoc });
+      } catch (openError) {
+        failedCount++;
+        log("代理内部打开失败: " + item.path + " | " + openError);
+        try { app.activeDocument = parentDoc; } catch (activeError) {}
+      }
+    }
+
+    for (var j = 0; j < opened.length; j++) {
+      var task = opened[j];
+      try {
+        app.activeDocument = task.childDoc;
+        var childItems = [];
+        collectSmartObjects(childItems);
+        for (var k = 0; k < childItems.length; k++) {
+          var child = childItems[k];
+          child.path = task.item.path + " / " + child.name;
+          if (child.meta && child.meta.linked) {
+            collectOneLinkedItem(child, folder, k);
+          }
+        }
+        task.childDoc.close(SaveOptions.SAVECHANGES);
+        task.childDoc = null;
+      } catch (eProxy) {
+        failedCount++;
+        log("代理内部收集失败: " + task.item.path + " | " + eProxy);
+      } finally {
+        try { if (task.childDoc) task.childDoc.close(SaveOptions.DONOTSAVECHANGES); } catch (closeError) {}
+        try { app.activeDocument = parentDoc; } catch (activeError2) {}
+      }
+    }
+
+    batch.length = 0;
+  }
+
   try {
     var folder = outputFolder();
     if (!folder) return;
@@ -422,7 +564,8 @@
 
     var linkedCount = 0;
     for (var i = 0; i < items.length; i++) {
-      if (items[i].meta && items[i].meta.linked) linkedCount++;
+      if (items[i].meta && items[i].meta.linked && !isProxySmartObject(items[i].meta, items[i].name)) linkedCount++;
+      else if (isProxySmartObject(items[i].meta, items[i].name)) linkedCount++;
     }
 
     if (!items.length || !linkedCount) {
@@ -430,63 +573,26 @@
       return;
     }
 
-    var ok = confirm("找到智能对象：" + items.length + " 个\n其中链接智能对象：" + linkedCount + " 个\n\n将源文件复制到：\n" + folder.fsName + "\n\n并把图层重新链接到复制后的文件。\n脚本不会自动保存主 PSB。");
+    var ok = confirm("找到智能对象：" + items.length + " 个\n其中链接智能对象：" + linkedCount + " 个\n\n代理内部会按 " + MAX_OPEN_PROXY_BATCH + " 个一批处理。\n\n将源文件复制到：\n" + folder.fsName + "\n\n并把图层重新链接到复制后的文件。\n脚本不会自动保存主 PSB。");
     if (!ok) return;
 
     function collectAndRelinkAll() {
+      var proxyBatch = [];
       for (var j = 0; j < items.length; j++) {
       var item = items[j];
+      if (isProxySmartObject(item.meta, item.name)) {
+        proxyBatch.push(item);
+        if (proxyBatch.length >= MAX_OPEN_PROXY_BATCH) flushProxyCollectBatch(proxyBatch, folder);
+        continue;
+      }
       if (!item.meta || !item.meta.linked) {
         skippedCount++;
         log("跳过内嵌: " + item.path);
         continue;
       }
-      if (item.meta.linkMissing) {
-        failedCount++;
-        log("失败，链接缺失: " + item.path + " | " + item.meta.fileReference);
-        continue;
-      }
-      if (!item.meta.linkPath) {
-        failedCount++;
-        log("失败，无法读取源路径: " + item.path + " | " + item.meta.fileReference);
-        continue;
-      }
-
-      var source = File(item.meta.linkPath);
-      if (!source.exists) {
-        failedCount++;
-        log("失败，源文件不存在: " + item.path + " | " + item.meta.linkPath);
-        continue;
-      }
-      if (isInsideFolder(source, folder)) {
-        skippedCount++;
-        log("跳过，已经在目标目录: " + item.path + " | " + source.fsName);
-        continue;
-      }
-
-      var needsRepair = relinkWouldShowImportDialog(source);
-      var target = needsRepair ? uniqueFileWithExtension(folder, ".psb", item.name, j + 1, item.id) : uniqueFile(folder, source, item.name, j + 1, item.id);
-      try {
-        if (needsRepair) {
-          log("检测到非原生 PSB，自动包一层修复: " + source.fsName);
-          repairImportFileToPsb(source, target);
-          repairedCount++;
-        } else {
-          source.copy(target);
-        }
-        if (!target.exists) throw new Error("复制后目标文件不存在");
-        selectLayerById(item.id);
-        relinkSelectedSmartObject(target);
-        collectedCount++;
-        log("已收集并重链: " + item.path + " | " + source.fsName + " -> " + target.fsName);
-      } catch (eCollect) {
-        failedCount++;
-        try {
-          if (target.exists && !sameFile(source, target)) target.remove();
-        } catch (cleanupError) {}
-        log("收集失败: " + item.path + " | " + eCollect);
-      }
+      collectOneLinkedItem(item, folder, j);
     }
+      flushProxyCollectBatch(proxyBatch, folder);
     }
 
     runAsOneHistory("收集链接对象并重链", collectAndRelinkAll);

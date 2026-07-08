@@ -1,9 +1,15 @@
 (function () {
   var statusEl = document.getElementById("status");
   var linkButton = document.getElementById("run-link");
+  var linkOptionsToggle = document.getElementById("link-options-toggle");
+  var linkOptions = document.getElementById("link-options");
+  var linkRewriteCompatibleToggle = document.getElementById("link-rewrite-compatible");
+  var linkRepairExistingToggle = document.getElementById("link-repair-existing");
+  var selectedProxyButton = document.getElementById("run-selected-proxy");
   var collectButton = document.getElementById("run-collect");
   var relinkMissingButton = document.getElementById("run-relink-missing");
   var embedButton = document.getElementById("run-embed");
+  var cleanupLinksButton = document.getElementById("run-cleanup-links");
   var textButton = document.getElementById("run-text");
   var cleanMetadataButton = document.getElementById("run-clean-metadata");
   var cleanMetadataOptionsToggle = document.getElementById("clean-metadata-options-toggle");
@@ -16,6 +22,7 @@
     collect: "collect-linked-smart-objects.jsx",
     relinkMissing: "relink-missing-smart-objects.jsx",
     embed: "embed-linked-smart-objects.jsx",
+    cleanupLinks: "cleanup-unused-links.jsx",
     text: "extract-smart-object-text.jsx",
     cleanMetadata: "clean-ps-metadata.jsx",
     stampUsm: "stamp-usm-sharpen-documents.jsx"
@@ -27,9 +34,14 @@
 
   function setBusy(isBusy) {
     linkButton.disabled = isBusy;
+    linkOptionsToggle.classList.toggle("disabled", isBusy);
+    linkRewriteCompatibleToggle.disabled = isBusy;
+    linkRepairExistingToggle.disabled = isBusy;
+    selectedProxyButton.disabled = isBusy;
     collectButton.disabled = isBusy;
     relinkMissingButton.disabled = isBusy;
     embedButton.disabled = isBusy;
+    cleanupLinksButton.disabled = isBusy;
     textButton.disabled = isBusy;
     cleanMetadataButton.disabled = isBusy;
     cleanMetadataOptionsToggle.classList.toggle("disabled", isBusy);
@@ -37,14 +49,22 @@
     stampUsmButton.disabled = isBusy;
   }
 
-  function toggleCleanMetadataOptions(event) {
+  function toggleOptions(popover, toggle, disabledButton, event) {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    if (cleanMetadataButton.disabled) return;
-    cleanMetadataOptions.hidden = !cleanMetadataOptions.hidden;
-    cleanMetadataOptionsToggle.classList.toggle("open", !cleanMetadataOptions.hidden);
+    if (disabledButton.disabled) return;
+    popover.hidden = !popover.hidden;
+    toggle.classList.toggle("open", !popover.hidden);
+  }
+
+  function toggleLinkOptions(event) {
+    toggleOptions(linkOptions, linkOptionsToggle, linkButton, event);
+  }
+
+  function toggleCleanMetadataOptions(event) {
+    toggleOptions(cleanMetadataOptions, cleanMetadataOptionsToggle, cleanMetadataButton, event);
   }
 
   function extensionRoot() {
@@ -80,7 +100,30 @@
   }
 
   linkButton.addEventListener("click", function () {
-    runJsxFile(scripts.link, "批量转链接智能对象");
+    var rewriteCompatible = linkRewriteCompatibleToggle ? linkRewriteCompatibleToggle.checked : false;
+    var repairExisting = linkRepairExistingToggle ? linkRepairExistingToggle.checked : false;
+    runJsxFile(
+      scripts.link,
+      "批量转链接智能对象",
+      "$.global.__psbLinkRewriteCompatible = " + (rewriteCompatible ? "true;" : "false;") +
+        "$.global.__psbLinkRepairExisting = " + (repairExisting ? "true;" : "false;") +
+        "$.global.__psbLinkSelectedProxy = false;"
+    );
+  });
+
+  linkOptionsToggle.addEventListener("click", toggleLinkOptions);
+  linkOptionsToggle.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") toggleLinkOptions(event);
+  });
+
+  selectedProxyButton.addEventListener("click", function () {
+    runJsxFile(
+      scripts.link,
+      "选中智能对象转代理",
+      "$.global.__psbLinkRewriteCompatible = false;" +
+        "$.global.__psbLinkRepairExisting = false;" +
+        "$.global.__psbLinkSelectedProxy = true;"
+    );
   });
 
   collectButton.addEventListener("click", function () {
@@ -93,6 +136,10 @@
 
   embedButton.addEventListener("click", function () {
     runJsxFile(scripts.embed, "批量嵌入链接智能对象");
+  });
+
+  cleanupLinksButton.addEventListener("click", function () {
+    runJsxFile(scripts.cleanupLinks, "清理废弃 links 文件");
   });
 
   textButton.addEventListener("click", function () {

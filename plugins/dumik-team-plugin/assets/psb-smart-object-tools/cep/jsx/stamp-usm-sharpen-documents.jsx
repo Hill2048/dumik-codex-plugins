@@ -84,6 +84,34 @@
       return width > 1000 ? 77 : 44;
     }
 
+    function pxValue(value) {
+      try {
+        return value.as("px");
+      } catch (e) {
+        return Number(value);
+      }
+    }
+
+    function layerPosition(layer) {
+      try {
+        return {
+          left: pxValue(layer.bounds[0]),
+          top: pxValue(layer.bounds[1])
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function restoreLayerPosition(layer, before) {
+      if (!layer || !before) return;
+      var after = layerPosition(layer);
+      if (!after) return;
+      var dx = before.left - after.left;
+      var dy = before.top - after.top;
+      if (dx || dy) layer.translate(dx, dy);
+    }
+
     function readArtboardRect(layerSet) {
       try {
         var desc = layerDescriptorById(layerSet.id);
@@ -138,10 +166,15 @@
       pasted.applyUnSharpMask(amount, $.global.__psbStampUsmRadius, $.global.__psbStampUsmThreshold);
 
       if (targetGroup) {
+        var beforeMove = layerPosition(pasted);
         try {
           pasted.move(targetGroup, ElementPlacement.INSIDE);
+          restoreLayerPosition(pasted, beforeMove);
         } catch (moveError) {
-          try { pasted.move(targetGroup, ElementPlacement.PLACEATBEGINNING); } catch (fallbackError) {}
+          try {
+            pasted.move(targetGroup, ElementPlacement.PLACEATBEGINNING);
+            restoreLayerPosition(pasted, beforeMove);
+          } catch (fallbackError) {}
         }
       }
       return {
