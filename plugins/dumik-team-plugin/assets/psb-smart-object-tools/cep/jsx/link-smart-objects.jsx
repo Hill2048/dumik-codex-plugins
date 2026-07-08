@@ -33,6 +33,7 @@
   var REWRITE_LINKED_COMPATIBLE = !!$.global.__psbLinkRewriteCompatible;
   var REPAIR_EXISTING_LINKS = !!$.global.__psbLinkRepairExisting;
   var SELECTED_PROXY_ONLY = !!$.global.__psbLinkSelectedProxy;
+  var startedAt = new Date().getTime();
 
   var doc = app.activeDocument;
   var originalRulerUnits = app.preferences.rulerUnits;
@@ -49,11 +50,19 @@
   var wrappedProxyCount = 0;
   var embeddedOuterProxyCount = 0;
   var skippedProxyCount = 0;
+  var unlockedLayerCount = 0;
   var failedCount = 0;
   var linkedPsdPsbIndex = null;
 
   function log(msg) {
     logLines.push(msg);
+  }
+
+  function elapsedText() {
+    var seconds = Math.max(0, Math.round((new Date().getTime() - startedAt) / 1000));
+    var minutes = Math.floor(seconds / 60);
+    var rest = seconds % 60;
+    return minutes ? minutes + "分" + rest + "秒" : seconds + "秒";
   }
 
   function runAsOneHistory(name, fn) {
@@ -453,6 +462,49 @@
     executeAction(stringIDToTypeID("selectAllLayers"), desc, DialogModes.NO);
   }
 
+  function unlockLayerTree(layer) {
+    if (!layer) return;
+    if (layer.typename === "LayerSet") {
+      try {
+        if (layer.allLocked) {
+          layer.allLocked = false;
+          unlockedLayerCount++;
+        }
+      } catch (groupLockError) {}
+      for (var i = 0; i < layer.layers.length; i++) {
+        unlockLayerTree(layer.layers[i]);
+      }
+      return;
+    }
+
+    try {
+      if (layer.isBackgroundLayer) {
+        layer.isBackgroundLayer = false;
+        unlockedLayerCount++;
+      }
+    } catch (backgroundError) {}
+
+    var props = ["allLocked", "pixelsLocked", "positionLocked", "transparentPixelsLocked"];
+    for (var j = 0; j < props.length; j++) {
+      try {
+        if (layer[props[j]]) {
+          layer[props[j]] = false;
+          unlockedLayerCount++;
+        }
+      } catch (lockError) {}
+    }
+  }
+
+  function unlockAllLayers(targetDoc) {
+    var before = unlockedLayerCount;
+    for (var i = 0; i < targetDoc.layers.length; i++) {
+      unlockLayerTree(targetDoc.layers[i]);
+    }
+    if (unlockedLayerCount > before) {
+      log("已临时解锁图层: " + (unlockedLayerCount - before) + " | " + targetDoc.name);
+    }
+  }
+
   function makePreviewLayerFromOriginal(originalLayer) {
     var preview = originalLayer.duplicate();
     try {
@@ -479,6 +531,7 @@
       childDoc = app.activeDocument;
       if (childDoc === mainDoc) throw new Error("智能对象没有打开");
 
+      unlockAllLayers(childDoc);
       selectAllLayers();
       convertSelectedLayersToSmartObject();
       convertActiveEmbeddedToLinked(linkedFile);
@@ -503,6 +556,7 @@
     var originalLayer = null;
 
     app.activeDocument = childDoc;
+    unlockAllLayers(childDoc);
     selectAllLayers();
     convertSelectedLayersToSmartObject();
     convertActiveEmbeddedToLinked(task.linkedFile);
@@ -653,6 +707,7 @@
       f.writeln("批量转为链接智能对象 v1 日志");
       f.writeln("文件: " + safeDocName());
       f.writeln("时间: " + new Date());
+      f.writeln("耗时: " + elapsedText());
       f.writeln("输出目录: " + folder.fsName);
       f.writeln("");
       f.writeln("新转兼容: " + convertedCount);
@@ -661,6 +716,7 @@
       f.writeln("外层嵌入: " + embeddedOuterProxyCount);
       f.writeln("图层改名: " + renamedLayerCount);
       f.writeln("代理跳过: " + skippedProxyCount);
+      f.writeln("解锁图层: " + unlockedLayerCount);
       f.writeln("跳过: " + skippedCount);
       f.writeln("失败: " + failedCount);
       f.writeln("");
@@ -802,10 +858,12 @@
       "内部代理：" + wrappedProxyCount + "\n" +
       "外层嵌入：" + embeddedOuterProxyCount + "\n" +
       "图层改名：" + renamedLayerCount + "\n" +
+      "解锁图层：" + unlockedLayerCount + "\n" +
       "已跳过：" + skippedCount + "\n" +
       "单文件跳过：" + skippedSingleFileCount + "\n" +
       "代理跳过：" + skippedProxyCount + "\n" +
-      "失败：" + failedCount + "\n\n" +
+      "失败：" + failedCount + "\n" +
+      "耗时：" + elapsedText() + "\n\n" +
       "主文档没有自动保存，确认没问题后你再手动保存。\n" +
       (logFile ? "\n日志：" + logFile.fsName : "")
     );

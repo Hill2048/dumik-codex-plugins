@@ -22,6 +22,14 @@
   var MAX_DEPTH = 20;
   var MIN_LAYERS_TO_CLEAN = 5;
   var includeEmbeddedSmartObjects = $.global.__psbCleanMetadataIncludeEmbedded !== false;
+  var startedAt = new Date().getTime();
+
+  function elapsedText() {
+    var seconds = Math.max(0, Math.round((new Date().getTime() - startedAt) / 1000));
+    var minutes = Math.floor(seconds / 60);
+    var rest = seconds % 60;
+    return minutes ? minutes + "分" + rest + "秒" : seconds + "秒";
+  }
 
   function fail(message) {
     failedCount++;
@@ -353,7 +361,8 @@
     "跳过非PSD/PSB：" + formatSkipped + "\n" +
     "跳过少层文件：" + simpleSkipped + "\n" +
     "跳过打不开 SO：" + unopenableSkipped + "\n" +
-    "失败：" + failedCount + "\n\n" +
+    "失败：" + failedCount + "\n" +
+    "耗时：" + elapsedText() + "\n\n" +
     "主文件未自动保存，请检查后手动保存。" +
     failureText
   );

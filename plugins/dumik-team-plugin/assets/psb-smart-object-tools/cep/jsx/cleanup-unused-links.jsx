@@ -14,9 +14,17 @@
   var movedCount = 0;
   var skippedCount = 0;
   var failedCount = 0;
+  var startedAt = new Date().getTime();
 
   function log(msg) {
     logLines.push(msg);
+  }
+
+  function elapsedText() {
+    var seconds = Math.max(0, Math.round((new Date().getTime() - startedAt) / 1000));
+    var minutes = Math.floor(seconds / 60);
+    var rest = seconds % 60;
+    return minutes ? minutes + "分" + rest + "秒" : seconds + "秒";
   }
 
   function safeName(name) {
@@ -232,6 +240,7 @@
       f.writeln("清理废弃 links 日志");
       f.writeln("文件: " + doc.name);
       f.writeln("时间: " + new Date());
+      f.writeln("耗时: " + elapsedText());
       f.writeln("");
       f.writeln("移动: " + movedCount);
       f.writeln("跳过: " + skippedCount);
@@ -291,7 +300,7 @@
     }
 
     var logFile = (failedCount > 0) ? writeLog(folder) : null;
-    alert("完成。\n\n已移动：" + movedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n\n位置：\n" + trash.fsName + (logFile ? "\n\n日志：" + logFile.fsName : ""));
+    alert("完成。\n\n已移动：" + movedCount + "\n已跳过：" + skippedCount + "\n失败：" + failedCount + "\n耗时：" + elapsedText() + "\n\n位置：\n" + trash.fsName + (logFile ? "\n\n日志：" + logFile.fsName : ""));
   } catch (e) {
     alert("脚本出错: " + e + (e && e.line ? "\n行: " + e.line : ""));
   } finally {

@@ -4,7 +4,8 @@ param(
   [string]$Mode = "Install",
   [ValidateSet("Auto", "CEP", "UXP")]
   [string]$Flavor = "Auto",
-  [switch]$Update
+  [switch]$Update,
+  [switch]$SkipRemoteCheck
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,10 +13,12 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PluginRoot = Split-Path -Parent $ScriptDir
 $PluginName = "psb-smart-object-tools"
-$TargetRoot = Join-Path $env:APPDATA "Adobe\CEP\extensions"
-$Target = Join-Path $TargetRoot $PluginName
+$TargetRoot = if ($env:APPDATA) { Join-Path $env:APPDATA "Adobe\CEP\extensions" } else { "" }
+$Target = if ($TargetRoot) { Join-Path $TargetRoot $PluginName } else { "" }
 $BackupPattern = "psb-smart-object-tools.bak-*"
 $UxpPackageRoot = Join-Path $PluginRoot "dist"
+$GithubRawVersionUrl = "https://raw.githubusercontent.com/Hill2048/dumik-codex-plugins/main/plugins/dumik-team-plugin/assets/skill-versions.json"
+$GithubZipUrl = "https://github.com/Hill2048/dumik-codex-plugins/archive/refs/heads/main.zip"
 $RequiredFiles = @(
   "index.html",
   "js\main.js",
@@ -39,6 +42,96 @@ $KeyFiles = @(
 
 if ($Update) {
   $Mode = "Update"
+}
+
+function Get-PluginVersion {
+  param([string]$Root)
+
+  $versionFile = Join-Path $Root "assets\skill-versions.json"
+  if (Test-Path -LiteralPath $versionFile -PathType Leaf) {
+    try {
+      $versions = Get-Content -LiteralPath $versionFile -Raw | ConvertFrom-Json
+      if ($versions.pluginVersion) {
+        return [string]$versions.pluginVersion
+      }
+    } catch {}
+  }
+
+  $pluginFile = Join-Path $Root ".codex-plugin\plugin.json"
+  if (Test-Path -LiteralPath $pluginFile -PathType Leaf) {
+    try {
+      $plugin = Get-Content -LiteralPath $pluginFile -Raw | ConvertFrom-Json
+      if ($plugin.version) {
+        return [string]$plugin.version
+      }
+    } catch {}
+  }
+
+  return "0.0.0"
+}
+
+function Compare-VersionText {
+  param(
+    [string]$Left,
+    [string]$Right
+  )
+
+  try {
+    $leftVersion = [version]$Left
+    $rightVersion = [version]$Right
+    return $leftVersion.CompareTo($rightVersion)
+  } catch {
+    return [string]::Compare($Left, $Right, $true)
+  }
+}
+
+function Get-RemotePluginVersion {
+  $response = Invoke-WebRequest -Uri $GithubRawVersionUrl -UseBasicParsing -TimeoutSec 15
+  $remote = $response.Content | ConvertFrom-Json
+  return [string]$remote.pluginVersion
+}
+
+function Use-GithubPluginIfNewer {
+  if ($SkipRemoteCheck) {
+    Write-Host "GitHub version check skipped."
+    return
+  }
+
+  try {
+    $localVersion = Get-PluginVersion -Root $PluginRoot
+    $remoteVersion = Get-RemotePluginVersion
+    Write-Host "Local plugin version: $localVersion"
+    Write-Host "GitHub plugin version: $remoteVersion"
+
+    if ((Compare-VersionText -Left $remoteVersion -Right $localVersion) -le 0) {
+      Write-Host "GitHub check: local version is current."
+      return
+    }
+
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("dumik-psb-plugin-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
+    $zipPath = Join-Path $tempRoot "dumik-codex-plugins-main.zip"
+    Invoke-WebRequest -Uri $GithubZipUrl -UseBasicParsing -TimeoutSec 60 -OutFile $zipPath
+    Expand-Archive -LiteralPath $zipPath -DestinationPath $tempRoot -Force
+
+    $remoteRoot = Join-Path $tempRoot "dumik-codex-plugins-main\plugins\dumik-team-plugin"
+    if (!(Test-Path -LiteralPath $remoteRoot -PathType Container)) {
+      $remoteRoot = Get-ChildItem -LiteralPath $tempRoot -Directory -ErrorAction Stop |
+        ForEach-Object { Join-Path $_.FullName "plugins\dumik-team-plugin" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
+        Select-Object -First 1
+    }
+    if (!$remoteRoot -or !(Test-Path -LiteralPath $remoteRoot -PathType Container)) {
+      throw "Downloaded GitHub package does not contain plugins\dumik-team-plugin."
+    }
+
+    $script:PluginRoot = (Resolve-Path -LiteralPath $remoteRoot).Path
+    $script:UxpPackageRoot = Join-Path $script:PluginRoot "dist"
+    Write-Host "GitHub check: using newer plugin from GitHub."
+    Write-Host "GitHub source: $script:PluginRoot"
+  } catch {
+    Write-Warning "GitHub version check failed, continue with local plugin. $($_.Exception.Message)"
+  }
 }
 
 function Test-PsbCepSource {
@@ -306,6 +399,8 @@ function Install-UxpPackage {
   }
   return $true
 }
+
+Use-GithubPluginIfNewer
 
 $ResolvedFlavor = Resolve-Flavor
 

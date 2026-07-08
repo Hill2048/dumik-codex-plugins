@@ -5,6 +5,7 @@ const { app, core, action } = photoshop;
 const fs = uxp.storage.localFileSystem;
 const batchPlay = action.batchPlay;
 const MAX_OPEN_PROXY_BATCH = 4;
+let activeRunStartedAt = 0;
 
 const ui = {
   link: document.getElementById("run-link"),
@@ -37,9 +38,17 @@ function messageOf(error) {
   return error && error.message ? error.message : String(error);
 }
 
+function elapsedText(startedAt) {
+  const seconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes ? `${minutes}分${rest}秒` : `${seconds}秒`;
+}
+
 async function runModal(name, fn) {
   setBusy(true);
   setStatus(name);
+  activeRunStartedAt = Date.now();
   try {
     await core.executeAsModal(fn, { commandName: name });
     setStatus("");
@@ -47,13 +56,15 @@ async function runModal(name, fn) {
     await showAlert("执行失败", messageOf(error));
     setStatus(messageOf(error));
   } finally {
+    activeRunStartedAt = 0;
     setBusy(false);
   }
 }
 
 async function showAlert(title, message) {
   try {
-    await app.showAlert(`${title}\n\n${message}`);
+    const elapsed = title === "完成" && activeRunStartedAt ? `\n耗时：${elapsedText(activeRunStartedAt)}` : "";
+    await app.showAlert(`${title}\n\n${message}${elapsed}`);
   } catch (error) {
     console.log(title, message);
   }
@@ -484,6 +495,24 @@ async function selectAllLayers() {
   ]);
 }
 
+async function unlockSelectedLayers() {
+  try {
+    await bp([
+      {
+        _obj: "applyLocking",
+        _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+        layerLocking: {
+          _obj: "layerLocking",
+          protectNone: true
+        },
+        _options: { dialogOptions: "dontDisplay" }
+      }
+    ]);
+  } catch (error) {
+    console.log("unlock selected layers failed", error);
+  }
+}
+
 async function convertSelectedLayersToSmartObject() {
   await bp([
     {
@@ -592,6 +621,8 @@ async function makeProxyPreviewFromOriginal(originalId) {
 async function proxySelectedSmartObjectInternally(linkedFileEntry, mainLayerId) {
   await editSmartObjectContents();
   try {
+    await selectAllLayers();
+    await unlockSelectedLayers();
     await selectAllLayers();
     await convertSelectedLayersToSmartObject();
     await convertSelectedToLinked(linkedFileEntry);

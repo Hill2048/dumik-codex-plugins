@@ -7,10 +7,18 @@
   }
 
   var doc = app.activeDocument;
+  var startedAt = new Date().getTime();
   var radius = 1.0;
   var threshold = 0;
   var exportFolder = Folder.selectDialog("选择 JPG 导出位置");
   if (!exportFolder) return;
+
+  function elapsedText() {
+    var seconds = Math.max(0, Math.round((new Date().getTime() - startedAt) / 1000));
+    var minutes = Math.floor(seconds / 60);
+    var rest = seconds % 60;
+    return minutes ? minutes + "分" + rest + "秒" : seconds + "秒";
+  }
 
   function px(value) {
     try {
@@ -279,7 +287,8 @@
       "完成。\n\n" +
       "已盖印并锐化：" + ($.global.__psbStampUsmProcessed || 0) + "\n" +
       "已导出 JPG：" + ($.global.__psbStampUsmExported || 0) + "\n" +
-      "失败：" + ($.global.__psbStampUsmFailed || 0) +
+      "失败：" + ($.global.__psbStampUsmFailed || 0) + "\n" +
+      "耗时：" + elapsedText() +
       details +
       failures +
       "\n\n文件未自动保存，请检查后手动保存。"

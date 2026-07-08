@@ -25,6 +25,7 @@
   var HIDE_ORIGINAL_TEXT = true;
   var doc = app.activeDocument;
   var originalRulerUnits = app.preferences.rulerUnits;
+  var startedAt = new Date().getTime();
   app.preferences.rulerUnits = Units.PIXELS;
 
   var logLines = [];
@@ -34,6 +35,13 @@
     logLines.push(msg);
   }
 
+  function elapsedText() {
+    var seconds = Math.max(0, Math.round((new Date().getTime() - startedAt) / 1000));
+    var minutes = Math.floor(seconds / 60);
+    var rest = seconds % 60;
+    return minutes ? minutes + "分" + rest + "秒" : seconds + "秒";
+  }
+
   function runAsOneHistory(name, fn) {
     app.activeDocument.suspendHistory(name, "(" + fn.toString() + ")()");
   }
@@ -41,7 +49,7 @@
   function fail(msg) {
     log("失败: " + msg);
     writeLog();
-    alert(msg + "\n\n日志已写出。");
+    alert(msg + "\n\n耗时：" + elapsedText() + "\n日志已写出。");
   }
 
   function isSmartObject(layer) {
@@ -321,6 +329,7 @@
       f.open("w");
       f.writeln("只提取智能对象文字 v3 日志");
       f.writeln("时间: " + new Date());
+      f.writeln("耗时: " + elapsedText());
       f.writeln("");
       for (var i = 0; i < logLines.length; i++) f.writeln(logLines[i]);
       f.close();
@@ -399,12 +408,12 @@
 
     if (noTextFound) {
       writeLog();
-      alert("没找到可提取的文字层。\n\n原智能对象没有被修改。");
+      alert("没找到可提取的文字层。\n\n耗时：" + elapsedText() + "\n原智能对象没有被修改。");
       return;
     }
 
     writeLog();
-    alert("完成。\n\n结构已整理为：\n" + groups.parent.name + "\n  文案组\n  画面组\n\n已提取文字层: " + moved + "\n已隐藏原 SO 文字层: " + hidden);
+    alert("完成。\n\n结构已整理为：\n" + groups.parent.name + "\n  文案组\n  画面组\n\n已提取文字层: " + moved + "\n已隐藏原 SO 文字层: " + hidden + "\n耗时：" + elapsedText());
   } catch (e) {
     fail("脚本出错: " + e + (e && e.number ? " | 错误号: " + e.number : "") + (e && e.line ? " | 行: " + e.line : ""));
   } finally {
