@@ -26,6 +26,7 @@
   var DEFAULT_EXTENSION = ".psb";
   var LINKS_ROOT_FOLDER = "links";
   var LINKS_FOLDER_SUFFIX = "_links";
+  var NO_LINK_LAYER_SUFFIX = "_不转链接";
   var MAX_OPEN_PROXY_BATCH = 4;
   var MIN_VALID_LINKED_FILE_BYTES = 32768;
   var FORCE_MAX_COMPATIBILITY_DURING_RUN = true;
@@ -300,6 +301,11 @@
         if (descriptorLayerSection(desc) === "layerSectionEnd") continue;
         if (!desc.hasKey(stringIDToTypeID("smartObject"))) continue;
         var name = descriptorString(desc, "name", "Layer " + i);
+        if (isNoLinkCheckedName(name)) {
+          skippedCount++;
+          log("跳过已标记不转链接: " + name);
+          continue;
+        }
         var id = descriptorInteger(desc, "layerID", null);
         if (id === null) {
           log("跳过，无法读取 layerID: " + name);
@@ -420,6 +426,17 @@
     return String(name || "").replace(/\.[^\.]+$/, "");
   }
 
+  function isNoLinkCheckedName(name) {
+    return String(name || "").slice(-NO_LINK_LAYER_SUFFIX.length) === NO_LINK_LAYER_SUFFIX;
+  }
+
+  function noLinkCheckedLayerName(name) {
+    name = String(name || "smart_object");
+    if (isNoLinkCheckedName(name)) return name;
+    if (name.length > 120 - NO_LINK_LAYER_SUFFIX.length) name = name.substring(0, 120 - NO_LINK_LAYER_SUFFIX.length);
+    return name + NO_LINK_LAYER_SUFFIX;
+  }
+
   function layerNameFromFile(file) {
     var name = stripExtension(basenameFromPath(file && file.name ? file.name : file));
     if (!name) name = "linked_smart_object";
@@ -446,6 +463,18 @@
 
   function renameActiveLayerToProxyFile(file) {
     return renameActiveLayerToName(layerNameFromFile(file) + "_proxy");
+  }
+
+  function renameActiveLayerToNoLink(item, reason) {
+    var currentName = "";
+    try {
+      currentName = app.activeDocument.activeLayer.name;
+    } catch (e) {
+      currentName = item && item.name ? item.name : "smart_object";
+    }
+    var changed = renameActiveLayerToName(noLinkCheckedLayerName(currentName));
+    if (changed) log("已标记不转链接: " + (item && item.path ? item.path : currentName) + " | " + reason);
+    return changed;
   }
 
   function pushIndex(map, file) {
@@ -641,6 +670,7 @@
         childDoc.close(SaveOptions.DONOTSAVECHANGES);
         childDoc = null;
         app.activeDocument = mainDoc;
+        renameActiveLayerToNoLink({ path: app.activeDocument.activeLayer.name }, "轻量智能对象");
         return;
       }
 
@@ -676,6 +706,9 @@
       log("跳过轻量智能对象: " + task.item.path + " | " + simpleChildSkipText(childDoc));
       childDoc.close(SaveOptions.DONOTSAVECHANGES);
       task.childDoc = null;
+      app.activeDocument = doc;
+      selectLayerById(task.item.id);
+      renameActiveLayerToNoLink(task.item, "轻量智能对象");
       return;
     }
     saveDocumentAsLinkedFile(childDoc, task.linkedFile);
@@ -959,6 +992,7 @@
       if (shouldSkipSingleFileSmartObject(freshMeta, item.name)) {
         skippedCount++;
         skippedSingleFileCount++;
+        renameActiveLayerToNoLink(item, "单文件智能对象");
         log("跳过单文件智能对象: " + item.path + " | " + (freshMeta.fileReference || item.name));
         continue;
       }
