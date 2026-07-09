@@ -1,9 +1,9 @@
 {
   "plugin": "dumik-team-plugin",
-  "pluginVersion": "0.5.0",
+  "pluginVersion": "0.5.16",
   "skills": {
     "D-init": "0.2.0",
-    "D-psb-install": "0.1.7",
+    "D-psb-install": "0.1.10",
     "D-detail-plan": "0.1.1",
     "D-detail-auto": "0.2.1",
     "D-grid-prompt": "0.1.3",

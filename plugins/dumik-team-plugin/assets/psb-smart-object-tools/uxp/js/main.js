@@ -4,8 +4,22 @@ const uxp = require("uxp");
 const { app, core, action } = photoshop;
 const fs = uxp.storage.localFileSystem;
 const batchPlay = action.batchPlay;
+const PLUGIN_VERSION = "1.3.28";
 const MAX_OPEN_PROXY_BATCH = 4;
+const MIN_LAYERS_TO_CLEAN = 5;
 let activeRunStartedAt = 0;
+
+const jsxScripts = {
+  link: "link-smart-objects.jsx",
+  collect: "collect-linked-smart-objects.jsx",
+  relinkMissing: "relink-missing-smart-objects.jsx",
+  embed: "embed-linked-smart-objects.jsx",
+  cleanupLinks: "cleanup-unused-links.jsx",
+  text: "extract-smart-object-text.jsx",
+  cleanMetadata: "clean-ps-metadata.jsx",
+  purgeCache: "purge-ps-cache.jsx",
+  stampUsm: "stamp-usm-sharpen-documents.jsx"
+};
 
 const ui = {
   link: document.getElementById("run-link"),
@@ -22,6 +36,7 @@ const ui = {
   cleanMetaOptionsToggle: document.getElementById("clean-metadata-options-toggle"),
   cleanMetaOptions: document.getElementById("clean-metadata-options"),
   cleanEmbeddedSo: document.getElementById("clean-embedded-so"),
+  purgeCache: document.getElementById("run-purge-cache"),
   cleanupLinks: document.getElementById("run-cleanup-links"),
   stampUsm: document.getElementById("run-stamp-usm"),
   status: document.getElementById("status")
@@ -68,6 +83,7 @@ function setBusy(value) {
   setControlDisabled(ui.cleanMeta, value);
   setControlDisabled(ui.cleanMetaOptionsToggle, value);
   setControlDisabled(ui.cleanEmbeddedSo, value);
+  setControlDisabled(ui.purgeCache, value);
   setControlDisabled(ui.cleanupLinks, value);
   setControlDisabled(ui.stampUsm, value);
 }
@@ -84,6 +100,7 @@ function toggleOptions(popover, toggle, disabledControl, event) {
 
 function setStatus(message) {
   ui.status.textContent = message || "";
+  ui.status.hidden = !message;
 }
 
 function messageOf(error) {
@@ -114,17 +131,161 @@ async function runModal(name, fn) {
 }
 
 async function showAlert(title, message) {
-  try {
-    const elapsed = title === "完成" && activeRunStartedAt ? `\n耗时：${elapsedText(activeRunStartedAt)}` : "";
-    await app.showAlert(`${title}\n\n${message}${elapsed}`);
-  } catch (error) {
-    console.log(title, message);
-  }
+  const elapsed = title === "完成" && activeRunStartedAt ? `\n耗时：${elapsedText(activeRunStartedAt)}` : "";
+  await panelMessage(title, `${message}${elapsed}`);
 }
 
 async function confirmRun(title, message) {
-  await showAlert(title, message);
-  return true;
+  return panelMessage(title, message, true);
+}
+
+function displayPath(path) {
+  return nativePathFromValue(path).replace(/\//g, "\\");
+}
+
+function panelMessage(title, message, confirm) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "panel-dialog-backdrop";
+
+    const dialog = document.createElement("div");
+    dialog.className = `panel-dialog ${title === "执行失败" ? "is-error" : ""}`;
+
+    const head = document.createElement("div");
+    head.className = "panel-dialog-title";
+    head.textContent = title;
+
+    const body = document.createElement("div");
+    body.className = "panel-dialog-body";
+    String(message || "").split("\n").forEach((line) => {
+      const p = document.createElement("div");
+      p.textContent = line || " ";
+      body.appendChild(p);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "panel-dialog-actions";
+
+    function close(value) {
+      overlay.remove();
+      resolve(value);
+    }
+
+    if (confirm) {
+      const cancel = document.createElement("button");
+      cancel.className = "panel-dialog-button secondary";
+      cancel.textContent = "取消";
+      cancel.addEventListener("click", () => close(false));
+      actions.appendChild(cancel);
+    }
+
+    const ok = document.createElement("button");
+    ok.className = "panel-dialog-button primary";
+    ok.textContent = confirm ? "开始" : "知道了";
+    ok.addEventListener("click", () => close(true));
+    actions.appendChild(ok);
+
+    dialog.appendChild(head);
+    dialog.appendChild(body);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    ok.focus();
+  });
+}
+
+function jsxQuote(value) {
+  return `"${String(value || "").replace(/\\/g, "/").replace(/"/g, '\\"')}"`;
+}
+
+async function readPluginJsx(fileName) {
+  const response = await fetch(`./jsx/${fileName}`);
+  if (!response.ok) {
+    throw new Error(`找不到脚本：jsx/${fileName}`);
+  }
+  return response.text();
+}
+
+async function writeJsxRunner(fileName, prefixScript) {
+  const sourceText = await readPluginJsx(fileName);
+  const tempFolder = await fs.getTemporaryFolder();
+  const runner = await tempFolder.createFile(`psb_run_${Date.now()}.jsx`, {
+    overwrite: true
+  });
+  const body = `${prefixScript || ""}\n${sourceText}\n`;
+  await runner.write(body, { format: uxp.storage.formats.utf8 });
+  return runner;
+}
+
+async function runJsxFile(fileName, label, prefixScript) {
+  setBusy(true);
+  setStatus(`正在执行：${label}`);
+  activeRunStartedAt = Date.now();
+  try {
+    const runner = await writeJsxRunner(fileName, prefixScript);
+    const token = await fs.createSessionToken(runner);
+    await core.executeAsModal(
+      async () => {
+        await batchPlay(
+          [
+            {
+              _obj: "AdobeScriptAutomation Scripts",
+              javaScript: {
+                _path: token,
+                _kind: "local"
+              },
+              javaScriptMessage: "undefined",
+              _isCommand: true,
+              _options: { dialogOptions: "display" }
+            }
+          ],
+          {
+            synchronousExecution: true,
+            modalBehavior: "execute"
+          }
+        );
+      },
+      { commandName: label, interactive: true }
+    );
+    setStatus(`已触发：${label}，请看 Photoshop 弹窗和脚本日志。`);
+  } catch (error) {
+    await showAlert("执行失败", messageOf(error));
+    setStatus(messageOf(error));
+  } finally {
+    activeRunStartedAt = 0;
+    setBusy(false);
+  }
+}
+
+function runCepLink() {
+  const rewriteCompatible = ui.linkRewriteCompatible ? ui.linkRewriteCompatible.checked : false;
+  const repairExisting = ui.linkRepairExisting ? ui.linkRepairExisting.checked : false;
+  return runJsxFile(
+    jsxScripts.link,
+    "批量转链接智能对象",
+    `$.global.__psbLinkRewriteCompatible = ${rewriteCompatible ? "true" : "false"};` +
+      `$.global.__psbLinkRepairExisting = ${repairExisting ? "true" : "false"};` +
+      "$.global.__psbLinkSelectedProxy = false;"
+  );
+}
+
+function runCepSelectedProxy() {
+  return runJsxFile(
+    jsxScripts.link,
+    "选中智能对象转代理",
+    "$.global.__psbLinkRewriteCompatible = false;" +
+      "$.global.__psbLinkRepairExisting = false;" +
+      "$.global.__psbLinkSelectedProxy = true;"
+  );
+}
+
+function runCepCleanMeta() {
+  const includeEmbedded = ui.cleanEmbeddedSo ? ui.cleanEmbeddedSo.checked : false;
+  return runJsxFile(
+    jsxScripts.cleanMetadata,
+    "清理 PS 元数据",
+    `$.global.__psbCleanMetadataIncludeEmbedded = ${includeEmbedded ? "true" : "false"};`
+  );
 }
 
 async function bp(commands) {
@@ -156,14 +317,47 @@ function normalizePath(path) {
   return String(path || "").replace(/\\/g, "/");
 }
 
+function decodeUriPath(path) {
+  let value = String(path || "");
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const decoded = decodeURIComponent(value);
+      if (decoded === value) break;
+      value = decoded;
+    } catch (error) {
+      break;
+    }
+  }
+  return value;
+}
+
+function nativePathFromValue(path) {
+  let value = String(path || "").trim();
+  if (!value) return "";
+  if (/^file:\/\//i.test(value)) {
+    try {
+      const url = new URL(value);
+      value = url.pathname || value.replace(/^file:\/\//i, "");
+    } catch (error) {
+      value = value.replace(/^file:\/\//i, "");
+    }
+  }
+  value = decodeUriPath(value);
+  value = normalizePath(value);
+  if (/^\/[a-zA-Z]:\//.test(value)) value = value.slice(1);
+  return value;
+}
+
 function parentPath(path) {
-  const normalized = normalizePath(path);
+  const normalized = nativePathFromValue(path);
+  if (/^[a-zA-Z]:\/?$/.test(normalized)) return "";
   const index = normalized.lastIndexOf("/");
+  if (index === 2 && /^[a-zA-Z]:\//.test(normalized)) return normalized.slice(0, 3);
   return index >= 0 ? normalized.slice(0, index) : "";
 }
 
 function fileNameFromPath(path) {
-  const normalized = normalizePath(path);
+  const normalized = nativePathFromValue(path);
   const parts = normalized.split("/");
   return parts[parts.length - 1] || "";
 }
@@ -175,7 +369,7 @@ function numberValue(value) {
 }
 
 function nativePathToUrl(path) {
-  const normalized = normalizePath(path);
+  const normalized = nativePathFromValue(path);
   const withSlash = /^[a-zA-Z]:\//.test(normalized) ? `/${normalized}` : normalized;
   return `file://${encodeURI(withSlash)}`;
 }
@@ -194,10 +388,15 @@ async function exists(path) {
 }
 
 async function ensureFolder(path) {
+  const normalized = nativePathFromValue(path);
   try {
-    return await getEntry(path);
+    return await getEntry(normalized);
   } catch (error) {
-    return fs.createEntryWithUrl(nativePathToUrl(path), {
+    const parent = parentPath(normalized);
+    if (parent && parent !== normalized) {
+      await ensureFolder(parent);
+    }
+    return fs.createEntryWithUrl(nativePathToUrl(normalized), {
       type: uxp.storage.types.folder
     });
   }
@@ -241,8 +440,9 @@ async function activeDocumentPath() {
   for (const candidate of candidates) {
     if (!candidate) continue;
     if (typeof candidate === "string") {
-      if (/\.(psd|psb|psdt)$/i.test(candidate)) return candidate;
-      return `${candidate.replace(/[\\/]$/, "")}/${activeDocumentName()}`;
+      const native = nativePathFromValue(candidate);
+      if (/\.(psd|psb|psdt)$/i.test(native)) return native;
+      return `${native.replace(/[\\/]$/, "")}/${activeDocumentName()}`;
     }
   }
 
@@ -471,23 +671,23 @@ async function selectLayer(id) {
 }
 
 async function relinkSelected(fileEntry) {
-  const token = fs.createSessionToken(fileEntry);
+  const path = fileEntry && fileEntry.nativePath ? nativePathFromValue(fileEntry.nativePath) : fs.createSessionToken(fileEntry);
   await bp([
     {
       _obj: "placedLayerRelinkToFile",
-      null: { _path: token, _kind: "local" },
+      null: { _path: path, _kind: "local" },
       _options: { dialogOptions: "dontDisplay" }
     }
   ]);
 }
 
 async function convertSelectedToLinked(fileEntry) {
-  const token = fs.createSessionToken(fileEntry);
+  const path = fileEntry && fileEntry.nativePath ? nativePathFromValue(fileEntry.nativePath) : fs.createSessionToken(fileEntry);
   await bp([
     {
       _obj: "placedLayerConvertToLinked",
       _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
-      using: { _path: token, _kind: "local" },
+      using: { _path: path, _kind: "local" },
       _options: { dialogOptions: "dontDisplay" }
     }
   ]);
@@ -718,7 +918,11 @@ async function linksFolder() {
 }
 
 function sourcePath(meta) {
-  return meta.linkPath || (meta.fileReference && normalizePath(meta.fileReference)) || "";
+  return nativePathFromValue(meta.linkPath || meta.fileReference || "");
+}
+
+function psdOrPsbName(name) {
+  return /\.(psd|psb|psdt)$/i.test(String(name || ""));
 }
 
 function extensionOf(path) {
@@ -791,15 +995,23 @@ async function parentEntryOf(entry) {
   return getEntry(parentPath(native));
 }
 
-async function walkFolder(folder, index) {
+async function walkFolder(folder, index, depth) {
+  const remaining = typeof depth === "number" ? depth : 30;
+  if (remaining < 0) return;
   const entries = await folder.getEntries();
+  if (!index.__stem) index.__stem = {};
   for (const entry of entries) {
     if (entry.isFolder) {
-      await walkFolder(entry, index);
+      if (!/^_unused_links_/i.test(entry.name)) await walkFolder(entry, index, remaining - 1);
     } else if (entry.isFile) {
       const key = entry.name.toLowerCase();
       if (!index[key]) index[key] = [];
       index[key].push(entry);
+      const stem = stripExtension(entry.name).toLowerCase();
+      if (stem) {
+        if (!index.__stem[stem]) index.__stem[stem] = [];
+        index.__stem[stem].push(entry);
+      }
     }
   }
 }
@@ -815,7 +1027,7 @@ function timestamp() {
 }
 
 function pathKey(path) {
-  return normalizePath(path).toLowerCase();
+  return nativePathFromValue(path).toLowerCase();
 }
 
 async function scanFiles(folder, out) {
@@ -887,7 +1099,7 @@ async function collectOneLinkedItem(item, folderPath, docBase, index) {
   if (normalizePath(source.nativePath || "").indexOf(normalizePath(folderPath) + "/") === 0) {
     return "skipped";
   }
-  const target = await uniqueFile(folderPath, docBase, item.name, index + 1, item.id, extensionOf(srcPath));
+  const target = await uniqueFile(folderPath, docBase, item.name, index + 1, item.id, extensionOf(source.name || source.nativePath || srcPath));
   await copyFile(source, target);
   await selectLayer(item.id);
   await relinkSelected(target);
@@ -927,7 +1139,11 @@ async function collectProxyInternalLinks(item, folderPath, docBase, indexBase) {
 }
 
 function uniqueMatch(index, name) {
-  const matches = index[String(name || "").toLowerCase()] || [];
+  const key = String(name || "").toLowerCase();
+  let matches = index[key] || [];
+  if (!matches.length && index.__stem) {
+    matches = index.__stem[stripExtension(key)] || [];
+  }
   if (matches.length === 1) return { entry: matches[0], skipped: false };
   return { entry: null, skipped: matches.length > 1 };
 }
@@ -982,7 +1198,7 @@ async function runLink() {
       return repairExisting && !item.meta.linkMissing;
     });
     if (!todo.length) throw new Error(repairExisting ? "没有可转换的智能对象。" : "没有内嵌智能对象。");
-    if (!(await confirmRun("转链接", `将 ${todo.length} 个对象转成内部代理结构，链接文件放到 links。`))) return;
+    if (!(await confirmRun("转链接", `数量：${todo.length}\n保存到：${displayPath(folderPath)}\n会转成内嵌代理，原始链接放在代理里面。`))) return;
 
     let ok = 0;
     let fail = 0;
@@ -1004,7 +1220,7 @@ async function runLink() {
         console.log("link proxy failed", item.name, error);
       }
     }
-    await showAlert("完成", `已转代理链接：${ok}\n失败：${fail}`);
+    await showAlert("完成", `已转代理链接：${ok}\n失败：${fail}\n位置：${displayPath(folderPath)}`);
   });
 }
 
@@ -1026,7 +1242,7 @@ async function runSelectedProxy() {
       target = await uniqueFile(folderPath, docBase, layerName, 1, selected.layerID || selected.itemIndex || 0, ".psb");
     }
     await proxySelectedSmartObjectInternally(target, selected.layerID || selected.itemIndex || 0);
-    await showAlert("完成", `已转换：${layerName}`);
+    await showAlert("完成", `已转换：${layerName}\n位置：${displayPath(folderPath)}`);
   });
 }
 
@@ -1037,7 +1253,7 @@ async function runCollect() {
     const layers = await smartObjectLayers();
     const todo = layers.filter((item) => (item.meta.linked && !item.meta.linkMissing) || isProxySmartObject(item));
     if (!todo.length) throw new Error("没有可收集的链接对象。");
-    if (!(await confirmRun("收集链接", `将 ${todo.length} 个对象的源文件拷到 links 并重链。代理内部也会处理。`))) return;
+    if (!(await confirmRun("收集链接", `数量：${todo.length}\n保存到：${displayPath(folderPath)}\n会复制源文件，并重新指向这里。`))) return;
 
     let ok = 0;
     let skipped = 0;
@@ -1060,19 +1276,28 @@ async function runCollect() {
         console.log("collect failed", item.name, error);
       }
     }
-    await showAlert("完成", `已收集：${ok}\n已跳过：${skipped}\n失败：${fail}`);
+    await showAlert("完成", `已收集：${ok}\n已跳过：${skipped}\n失败：${fail}\n位置：${displayPath(folderPath)}`);
   });
 }
 
 async function runRelinkMissing() {
-  const folder = await fs.getFolder();
+  let folder = null;
+  let autoSearch = false;
+  try {
+    const docPath = await activeDocumentPath();
+    folder = await getEntry(`${parentPath(docPath)}/links`);
+    autoSearch = true;
+  } catch (error) {
+    folder = await fs.getFolder();
+  }
   if (!folder) return;
 
   await runModal("找回丢失链接", async () => {
     const layers = await smartObjectLayers();
     const missing = layers.filter((item) => (item.meta.linked && item.meta.linkMissing) || isProxySmartObject(item));
     if (!missing.length) throw new Error("没有丢失链接。");
-    if (!(await confirmRun("找回丢失链接", `将在所选文件夹里按文件名匹配 ${missing.length} 个对象。代理内部也会处理。`))) return;
+    const folderLabel = folder.nativePath || folder.name;
+    if (!(await confirmRun("找回丢失链接", `数量：${missing.length}\n搜索：${displayPath(folderLabel)}\n${autoSearch ? "优先使用主文件旁边的 links。" : "会在所选文件夹内递归查找。"}\n同名多个会跳过。`))) return;
 
     const index = {};
     await walkFolder(folder, index);
@@ -1149,6 +1374,7 @@ async function runCleanupLinks() {
     }
 
     const trash = await ensureFolder(`${folderPath}/_unused_links_${timestamp()}`);
+    if (!(await confirmRun("清废链接", `发现：${unused.length} 个\n移动到：${displayPath(trash.nativePath || `${folderPath}/_unused_links`)}\n不会直接删除。`))) return;
     let moved = 0;
     let fail = 0;
     for (const entry of unused) {
@@ -1161,7 +1387,7 @@ async function runCleanupLinks() {
         console.log("move unused failed", entry.name, error);
       }
     }
-    await showAlert("完成", `已移动：${moved}\n失败：${fail}`);
+    await showAlert("完成", `已移动：${moved}\n失败：${fail}\n位置：${displayPath(trash.nativePath || folderPath)}`);
   });
 }
 
@@ -1249,18 +1475,46 @@ async function deleteDocumentMetadata() {
 }
 
 async function cleanMetadataDeep(includeEmbedded) {
-  let cleaned = await deleteDocumentMetadata();
+  let cleaned = 0;
   let failed = 0;
-  if (!includeEmbedded) return { cleaned, failed };
+  let skippedSimple = 0;
+  let skippedFormat = 0;
+  let skippedLinked = 0;
+  let skippedProxy = 0;
+  if (!psdOrPsbName(activeDocumentName())) {
+    skippedFormat += 1;
+  } else if ((await layerCount()) < MIN_LAYERS_TO_CLEAN) {
+    skippedSimple += 1;
+  } else {
+    cleaned += await deleteDocumentMetadata();
+  }
+  if (!includeEmbedded) return { cleaned, failed, skippedSimple, skippedFormat, skippedLinked, skippedProxy };
   const layers = await smartObjectLayers();
   for (const item of layers) {
-    if (item.meta.linked || item.meta.linkMissing || isProxySmartObject(item)) continue;
+    if (item.meta.linked || item.meta.linkMissing) {
+      skippedLinked += 1;
+      continue;
+    }
+    if (isProxySmartObject(item)) {
+      skippedProxy += 1;
+      continue;
+    }
+    if (!psdOrPsbName(item.meta.fileReference || item.name)) {
+      skippedFormat += 1;
+      continue;
+    }
     try {
       await selectLayer(item.id);
       await editSmartObjectContents();
       try {
-        cleaned += await deleteDocumentMetadata();
-        await closeActiveDocument(true);
+        let changed = false;
+        if ((await layerCount()) < MIN_LAYERS_TO_CLEAN) {
+          skippedSimple += 1;
+        } else {
+          cleaned += await deleteDocumentMetadata();
+          changed = true;
+        }
+        await closeActiveDocument(changed);
       } catch (innerError) {
         try {
           await closeActiveDocument(false);
@@ -1274,14 +1528,14 @@ async function cleanMetadataDeep(includeEmbedded) {
       console.log("clean child metadata failed", item.name, error);
     }
   }
-  return { cleaned, failed };
+  return { cleaned, failed, skippedSimple, skippedFormat, skippedLinked, skippedProxy };
 }
 
 async function runCleanMeta() {
   await runModal("清元数据", async () => {
     const includeEmbedded = ui.cleanEmbeddedSo ? ui.cleanEmbeddedSo.checked : true;
     const result = await cleanMetadataDeep(includeEmbedded);
-    await showAlert("完成", `已清理元数据项：${result.cleaned}\n内部失败：${result.failed}\n文件不会自动保存。`);
+    await showAlert("完成", `已清理元数据项：${result.cleaned}\n跳过链接 SO：${result.skippedLinked}\n跳过代理 SO：${result.skippedProxy}\n跳过非PSD/PSB：${result.skippedFormat}\n跳过少层文件：${result.skippedSimple}\n失败：${result.failed}\n文件不会自动保存。`);
   });
 }
 
@@ -1369,12 +1623,14 @@ bindToggle(ui.cleanMetaOptionsToggle, ui.cleanMetaOptions, ui.cleanMeta);
 bindOptionInput(ui.linkRewriteCompatible);
 bindOptionInput(ui.linkRepairExisting);
 bindOptionInput(ui.cleanEmbeddedSo);
-bindRun(ui.link, runLink);
-bindRun(ui.selectedProxy, runSelectedProxy);
-bindRun(ui.collect, runCollect);
-bindRun(ui.relinkMissing, runRelinkMissing);
-bindRun(ui.embed, runEmbed);
-bindRun(ui.text, runExtractText);
-bindRun(ui.cleanMeta, runCleanMeta);
-bindRun(ui.cleanupLinks, runCleanupLinks);
-bindRun(ui.stampUsm, runStampUsm);
+bindRun(ui.link, runCepLink);
+bindRun(ui.selectedProxy, runCepSelectedProxy);
+bindRun(ui.collect, () => runJsxFile(jsxScripts.collect, "收集链接对象到主文件目录"));
+bindRun(ui.relinkMissing, () => runJsxFile(jsxScripts.relinkMissing, "批量重新链接丢失智能对象"));
+bindRun(ui.embed, () => runJsxFile(jsxScripts.embed, "批量嵌入链接智能对象"));
+bindRun(ui.text, () => runJsxFile(jsxScripts.text, "只提取当前 SO 文字"));
+bindRun(ui.cleanMeta, runCepCleanMeta);
+bindRun(ui.purgeCache, () => runJsxFile(jsxScripts.purgeCache, "清理 PS 缓存"));
+bindRun(ui.cleanupLinks, () => runJsxFile(jsxScripts.cleanupLinks, "清理废弃 links 文件"));
+bindRun(ui.stampUsm, () => runJsxFile(jsxScripts.stampUsm, "锐化并导出 JPG"));
+setStatus(`准备就绪：UXP ${PLUGIN_VERSION}`);

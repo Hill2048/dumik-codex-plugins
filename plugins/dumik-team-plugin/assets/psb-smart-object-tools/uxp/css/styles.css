@@ -148,6 +148,10 @@ body {
   background: #7f5cac;
 }
 
+.action-cache .icon {
+  background: #627d6f;
+}
+
 .action-sharpen .icon {
   background: #b0994e;
 }
@@ -306,4 +310,85 @@ body {
 .action-link .hint,
 .action-clean .hint {
   right: 44px;
+}
+
+#status {
+  margin: 6px 3px 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: #e8e8e8;
+  background: #494949;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.panel-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 31, 31, 0.48);
+}
+
+.panel-dialog {
+  width: min(360px, 100%);
+  max-height: calc(100vh - 20px);
+  padding: 12px;
+  border: 1px solid #707070;
+  border-radius: 6px;
+  color: #f0f0f0;
+  background: #4a4a4a;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.panel-dialog.is-error {
+  border-color: #9a7067;
+}
+
+.panel-dialog-title {
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.panel-dialog-body {
+  max-height: 240px;
+  overflow: auto;
+  color: #e1e1e1;
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.panel-dialog-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.panel-dialog-button {
+  min-width: 64px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid #6f6f6f;
+  border-radius: 4px;
+  color: #f2f2f2;
+  background: #555555;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.panel-dialog-button.primary {
+  border-color: #5a83b7;
+  background: #4f7db8;
+}
+
+.panel-dialog-button.secondary {
+  background: #4d4d4d;
 }

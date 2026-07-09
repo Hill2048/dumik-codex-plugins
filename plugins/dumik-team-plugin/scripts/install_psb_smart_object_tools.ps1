@@ -17,6 +17,8 @@ $TargetRoot = if ($env:APPDATA) { Join-Path $env:APPDATA "Adobe\CEP\extensions" 
 $Target = if ($TargetRoot) { Join-Path $TargetRoot $PluginName } else { "" }
 $BackupPattern = "psb-smart-object-tools.bak-*"
 $UxpPackageRoot = Join-Path $PluginRoot "dist"
+$UxpInstallMethod = ""
+$UxpInstallTarget = ""
 $GithubRawVersionUrl = "https://raw.githubusercontent.com/Hill2048/dumik-codex-plugins/main/plugins/dumik-team-plugin/assets/skill-versions.json"
 $GithubZipUrl = "https://github.com/Hill2048/dumik-codex-plugins/archive/refs/heads/main.zip"
 $RequiredFiles = @(
@@ -29,6 +31,7 @@ $RequiredFiles = @(
   "jsx\embed-linked-smart-objects.jsx",
   "jsx\clean-ps-metadata.jsx",
   "jsx\cleanup-unused-links.jsx",
+  "jsx\purge-ps-cache.jsx",
   "jsx\stamp-usm-sharpen-documents.jsx"
 )
 $KeyFiles = @(
@@ -154,7 +157,7 @@ function Test-PsbUxpSource {
   if (!(Test-Path -LiteralPath $Path -PathType Container)) {
     return $false
   }
-  foreach ($file in @("manifest.json", "index.html", "js\main.js")) {
+  foreach ($file in @("manifest.json", "index.html", "js\main.js", "jsx\link-smart-objects.jsx")) {
     if (!(Test-Path -LiteralPath (Join-Path $Path $file) -PathType Leaf)) {
       return $false
     }
@@ -235,10 +238,7 @@ function Resolve-Flavor {
   if ($Flavor -ne "Auto") {
     return $Flavor
   }
-  if ($IsMacOS) {
-    return "UXP"
-  }
-  return "CEP"
+  return "UXP"
 }
 
 function Assert-SafeCepPath {
@@ -320,7 +320,20 @@ function Enable-CepDebugMode {
 function Assert-UxpFiles {
   param([string]$Root)
 
-  foreach ($file in @("manifest.json", "index.html", "js\main.js")) {
+  foreach ($file in @(
+      "manifest.json",
+      "index.html",
+      "js\main.js",
+      "jsx\link-smart-objects.jsx",
+      "jsx\relink-missing-smart-objects.jsx",
+      "jsx\collect-linked-smart-objects.jsx",
+      "jsx\embed-linked-smart-objects.jsx",
+      "jsx\clean-ps-metadata.jsx",
+      "jsx\cleanup-unused-links.jsx",
+      "jsx\purge-ps-cache.jsx",
+      "jsx\stamp-usm-sharpen-documents.jsx",
+      "jsx\extract-smart-object-text.jsx"
+    )) {
     $path = Join-Path $Root $file
     if (!(Test-Path -LiteralPath $path -PathType Leaf)) {
       throw "Required UXP file missing: $path"
@@ -393,6 +406,50 @@ function Find-Upia {
   return $null
 }
 
+function Invoke-Upia {
+  param(
+    [string]$Upia,
+    [string[]]$Arguments,
+    [switch]$Quiet
+  )
+
+  $output = @(& $Upia @Arguments 2>&1)
+  $text = ($output | ForEach-Object { [string]$_ }) -join "`n"
+  if ($text -and !$Quiet) {
+    Write-Host $text
+  }
+  if ($LASTEXITCODE -ne 0 -or $text -match "(?i)failed to install|status\s*=\s*-\d+|error") {
+    return $false
+  }
+  return $true
+}
+
+function Install-UxpSourceFallback {
+  param([string]$SourceRoot)
+
+  if ($IsMacOS) {
+    return ""
+  }
+
+  $pluginId = Get-UxpManifestValue -SourceRoot $SourceRoot -Name "id"
+  $version = Get-UxpVersion -SourceRoot $SourceRoot
+  if (!$pluginId) {
+    throw "UXP manifest id missing."
+  }
+
+  $root = Join-Path $env:ProgramFiles "Common Files\Adobe\UXP\Plugins\External"
+  New-Item -ItemType Directory -Force -Path $root | Out-Null
+  $target = Join-Path $root ("$pluginId`_$version")
+
+  Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like "$pluginId`_*" } |
+    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force }
+
+  Copy-Item -LiteralPath $SourceRoot -Destination $target -Recurse -Force
+  Assert-UxpFiles -Root $target
+  return $target
+}
+
 function Install-UxpPackage {
   param(
     [string]$PackagePath,
@@ -403,31 +460,38 @@ function Install-UxpPackage {
   if (!$upia) {
     Write-Host "UPIA not found. CCX package created only."
     Write-Host "Package: $PackagePath"
+    $script:UxpInstallMethod = "PackageOnly"
+    $script:UxpInstallTarget = $PackagePath
     return $false
   }
 
-  $pluginName = Get-UxpManifestValue -SourceRoot $SourceRoot -Name "name"
   $pluginId = Get-UxpManifestValue -SourceRoot $SourceRoot -Name "id"
+  $installed = $true
   if ($IsMacOS) {
-    if ($pluginName) {
-      & $upia --remove $pluginName | Out-Null
-    }
     if ($pluginId) {
-      & $upia --remove $pluginId | Out-Null
+      Invoke-Upia -Upia $upia -Arguments @("--remove", $pluginId) -Quiet | Out-Null
     }
-    & $upia --install $PackagePath
+    $installed = Invoke-Upia -Upia $upia -Arguments @("--install", $PackagePath)
   } else {
-    if ($pluginName) {
-      & $upia /remove $pluginName | Out-Null
-    }
     if ($pluginId) {
-      & $upia /remove $pluginId | Out-Null
+      Invoke-Upia -Upia $upia -Arguments @("/remove", $pluginId) -Quiet | Out-Null
     }
-    & $upia /install $PackagePath
+    $installed = Invoke-Upia -Upia $upia -Arguments @("/install", $PackagePath)
   }
-  if ($LASTEXITCODE -ne 0) {
-    throw "UPIA install failed. Exit code: $LASTEXITCODE"
+  if (!$installed) {
+    Write-Warning "UPIA install failed."
+    $fallbackTarget = Install-UxpSourceFallback -SourceRoot $SourceRoot
+    if ($fallbackTarget) {
+      Write-Host "Installed by fallback copy: $fallbackTarget"
+      $script:UxpInstallMethod = "FallbackCopy"
+      $script:UxpInstallTarget = $fallbackTarget
+      return $true
+    }
+    $script:UxpInstallMethod = "Failed"
+    return $false
   }
+  $script:UxpInstallMethod = "UPIA"
+  $script:UxpInstallTarget = $PackagePath
   return $true
 }
 
@@ -454,7 +518,11 @@ if ($ResolvedFlavor -eq "UXP") {
   Write-Host "Flavor: UXP"
   Write-Host "Source: $Source"
   Write-Host "Package: $packagePath"
-  Write-Host "Installed by UPIA: $installed"
+  Write-Host "Installed: $installed"
+  Write-Host "Install method: $UxpInstallMethod"
+  if ($UxpInstallTarget) {
+    Write-Host "Install target: $UxpInstallTarget"
+  }
   Write-Host "Validation: passed"
   exit 0
 }

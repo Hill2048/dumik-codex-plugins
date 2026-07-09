@@ -15,6 +15,7 @@
   var cleanMetadataOptionsToggle = document.getElementById("clean-metadata-options-toggle");
   var cleanMetadataOptions = document.getElementById("clean-metadata-options");
   var cleanEmbeddedSoToggle = document.getElementById("clean-embedded-so");
+  var purgeCacheButton = document.getElementById("run-purge-cache");
   var stampUsmButton = document.getElementById("run-stamp-usm");
 
   var scripts = {
@@ -25,6 +26,7 @@
     cleanupLinks: "cleanup-unused-links.jsx",
     text: "extract-smart-object-text.jsx",
     cleanMetadata: "clean-ps-metadata.jsx",
+    purgeCache: "purge-ps-cache.jsx",
     stampUsm: "stamp-usm-sharpen-documents.jsx"
   };
 
@@ -46,6 +48,7 @@
     cleanMetadataButton.disabled = isBusy;
     cleanMetadataOptionsToggle.classList.toggle("disabled", isBusy);
     cleanEmbeddedSoToggle.disabled = isBusy;
+    purgeCacheButton.disabled = isBusy;
     stampUsmButton.disabled = isBusy;
   }
 
@@ -158,6 +161,10 @@
       "清理 PS 元数据",
       "$.global.__psbCleanMetadataIncludeEmbedded = " + (includeEmbedded ? "true;" : "false;")
     );
+  });
+
+  purgeCacheButton.addEventListener("click", function () {
+    runJsxFile(scripts.purgeCache, "清理 PS 缓存");
   });
 
   stampUsmButton.addEventListener("click", function () {

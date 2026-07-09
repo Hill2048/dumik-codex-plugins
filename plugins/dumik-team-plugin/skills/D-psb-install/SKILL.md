@@ -1,7 +1,7 @@
 ---
 name: D-psb-install
-version: 0.1.7
-description: "安装/更新 PSB 智能对象工具。先自动核对 GitHub 最新版本；Mac 自动走 UXP，Windows 默认走 CEP，适合触发词：安装 PSB 插件、更新 PSB 插件、安装智能对象工具、装 PSB 智能对象工具、分享来的插件怎么装。"
+version: 0.1.10
+description: "安装/更新 PSB 智能对象工具。先自动核对 GitHub 最新版本；默认安装 UXP 版，适合触发词：安装 PSB 插件、更新 PSB 插件、安装智能对象工具、装 PSB 智能对象工具、分享来的插件怎么装。"
 ---
 
 # PSB 智能对象工具安装
@@ -10,7 +10,7 @@ description: "安装/更新 PSB 智能对象工具。先自动核对 GitHub 最�
 
 更新时先查 GitHub `Hill2048/dumik-codex-plugins` 的 `main` 分支版本。远端 `pluginVersion` 更高时，下载 GitHub main zip 的插件资产来安装，不要只用本地旧缓存。
 
-Mac 不使用 CEP，自动安装/打包 UXP。Windows 默认继续安装 CEP 稳定版。
+默认安装/打包 UXP。只有用户明确要求旧版时，才走 CEP。
 
 ## 触发
 
@@ -43,24 +43,24 @@ Mac 不使用 CEP，自动安装/打包 UXP。Windows 默认继续安装 CEP 稳
    - 有 `manifest.json`
    - 有 `index.html`
    - 有 `js/main.js`
+   - 有 `jsx/link-smart-objects.jsx`
 
 3. 判断安装通道：
-   - macOS：走 UXP
-   - Windows：默认走 CEP
-   - 用户明确说 UXP：走 UXP
+   - 默认走 UXP
+   - 用户明确说旧版/CEP：才走 CEP
 
 4. CEP 更新时先删除旧目录 `psb-smart-object-tools`，再复制新版，不要和旧文件混合覆盖。
 
-5. 运行插件根目录下的安装脚本，更新时优先用 `-Update`。脚本默认会先查 GitHub 版本：
+5. 运行插件根目录下的安装脚本，更新时优先用 `-Update`。脚本默认会先查 GitHub 版本，并安装 UXP：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<插件根>\scripts\install_psb_smart_object_tools.ps1" -Update
 ```
 
-Mac / UXP：
+明确指定 UXP：
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File "<插件根>/scripts/install_psb_smart_object_tools.ps1" -Flavor UXP -Update
+powershell -ExecutionPolicy Bypass -File "<插件根>\scripts\install_psb_smart_object_tools.ps1" -Flavor UXP -Update
 ```
 
 如果 Mac 没有 PowerShell，运行 shell 脚本：
@@ -90,10 +90,21 @@ powershell -ExecutionPolicy Bypass -File "<插件根>\scripts\install_psb_smart_
      - `jsx/embed-linked-smart-objects.jsx`
      - `jsx/clean-ps-metadata.jsx`
      - `jsx/cleanup-unused-links.jsx`
+     - `jsx/purge-ps-cache.jsx`
      - `jsx/stamp-usm-sharpen-documents.jsx`
 
 7. UXP 安装后必须校验：
    - `manifest.json`、`index.html`、`js/main.js` 存在
+   - `jsx/` 里的 CEP 同款脚本存在，至少包含：
+     - `jsx/link-smart-objects.jsx`
+     - `jsx/relink-missing-smart-objects.jsx`
+     - `jsx/collect-linked-smart-objects.jsx`
+     - `jsx/embed-linked-smart-objects.jsx`
+     - `jsx/clean-ps-metadata.jsx`
+     - `jsx/cleanup-unused-links.jsx`
+     - `jsx/purge-ps-cache.jsx`
+     - `jsx/stamp-usm-sharpen-documents.jsx`
+     - `jsx/extract-smart-object-text.jsx`
    - 能生成 `.ccx` 包
    - 如果系统能找到 UPIA，就用 UPIA 安装；找不到就告诉用户 `.ccx` 包位置
 
@@ -116,9 +127,10 @@ powershell -ExecutionPolicy Bypass -File "<插件根>\scripts\install_psb_smart_
 
 ## 说明
 
-- 默认安装 CEP 稳定版。
+- 默认安装 UXP 版。
+- 当前 UXP 面板复用 `jsx/` 里的 CEP 同款脚本，不能只复制 HTML/JS/CSS。
 - Mac 默认使用 UXP，目录是 `assets\psb-smart-object-tools\uxp`。
-- Windows 默认使用 CEP 稳定版。
+- Windows 默认也使用 UXP；旧 CEP 只作兼容保留。
 - `uxp-preview` 只保留作历史预览，不作为主安装方式。
 - 更新模式会删除旧版和历史备份，避免继续加载老面板。
 - 每次发布 PSB 插件更新，都必须同步提高 `pluginVersion`，否则别人的安装脚本会判断“本地已是最新版”。

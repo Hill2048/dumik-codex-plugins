@@ -279,6 +279,10 @@ button small {
   background: #7f6a9f;
 }
 
+.action-cache .icon {
+  background: #627d6f;
+}
+
 .action-sharpen .icon {
   background: #b06a43;
 }
