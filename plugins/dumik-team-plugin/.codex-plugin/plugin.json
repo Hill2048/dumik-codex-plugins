@@ -1,6 +1,6 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.5.18",
+  "version": "0.5.19",
   "description": "DUMIK 团队短名技能包：D-init、D-api-test、D-psb-install、D-image-prompt、D-image-run、D-image-HD、D-image-repair、D-rh、D-detail-plan、D-detail-auto、D-grid-prompt、D-video-plan、D-video-report、D-storyboard、D-video-run。",
   "author": {
     "name": "DUMIK Team"

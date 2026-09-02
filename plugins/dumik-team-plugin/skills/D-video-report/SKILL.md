@@ -2,7 +2,7 @@
 name: D-video-report
 description: "把真实视频拆成可复查的中文图文 HTML 报告。用于参考视频拉片、教程或录屏拆解、关键帧提取、口播字幕整理、节奏卖点与证据链分析；没有真实视频素材时不使用。"
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # 视频证据报告
@@ -28,14 +28,19 @@ metadata:
    - 逐镜拉片：按真实剪辑点划镜头，每镜默认保留 A/B 两帧，分别证明镜头建立与动作结果。
    - 教程/界面录屏：按操作状态、字幕变化和结果画面取证。
 4. 有字幕先读取字幕；有可靠转写能力再转写音频。听不清、看不清或无法验证的内容标为“不确定”，不能补写。
-5. 生成中文 HTML，至少包含：来源与处理范围、关键结论、证据说明、带时间点的口播/字幕、关键帧时间线、镜头或卖点结构、可复用结论和不确定项。
-6. 长时间线或用户要求交互回看时，读取 [交互报告规范](references/interactive-report.md)。需要 `file://` 下载关键帧时运行：
+5. 按 [报告数据协议](references/report-data-schema.md) 写 `report-data.json`，不要临场重写页面结构。然后用固定模板构建：
+
+```powershell
+node plugins\dumik-team-plugin\skills\D-video-report\scripts\build_report_page.mjs <report-dir> <report-data.json>
+```
+
+6. 所有报告默认使用 `assets/report-template/`：顶部结论与指标、左侧原片、右侧逐镜证据、字幕搜索、关键镜头筛选、可复用结论。长时间线或交互细节读取 [交互报告规范](references/interactive-report.md)。需要 `file://` 下载关键帧时运行：
 
 ```powershell
 node plugins\dumik-team-plugin\skills\D-video-report\scripts\build_frame_download_data.mjs <report-dir>
 ```
 
-7. 打开成品检查图片和视频路径、中文排版、宽窄屏布局；真实点击一次播放定位、结构跳转和图片下载。
+7. 打开成品检查图片和视频路径、中文排版、桌面双栏与移动端底部回看；真实点击一次时间定位、结构跳转、筛选、字幕搜索和图片下载。
 
 ## 分析纪律
 
@@ -44,6 +49,7 @@ node plugins\dumik-team-plugin\skills\D-video-report\scripts\build_frame_downloa
 - 需要把分析转成新故事板、关键帧或逐镜提示词交给 `D-storyboard`。
 - 需要真实生成视频交给 `D-video-run`。
 - 不提交 Dreamina、Veo 或图片接口，不把长视频逐字稿整段塞进页面。
+- 不另造视觉模板，不使用渐变、玻璃拟态、发光边框、装饰动画或大面积同色卡片；报告视觉服从证据阅读。
 
 ## 完成标准
 

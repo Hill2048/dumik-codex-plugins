@@ -1,6 +1,6 @@
 {
   "plugin": "dumik-team-plugin",
-  "pluginVersion": "0.5.18",
+  "pluginVersion": "0.5.19",
   "skills": {
     "D-init": "0.2.0",
     "D-api-test": "0.1.0",
@@ -10,7 +10,7 @@
     "D-grid-prompt": "0.1.3",
     "D-image-repair": "0.1.2",
     "D-video-plan": "0.1.5",
-    "D-video-report": "0.1.0",
+    "D-video-report": "0.2.0",
     "D-image-prompt": "0.3.10",
     "D-image-HD": "0.1.0",
     "D-image-run": "1.3.6",

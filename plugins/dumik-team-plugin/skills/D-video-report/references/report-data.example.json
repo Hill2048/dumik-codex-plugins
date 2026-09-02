@@ -1,0 +1,59 @@
+{
+  "title": "厨具参考片逐镜拆解",
+  "kicker": "30 秒电商短片 / 结构与证据",
+  "summary": "视频用快速问题建立、材质微距证明和完整使用结果完成三段式转化，产品身份始终处于视觉中心。",
+  "duration": 30,
+  "generatedAt": "2026-09-02 18:00",
+  "sourceNote": "画面依据：原片与逐镜关键帧；口播依据：内嵌字幕人工校正。",
+  "video": {
+    "src": "media/source.mp4",
+    "poster": "frames/pair_001_a.jpg"
+  },
+  "metrics": {
+    "duration": "00:30",
+    "resolution": "1080 × 1920",
+    "evidence": "6 镜 / 12 帧"
+  },
+  "chapters": [
+    { "id": "shot-01", "title": "问题建立", "start": 0 },
+    { "id": "shot-02", "title": "材质证明", "start": 5.2 }
+  ],
+  "shots": [
+    {
+      "id": "shot-01",
+      "title": "问题建立",
+      "purpose": "用粘锅结果快速制造痛点。",
+      "start": 0,
+      "end": 5.1,
+      "key": true,
+      "note": "首秒直接给结果，不用人物口播铺垫。",
+      "frames": [
+        { "label": "A 建立", "time": 0.4, "src": "frames/pair_001_a.jpg", "alt": "锅内食材粘连的近景" },
+        { "label": "B 结果", "time": 4.8, "src": "frames/pair_001_b.jpg", "alt": "锅铲翻动仍有粘连的结果" }
+      ]
+    },
+    {
+      "id": "shot-02",
+      "title": "材质证明",
+      "purpose": "通过锅体微距和反射变化证明材质。",
+      "start": 5.2,
+      "end": 10.8,
+      "key": false,
+      "frames": [
+        { "label": "A 建立", "time": 5.4, "src": "frames/pair_002_a.jpg", "alt": "锅体材质微距" },
+        { "label": "B 结果", "time": 10.4, "src": "frames/pair_002_b.jpg", "alt": "光线扫过锅体表面" }
+      ]
+    }
+  ],
+  "transcript": [
+    { "start": 0.3, "end": 2.7, "text": "每次炒菜都粘锅？" },
+    { "start": 5.4, "end": 8.6, "text": "看得见的纯钛内壁。" }
+  ],
+  "findings": [
+    "前 3 秒只建立一个痛点，避免同时解释产品参数。",
+    "材质卖点用微距、扫光和使用结果三类证据连续证明。"
+  ],
+  "uncertainties": [
+    "00:18 附近字幕被手部遮挡，文字按可辨部分记录。"
+  ]
+}

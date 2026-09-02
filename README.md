@@ -12,9 +12,11 @@
 
 在 Codex 里打开“添加插件市场”，填写：
 
-- 来源：本仓库地址
+- 来源：`https://github.com/Hill2048/dumik-codex-plugins`
 - Git 引用：`main`
 - 稀疏路径：留空
+
+仓库 Marketplace 清单位于 `.agents/plugins/marketplace.json`。
 
 安装后搜索 `DUMIK Team Plugin` 即可使用。
 

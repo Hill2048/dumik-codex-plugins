@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>视频拉片报告</title>
+  <link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+  <a class="skip-link" href="#evidence">跳到镜头证据</a>
+  <header class="topbar">
+    <div class="brand-block">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <p class="eyebrow">DUMIK / VIDEO EVIDENCE</p>
+        <h1 id="report-title">视频拉片报告</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="copy-summary" class="button secondary" type="button">复制结论</button>
+      <button id="print-report" class="button primary" type="button">导出 PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="report-intro" aria-labelledby="report-title">
+      <div class="intro-copy">
+        <p id="report-kicker" class="kicker">参考视频拆解</p>
+        <p id="report-summary" class="summary">正在读取报告数据。</p>
+      </div>
+      <dl id="report-metrics" class="metric-strip" aria-label="视频概况"></dl>
+    </section>
+
+    <div class="workbench">
+      <aside class="viewer-column" aria-label="原片回看区">
+        <section class="viewer" id="viewer">
+          <div class="video-shell">
+            <video id="source-video" controls preload="metadata"></video>
+            <div id="video-empty" class="video-empty" hidden>未绑定可播放原片</div>
+          </div>
+          <div class="viewer-meta">
+            <div>
+              <span class="label">当前镜头</span>
+              <strong id="current-shot">等待定位</strong>
+            </div>
+            <div class="viewer-size">
+              <label for="viewer-width">播放器宽度</label>
+              <input id="viewer-width" type="range" min="480" max="920" step="40" value="680">
+            </div>
+          </div>
+          <nav id="chapter-nav" class="chapter-nav" aria-label="结构导航"></nav>
+        </section>
+      </aside>
+
+      <section id="evidence" class="evidence-column" aria-label="镜头证据">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SHOT LOG</p>
+            <h2>逐镜证据</h2>
+          </div>
+          <div class="segmented" role="group" aria-label="镜头筛选">
+            <button class="segment active" data-filter="all" type="button">全部</button>
+            <button class="segment" data-filter="key" type="button">关键镜头</button>
+          </div>
+        </div>
+        <div id="shot-list" class="shot-list"></div>
+      </section>
+    </div>
+
+    <section class="transcript-section" aria-labelledby="transcript-title">
+      <div class="section-heading transcript-heading">
+        <div>
+          <p class="eyebrow">TRANSCRIPT</p>
+          <h2 id="transcript-title">字幕与口播</h2>
+        </div>
+        <label class="search-field">
+          <span>搜索字幕</span>
+          <input id="transcript-search" type="search" placeholder="输入关键词" autocomplete="off">
+        </label>
+      </div>
+      <div id="transcript-list" class="transcript-list"></div>
+    </section>
+
+    <section class="findings-section" aria-labelledby="findings-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">TAKEAWAYS</p>
+          <h2 id="findings-title">可复用结论</h2>
+        </div>
+      </div>
+      <ol id="finding-list" class="finding-list"></ol>
+      <div id="uncertainties" class="uncertainties" hidden>
+        <h3>不确定项</h3>
+        <ul id="uncertainty-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="source-note">证据来自原片、关键帧和字幕。</span>
+    <span id="generated-at"></span>
+  </footer>
+
+  <script src="assets/report-data.js"></script>
+  <script src="assets/frame-downloads.js"></script>
+  <script src="assets/report.js"></script>
+</body>
+</html>
