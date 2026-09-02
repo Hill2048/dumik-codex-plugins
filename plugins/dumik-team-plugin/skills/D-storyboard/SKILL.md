@@ -1,7 +1,7 @@
 ---
 name: D-storyboard
 description: "统一视频故事板、产品故事板、连续分镜、关键帧提示词和逐镜生视频提示词。适用于产品视频、电商视频、Image2 产品故事板、通用连续镜头、剧情/场景分镜和需要跨镜头保持一致的视频提示词；默认只输出文字和可执行提示词，不提交图片或视频生成任务。"
-version: 1.1.0
+version: 1.1.1
 ---
 
 # 视频故事板与分镜提示词
@@ -11,6 +11,14 @@ version: 1.1.0
 默认只输出提示词、分镜、关键帧和逐镜视频提示词。不调用生图、生视频或 CLI。只有用户明确说“生成 / 出图 / 出片 / 提交 / 跑任务”时，才交给 `D-image-run` 或 `D-video-run` 执行。
 
 可直接套用的模板块（Image2 身份板、故事板生图模板、逐镜模板、线性序列）在 [references/templates.md](references/templates.md)，写之前先读对应块。
+
+Seedance / Dreamina 相关参考：
+
+- 镜头语言和运镜控制：读 [references/seedance-camera-codec.md](references/seedance-camera-codec.md)。
+- 产品图或首帧转视频：读 [references/seedance-image-to-video.md](references/seedance-image-to-video.md)。
+- 分镜板、多宫格、故事板参考图转视频：读 [references/seedance-storyboard-driven.md](references/seedance-storyboard-driven.md)。
+
+这些参考只补强提示词写法，不改变本 skill 的边界：不提交生图、生视频或 CLI。
 
 ## 何时使用
 
@@ -118,6 +126,13 @@ product 扩展：产品名称、品类、核心卖点（最多 3 个按画面优
 一镜一条提示词，不把多个无关镜头塞进一条。模板见 `references/templates.md`（product/hybrid 版和 sequential 版，外加单条线性序列写法）。
 
 Dreamina / Seedance 默认：按 `seedance2.0` 的稳定性写；只有用户明确要快才用 `seedance2.0fast`；目标工具不能选模型时省略模型参数，保持工具无关。
+
+写 Seedance 提示词时，优先使用 DUMIK 消化版参考：
+
+- 每镜只保留一个主动作和一个镜头运动。
+- 图生视频时少重述画面已有内容，只补时长、比例、动作、镜头和产品身份锁定。
+- 分镜板驱动时必须写明不复刻边框、网格线、格子编号、注释文字或水印。
+- 产品白底图控制结构，故事板控制动作和构图；二者冲突时保护产品结构。
 
 ## 返修诊断
 

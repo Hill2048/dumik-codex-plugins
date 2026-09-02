@@ -1,103 +1,80 @@
 ---
 name: D-image-run
-description: "普通图片接口执行入口。单张文生图直接回传图片组件；把已确认的提示词、原图和参考图提交到 Image2 / Banana 系列并保存结果；不写提示词、不做 RunningHub 工作流、不做视频。"
+description: "普通图片接口执行入口。收到明确生图或改图要求后立即发包并保存结果；单张直接调用，多候选独立并发。默认不做预检、看图审核、尺寸复核或候选推荐。"
 ---
 
 # 图片执行 Agent
 
-本 skill 是普通图片接口的执行层，不是策划层，也不是提示词层。
+目标只有一个：从用户说“生图 / 出图 / 编辑图片”到接口发包、图片落盘和回传，路径尽可能短。
 
-## 先分流
+## 默认全流程
 
-- `RunningHub` / `RH` / `放大工作流` / `超分` / `高清放大`
-  -> 交给 `D-rh`
-- `视频` / `TVC` / `生视频` / `确认片`
-  -> 交给 `D-video-run` 或视频线
-- `写提示词` / `优化提示词` / `改图指令`
-  -> 交给 `D-image-prompt`（改图 / brief 双模式）或对应上游
-- `生成图片` / `出图` / `编辑图片` / `调用普通图片接口`
-  -> 本 skill
+1. 把用户本轮描述视为已确认要求；上游已有 `prompt` / `prompt-file` / `final_instruction` 就直接使用。
+2. 用户同时要求“改图 + 生图”时，`D-image-prompt` 在内部写完可执行提示词后直接交接；不展示提示词，不等二次确认。
+3. 按用户指定或本 skill 默认值选模型、尺寸和数量，立即发包。
+4. 单张走单请求；N 张候选拆成 N 个独立单图请求并发提交，每条 `count: 1`、独立文件名。
+5. 图片落 `输出/确认图/`，脚本自动写运行记录。
+6. 文件保存成功后立即回传图片、路径和实际返回数量，结束。
 
-## 职责
+## 只保留这些判断
 
-- 提交已经确认的 `prompt` / `prompt-file` / `final_instruction`。
-- 单图生成或单图编辑。
-- 明确批量时，按任务 JSON 批量提交。
-- 保存图片结果和运行记录。
-- 结果落 `输出/确认图/` 并记录运行记录；`qaVerdict` 自检结论建议一并记录。`D-detail-auto` 串跑时由它把每张结果状态写进运行记录里的 run-state，本 skill 只管出图和回报结果。
+- 改图却没有目标图，或多图职责冲突到可能改错对象：才问一句。
+- `RunningHub / RH / 超分 / 放大 / 抠图 / 去背景`：交 `D-rh`。
+- 视频任务：交视频线。
+- 用户只要提示词、不要求生成：交 `D-image-prompt` 并停在文字。
+- 接口真实失败：按“失败处理”执行。
 
-## 不负责
+除此之外不做项目扫描、脚本搜索、API 预检、配置盘点、模型比较、方案分析或确认等待。
 
-- 不写词，不优化词，不改写上游指令。
-- 不判断画面创意，不做产品策略。
-- 不执行 RunningHub 工作流。
-- 不做视频生成。
-- 不把 API Key 写进插件或日志。
+## 默认参数
 
-## 默认选择
+- 供应商：`https://sub.juaihub.cn`；Key 从本机缓存读取，不写进插件或运行记录。
+- 未指定模型：`banana2`，即 `gemini-3.1-flash-image-preview`。
+- `banana / banana2`：`gemini-3.1-flash-image-preview`。
+- `bananapro / banana-pro`：`gemini-3-pro-image-preview`。
+- 未指定尺寸：`2K`；明确 4K 就用 `4K` 或 `source-4k`。
+- 改图默认跟随目标图比例：2K 用 `source-2k`，4K 用 `source-4k`。
+- N 张候选默认并发数为 `min(N, 8)`。
 
-- 没说批量：按单图。
-- 没说模型：默认 `gpt-image-2`，默认 `2K`。
-- 明确说 `banana` / `banana2`：用 `nano-banana-2`。
-- 明确说 `bananapro`：用 `nano-banana-pro`。
-- 多候选：必须拆成多条 row，每条 `count: 1`，不要依赖 `count > 1`。
-- 需要“按目标图比例出 2K”：直接用 `--output-size source-2k`，脚本会读取 `--image` / `file` 的原始比例，按长边 2048 自动计算、生成后归一并验收，不要手算尺寸。
-- 固定模型 / 固定尺寸优先用 `scripts\presets\*.ps1`，不要让 agent 临场拼模型名和尺寸。新增或变更组合时运行 `scripts\build_image_preset_scripts.py` 重建快捷脚本。
+## 最快执行入口
 
-## 单张直接出图
+### 单张文生图
 
-用户直接说“生图 / 出图 / 生成一张”时，用户给出的描述就是已确认提示词，立刻执行；不要再调 `D-image-prompt`，不要重述提示词，不要搜索插件、读取 API 配置、检查脚本或做预检。
-
-- 单张文生图：优先调用已加载的 Juaihub 图片 MCP，一次请求直接回传图片组件。
-- 没说模型：`gpt-image-2`，2K；说 `banana`：`nano-banana-2`，2K；说 `bananapro`：`nano-banana-pro`，2K。
-- 成功后只回传图片和保存路径。不要额外验证尺寸、二次打开图片或输出运行过程。
-- MCP 未加载、请求失败、批量、或带目标图/参考图的改图：才走下面的脚本入口，并简短说明原因。
-
-用户以后只需说：`生一张 <画面描述>`；模型和 2K 默认值由本 skill 判断，不要求用户提 MCP 名称。
-
-## 执行入口
-
-单图生成：
+优先调用已加载的 Juaihub 图片 MCP，一次请求直接回传。MCP 未加载或失败才走脚本：
 
 ```powershell
 python scripts\generate_batch_images.py `
-  --prompt "<已确认提示词>" `
+  --prompt "<最终提示词>" `
   --image-model banana `
   --out "<输出图片路径>"
 ```
 
-单图编辑：
+### 单张改图
+
+直接用固定 preset，不临场拼模型名和尺寸：
 
 ```powershell
-python scripts\generate_batch_images.py `
-  --image "<目标图路径>" `
-  --reference "<参考图路径>" `
-  --prompt "<已确认改图指令>" `
-  --image-model bananapro `
-  --output-size source-2k `
-  --out "<输出图片路径>"
+scripts\presets\banana-source-2k.ps1 `
+  -Image "<目标图路径>" `
+  -PromptFile "<提示词.txt>" `
+  -Out "<输出图片路径>"
 ```
 
-最快 x3 改图：
+4K 把 preset 换成 `banana-source-4k.ps1`；用户指定 Banana Pro 时换同名 `bananapro-*` preset。
+
+### xN 多候选
+
+`-Count N` 对 Banana 系列会在脚本内部拆成 N 个独立单图请求并发提交，不依赖接口一次返回多张：
 
 ```powershell
-scripts\presets\bananapro-source-2k.ps1 `
+scripts\presets\banana-source-4k.ps1 `
   -Image "<目标图路径>" `
-  -Reference "<参考图路径>" `
   -PromptFile "<提示词.txt>" `
   -Count 3 `
-  -Out "<输出目录>\confirm.png"
+  -Out "<输出目录>\candidate.png"
 ```
 
-其他常用脚本：
-
-- `scripts\presets\image2-2k-square.ps1`
-- `scripts\presets\banana-source-2k.ps1`
-- `scripts\presets\banana-vip-4k-9x16.ps1`
-- `scripts\presets\bananapro-source-2k.ps1`
-- `scripts\presets\bananapro-vip-source-4k.ps1`
-
-批量提交：
+已有批任务 JSON 时继续使用批量入口，每行必须 `count: 1`，并发数按任务数设置：
 
 ```powershell
 python scripts\generate_batch_images.py `
@@ -108,16 +85,31 @@ python scripts\generate_batch_images.py `
   --concurrency 3
 ```
 
-## 读细节
+## 默认不做
 
-- Image2 参数：`references/model-image2.md`
-- Banana 参数：`references/model-banana2.md`
-- 批量输入示例：`references/results-input-example.json`
-- 检查模板：`references/checklist-template.md`
-- `D-detail-auto` 串跑时的 run-state 规则见该 skill 的 SKILL.md；本 skill 只管出图和回报结果。
+- 不在发包前展示、重述或等待确认提示词。
+- 不做接口健康检查、模型列表查询或尺寸探测。
+- 不在生成后重新打开图片、逐张看图、比较、排序或推荐。
+- 不验证画面内容、文字、结构、材质、比例或清晰度。
+- 不额外写 `qaVerdict`、QA 报告或候选点评。
+- 不把确认图复制到成品目录，不等待用户确认后再回传。
+
+只有用户明确说“审核 / 检查 / 选图 / 推荐 / 看看有没有问题”时，才进入相应审核流程。
+
+## 失败处理
+
+- `401`：用 `plugins\dumik-team-plugin\scripts\init_api_cache.py --check` 刷新本机缓存并重试一次。
+- 用户提供临时 Key：只用于当前进程，不写项目、插件或运行记录。
+- 其他接口失败：保留失败记录并直接回报错误；用户没要求排障时不展开诊断。
+- 批量结束只核对生成文件数量是否等于用户要求数量；这是收包完整性检查，不是画面审核。
 
 ## 结束条件
 
-- 结果图片已保存到指定目录。
-- 运行记录已保存到 `输出\运行记录` 或同级记录文件。
-- 如果是确认图，只产出确认图并停下等用户确认。
+- 要求的图片数量已经保存，或接口失败已经明确返回。
+- 成功时只回传图片、保存路径和数量；不附流程说明和审核结论。
+
+## 参数细节
+
+- Image2：`references/model-image2.md`
+- Banana：`references/model-banana2.md`
+- 批量 JSON：`references/results-input-example.json`

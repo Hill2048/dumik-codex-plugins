@@ -478,7 +478,7 @@
       <img src="logo.svg" alt="DUMIK 标识">
       <span>
         <strong>DUMIK Team Plugin</strong>
-        <span>项目内 skills 流程图 / 0.1.16</span>
+        <span>项目内 skills 流程图 / 0.1.17</span>
       </span>
     </div>
     <nav class="nav" aria-label="页面导航">
@@ -497,7 +497,7 @@
         <p>项目内所有视觉任务先过统一路由。RunningHub 放大和抠图归在图片主线里，作为后处理小环；视频仍走单独旁路。</p>
       </div>
       <div class="status-strip">
-        <div class="metric"><strong>13</strong><span>当前技能入口</span></div>
+        <div class="metric"><strong>14</strong><span>当前技能入口</span></div>
         <div class="metric"><strong>2</strong><span>主分流：图片主线 / 视频旁路</span></div>
         <div class="metric"><strong>1</strong><span>权威规则：agent-skill-routing.md</span></div>
       </div>
@@ -525,7 +525,7 @@
             </div>
             <div class="pill video">
               <strong>视频旁路</strong>
-              <p>TVC、卖点顺序、故事板、连续分镜、生视频、视频批量。</p>
+              <p>TVC、已有视频拉片、卖点顺序、故事板、连续分镜、生视频、视频批量。</p>
             </div>
           </div>
         </div>
@@ -538,7 +538,7 @@
             <article class="card image">
               <span class="tag">顶层入口</span>
               <h4>电商视觉总监</h4>
-              <p><code>ecom-visual-director</code><br>判断任务、项目入口、输出归档、底层调度。</p>
+              <p><code>AGENTS.md 总监职责</code><br>判断任务、项目入口、输出归档、底层调度（已并入 AGENTS.md，非独立 skill）。</p>
             </article>
 
             <article class="card image">
@@ -585,18 +585,24 @@
 
           <div class="lane">
             <h3>视频旁路</h3>
-            <p>视频先定转化逻辑，再写故事板，最后执行生成。</p>
+            <p>已有视频先拆证据；新视频先定转化逻辑，再写故事板，最后执行生成。</p>
 
             <article class="card video">
               <span class="tag">顶层入口</span>
               <h4>TVC 总导演</h4>
-              <p><code>tvc-director</code><br>判断视频阶段、项目入口、输出归档、底层调度。</p>
+              <p><code>AGENTS.md 总监职责</code><br>判断视频阶段、项目入口、输出归档、底层调度（已并入 AGENTS.md，非独立 skill）。</p>
             </article>
 
             <article class="card video">
               <span class="tag">转化策略</span>
               <h4>电商视频转化</h4>
               <p><code>D-video-plan</code><br>卖点顺序、证据链、开头钩子和视频结构。</p>
+            </article>
+
+            <article class="card video">
+              <span class="tag">已有视频拆解</span>
+              <h4>视频证据 HTML 报告</h4>
+              <p><code>D-video-report</code><br>逐镜拉片、关键帧、字幕口播、节奏卖点和可交互证据报告。</p>
             </article>
 
             <article class="card video">
@@ -627,7 +633,7 @@
         <span>图片抠图<br>RunningHub</span>
         <span>详情页流程<br>策划 / 抽卡 / 修复</span>
         <span>视频生成<br>Seedance 2.0</span>
-        <span>视频流程<br>TVC / 故事板 / 逐镜</span>
+        <span>视频流程<br>拉片报告 / TVC / 故事板 / 逐镜</span>
         <span>批量执行<br>图片 / 视频</span>
       </div>
     </section>
@@ -667,17 +673,17 @@
         <div class="cell head">完成标准</div>
 
         <div class="cell"><strong>主图 / 详情页 / KV</strong><p>电商静态视觉。</p></div>
-        <div class="cell"><strong>ecom-visual-director</strong><p>先判断项目和交付形态。</p></div>
+        <div class="cell"><strong>AGENTS.md 总监职责</strong><p>先判断项目和交付形态。</p></div>
         <div class="cell"><strong>planner / prompt / batch</strong><p>按阶段调度。</p></div>
         <div class="cell"><strong>图或提示词归档</strong><p>进入当前项目输出分类。</p></div>
 
         <div class="cell"><strong>改图 / 白底精修</strong><p>保结构、保角度、修品牌区。</p></div>
-        <div class="cell"><strong>ecom-visual-director</strong><p>确认目标图和参考角色。</p></div>
+        <div class="cell"><strong>AGENTS.md 总监职责</strong><p>确认目标图和参考角色。</p></div>
         <div class="cell"><strong>D-image-prompt</strong><p>写可执行改图指令。</p></div>
         <div class="cell"><strong>比例清楚</strong><p>指令可直接交给执行层。</p></div>
 
         <div class="cell"><strong>普通生图 / 改图接口</strong><p>Image2、Banana。</p></div>
-        <div class="cell"><strong>ecom-visual-director</strong><p>确认已有提示词。</p></div>
+        <div class="cell"><strong>AGENTS.md 总监职责</strong><p>确认已有提示词。</p></div>
         <div class="cell"><strong>D-image-run</strong><p>只提交，不写词。</p></div>
         <div class="cell"><strong>图片保存</strong><p>确认图 / 成品 / 记录齐全。</p></div>
 
@@ -686,9 +692,9 @@
         <div class="cell"><strong>D-rh</strong><p>提交 workflow / AI App 并下载结果。</p></div>
         <div class="cell"><strong>后处理图保存</strong><p>结果和 taskId 记录齐全。</p></div>
 
-        <div class="cell"><strong>视频策略 / 分镜 / 生视频</strong><p>TVC 或动态交付。</p></div>
-        <div class="cell"><strong>tvc-director</strong><p>先判断阶段。</p></div>
-        <div class="cell"><strong>conversion / storyboard / video-batch</strong><p>策略、分镜、执行分开。</p></div>
+        <div class="cell"><strong>视频拆解 / 策略 / 分镜 / 生视频</strong><p>已有视频证据或动态交付。</p></div>
+        <div class="cell"><strong>AGENTS.md 总监职责</strong><p>先判断阶段。</p></div>
+        <div class="cell"><strong>D-video-report / plan / storyboard / run</strong><p>拆解、策略、分镜、执行分开。</p></div>
         <div class="cell"><strong>确认片或成片</strong><p>进入视频输出分类。</p></div>
       </div>
     </section>

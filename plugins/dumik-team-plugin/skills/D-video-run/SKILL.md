@@ -1,7 +1,7 @@
 ---
 name: D-video-run
 description: "项目制批量生视频。适用于先确认需求和输出路径，创建中文项目文件夹，让用户放入首帧/参考素材，再先出 1 条确认片，确认后用即梦 CLI 或 Veo 异步接口批量提交视频任务。默认走 Dreamina，全能参考 `multimodal2video`，模型为 `seedance2.0fast_vip`；用户明确选择 Veo 时走 NewAPI Business `/v1/videos`。"
-version: 0.1.7
+version: 0.1.8
 ---
 
 # 批量视频生成 Agent
@@ -45,6 +45,9 @@ Do not skip the confirmation clip. Do not start full batch submission before the
 - 默认等待预期：Seedance2 视频生成常见等待 `10-30` 分钟，`15s`、多参考、VIP 队列也可能需要较长时间；只要状态是 `querying` / `Queueing` / `Generating` 就继续按异步任务查询。
 
 Only switch to `image2video` when the user explicitly wants a single first-frame animation and does not need full mixed-media references.
+
+Seedance / Dreamina 提交限制参考见 [references/seedance-platform-limits.md](references/seedance-platform-limits.md)。
+该文件只做提交前检查，不覆盖本 skill 的默认模型、确认片纪律或最新文件确认规则。
 
 ## Veo 路线（仅用户明确选择时）
 
@@ -223,6 +226,7 @@ The generation script accepts either an array or an object with `items`:
 ```
 
 Read [references/results-input-example.json](references/results-input-example.json) when checking the JSON shape.
+Read [references/seedance-platform-limits.md](references/seedance-platform-limits.md) when checking Dreamina / Seedance media constraints and async expectations.
 
 ## Async Waiting And Querying
 

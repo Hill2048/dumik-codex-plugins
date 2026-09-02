@@ -15,11 +15,7 @@ GENERATOR = SCRIPT_DIR / "generate_batch_images.py"
 MODELS = {
     "image2": "image2",
     "banana": "banana",
-    "banana-vip": "banana-vip",
-    "banana-vip-2k": "banana-vip-2k",
-    "banana-vip-4k": "banana-vip-4k",
     "bananapro": "bananapro",
-    "bananapro-vip": "bananapro-vip",
 }
 
 SIZES = {

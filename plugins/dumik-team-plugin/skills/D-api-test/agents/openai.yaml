@@ -1,0 +1,4 @@
+interface:
+  display_name: "API 基准测试"
+  short_description: "用固定测试题对比图片 API 的成功率、尺寸、比例、速度与输出质量"
+  default_prompt: "使用固定基准测试当前 API；先确认接口地址和密钥来源，再执行对应测试域并输出可比报告。"

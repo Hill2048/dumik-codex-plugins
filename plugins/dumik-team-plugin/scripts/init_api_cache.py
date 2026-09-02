@@ -19,7 +19,7 @@ from typing import Any
 from urllib import error, request
 
 
-DEFAULT_BASE_URL = "https://api.juaihub.cn/v1"
+DEFAULT_BASE_URL = "https://sub.juaihub.cn/v1"
 
 
 def codex_home() -> Path:

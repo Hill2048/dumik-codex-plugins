@@ -81,11 +81,6 @@ def load_json(path: Path) -> Any:
         raise RunningHubError(f"Invalid JSON config: {path}") from exc
 
 
-def write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
 def clean_base_url(value: str | None) -> str:
     return (value or DEFAULT_API_BASE_URL).rstrip("/")
 
@@ -545,11 +540,12 @@ def download_outputs(
     urls: list[str],
     out_dir: Path,
     timeout: int,
+    filename_prefix: str,
 ) -> list[str]:
     saved: list[str] = []
     out_dir.mkdir(parents=True, exist_ok=True)
     for index, url in enumerate(urls, start=1):
-        output_path = out_dir / f"runninghub-result-{index:03d}{extension_from_url(url)}"
+        output_path = out_dir / f"{filename_prefix}-{index:03d}{extension_from_url(url)}"
         response = session.get(url, timeout=timeout)
         response.raise_for_status()
         output_path.write_bytes(response.content)
@@ -566,9 +562,8 @@ def resolve_config_path(args: argparse.Namespace) -> Path:
 def resolve_output_dir(args: argparse.Namespace) -> Path:
     if args.out_dir:
         return Path(args.out_dir).expanduser()
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     downloads = Path(os.getenv("USERPROFILE", str(Path.home()))) / "Downloads"
-    return downloads / "runninghub" / f"{args.preset}-{stamp}"
+    return downloads / f"rh-{datetime.now().strftime('%Y%m%d')}"
 
 
 def run(args: argparse.Namespace) -> None:
@@ -583,6 +578,7 @@ def run(args: argparse.Namespace) -> None:
     poll_interval = int(args.poll_interval or config.get("pollIntervalSeconds") or DEFAULT_POLL_INTERVAL)
     wait_timeout = int(args.timeout or config.get("timeoutSeconds") or DEFAULT_TIMEOUT)
     out_dir = resolve_output_dir(args)
+    filename_prefix = f"{args.preset}-{datetime.now().strftime('%H%M%S')}"
 
     session = requests.Session()
     if args.validate_auth:
@@ -652,21 +648,8 @@ def run(args: argparse.Namespace) -> None:
         urls=urls,
         out_dir=out_dir,
         timeout=request_timeout,
+        filename_prefix=filename_prefix,
     )
-    record = {
-        "preset": args.preset,
-        "type": preset_type,
-        "configPath": str(config_path),
-        "remoteId": remote_id,
-        "taskId": task_id,
-        "status": status_data,
-        "outputs": outputs,
-        "outputUrls": urls,
-        "savedFiles": saved_files,
-        "createdAt": datetime.now().isoformat(timespec="seconds"),
-    }
-    write_json(out_dir / "runninghub-run.json", record)
-
     print(f"outputs={len(saved_files)}", flush=True)
     for path in saved_files:
         print(path, flush=True)

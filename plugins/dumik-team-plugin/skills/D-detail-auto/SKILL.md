@@ -144,4 +144,4 @@ approved 的图归 `输出/成品/`，写 `handoff.md` 记下每张来源（卖�
 - 抽卡提示词 → `D-grid-prompt`
 - 实际生成 / 批量 → `D-image-run`
 - 细节修复 / QA → `D-image-repair`
-- 顶层路由 / 项目入口 → `ecom-visual-director`
+- 顶层路由 / 项目入口 → AGENTS.md 总监职责

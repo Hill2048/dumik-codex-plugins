@@ -1,19 +1,20 @@
 {
   "name": "dumik-team-plugin",
-  "version": "0.5.17",
-  "description": "DUMIK 团队短名技能包：D-init、D-psb-install、D-image-prompt、D-image-run、D-image-HD、D-image-repair、D-rh、D-detail-plan、D-detail-auto、D-grid-prompt、D-video-plan、D-storyboard、D-video-run。视频线已补充 Seedance / Dreamina 方法论参考。",
+  "version": "0.5.18",
+  "description": "DUMIK 团队短名技能包：D-init、D-api-test、D-psb-install、D-image-prompt、D-image-run、D-image-HD、D-image-repair、D-rh、D-detail-plan、D-detail-auto、D-grid-prompt、D-video-plan、D-video-report、D-storyboard、D-video-run。",
   "author": {
     "name": "DUMIK Team"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "DUMIK Team Plugin",
-    "shortDescription": "DUMIK 短名视觉技能：初始化、PSB 工具安装、图片提示词、生图改图、高清修复、RunningHub、详情页、故事板和视频执行。",
-    "longDescription": "面向 DUMIK 团队的视觉工作流插件。当前技能统一使用 D-* 短名：D-init 负责工作台初始化和入口文件；D-psb-install 负责安装 Photoshop PSB 智能对象工具；D-image-prompt 负责图片提示词、改图和视觉 brief；D-image-run 负责普通图片生成；D-image-HD 负责整图高清修复；D-image-repair 负责产品局部细节修复；D-rh 负责 RunningHub 后处理；D-detail-plan、D-detail-auto、D-grid-prompt 负责详情页策略、自动串跑和抽卡发散；D-video-plan、D-storyboard、D-video-run 负责视频转化、故事板和批量生视频，并内置 Seedance / Dreamina 的转化节奏、镜头语言、图生视频、分镜板驱动和执行限制参考。",
+    "shortDescription": "DUMIK 短名视觉技能：初始化、API 基准、图片生产、视频拉片、故事板和视频执行。",
+    "longDescription": "面向 DUMIK 团队的视觉工作流插件。D-init 负责工作台初始化；D-api-test 负责新增接口的固定基准；图片线负责提示词、生图改图、高清修复、产品细节修复、RunningHub 和详情页；视频线负责转化策划、视频证据 HTML 报告、故事板和批量生视频。",
     "developerName": "DUMIK Team",
     "category": "创意工具",
     "capabilities": [
       "D-init",
+      "D-api-test",
       "D-psb-install",
       "D-image-prompt",
       "D-image-run",
@@ -24,10 +25,11 @@
       "D-detail-auto",
       "D-grid-prompt",
       "D-video-plan",
+      "D-video-report",
       "D-storyboard",
       "D-video-run",
       "项目环境部署",
-      "PSB 智能对象工具安装",
+      "API 基准测试",
       "已检查清单",
       "详情页出图策划",
       "四宫格抽卡",
@@ -39,6 +41,8 @@
       "批量改图",
       "视频故事板",
       "视频策划",
+      "视频拉片报告",
+      "关键帧与字幕证据",
       "逐镜提示词",
       "批量生视频"
     ],

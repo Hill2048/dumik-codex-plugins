@@ -16,7 +16,6 @@ import argparse
 import ast
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import importlib.util
 import json
 import mimetypes
 import os
@@ -27,59 +26,33 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import requests
 from PIL import Image
 
 
 DEFAULT_OUTPUT_DIR = Path.cwd() / "输出"
-DEFAULT_BASE_URL = "https://api.juaihub.cn"
-DEFAULT_IMAGE_MODEL = "gpt-image-2"
-NAS_REFERENCE_CACHE_NAME = "nas_reference_cache.json"
-NAS_REFERENCE_TRUST_SECONDS = 30 * 60
-BANANA2_IMAGE_MODEL = "nano-banana-2"
-BANANA2_VIP_AUTO_MODEL = "__banana2_vip_auto__"
-BANANA2_VIP_2K_MODEL = "nano-banana-2-cl"
-BANANA2_VIP_4K_MODEL = "nano-banana-2-4k-cl"
-BANANAPRO_IMAGE_MODEL = "nano-banana-pro"
-BANANAPRO_VIP_MODEL = "nano-banana-pro-cl"
+DEFAULT_BASE_URL = "https://sub.juaihub.cn"
+DEFAULT_IMAGE_MODEL = "banana2"
+BANANA2_IMAGE_MODEL = "gemini-3.1-flash-image-preview"
+BANANAPRO_IMAGE_MODEL = "gemini-3-pro-image-preview"
+IMAGE2_IMAGE_MODEL = "gpt-image-2"
 CHAT_IMAGE_MODELS = {
     BANANA2_IMAGE_MODEL,
-    BANANA2_VIP_2K_MODEL,
-    BANANA2_VIP_4K_MODEL,
     BANANAPRO_IMAGE_MODEL,
-    BANANAPRO_VIP_MODEL,
 }
 IMAGE_MODEL_ALIASES = {
     "gpt-image-2": "gpt-image-2",
     "image2": "gpt-image-2",
     "banana": BANANA2_IMAGE_MODEL,
     "banana2": BANANA2_IMAGE_MODEL,
-    "nano-banana-2": BANANA2_IMAGE_MODEL,
-    BANANA2_VIP_AUTO_MODEL: BANANA2_VIP_AUTO_MODEL,
-    "banana-vip": BANANA2_VIP_AUTO_MODEL,
-    "banana2-vip": BANANA2_VIP_AUTO_MODEL,
-    "nano-banana-2-vip": BANANA2_VIP_AUTO_MODEL,
-    "nano-banana-2-cl": BANANA2_VIP_2K_MODEL,
-    "banana-vip-2k": BANANA2_VIP_2K_MODEL,
-    "banana2-vip-2k": BANANA2_VIP_2K_MODEL,
-    "nano-banana-2-vip-2k": BANANA2_VIP_2K_MODEL,
-    "nano-banana-2-4k-cl": BANANA2_VIP_4K_MODEL,
-    "banana-vip-4k": BANANA2_VIP_4K_MODEL,
-    "banana2-vip-4k": BANANA2_VIP_4K_MODEL,
-    "nano-banana-2-vip-4k": BANANA2_VIP_4K_MODEL,
+    "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
+    "gemini-3.1-flash-image-preview": BANANA2_IMAGE_MODEL,
     "bananapro": BANANAPRO_IMAGE_MODEL,
     "banana-pro": BANANAPRO_IMAGE_MODEL,
     "banana_pro": BANANAPRO_IMAGE_MODEL,
-    "nano-banana-pro": BANANAPRO_IMAGE_MODEL,
-    "bananapro-vip": BANANAPRO_VIP_MODEL,
-    "banana-pro-vip": BANANAPRO_VIP_MODEL,
-    "banana_pro_vip": BANANAPRO_VIP_MODEL,
-    "nano-banana-pro-cl": BANANAPRO_VIP_MODEL,
-    "nano-banana-pro-vip": BANANAPRO_VIP_MODEL,
-    "gemini-3.1-flash-image": BANANA2_IMAGE_MODEL,
-    "gemini-3.1-flash-image-preview": BANANA2_IMAGE_MODEL,
+    "gemini-3-pro-image": BANANAPRO_IMAGE_MODEL,
+    "gemini-3-pro-image-preview": BANANAPRO_IMAGE_MODEL,
 }
 DEFAULT_STORYBOARD_RATIO = "9:16"
 DEFAULT_STORYBOARD_SIZES = {
@@ -278,10 +251,7 @@ def normalize_image_model(value: str) -> str:
 
 
 def resolve_image_model_for_size(value: str, size: str) -> str:
-    model = normalize_image_model(value)
-    if model == BANANA2_VIP_AUTO_MODEL:
-        return BANANA2_VIP_4K_MODEL if image_size_label(size) == "4K" else BANANA2_VIP_2K_MODEL
-    return model
+    return normalize_image_model(value)
 
 
 def read_prompt(prompt: str | None, prompt_file: str | None) -> str:
@@ -518,7 +488,7 @@ def image_model_payload_options(image_model: str, size: str) -> dict[str, Any]:
         "size": size,
         "response_format": "b64_json",
     }
-    if image_model == DEFAULT_IMAGE_MODEL:
+    if image_model == IMAGE2_IMAGE_MODEL:
         payload["quality"] = image2_quality_for_size(size)
     return payload
 
@@ -530,14 +500,24 @@ def aspect_ratio_for_size(size: str) -> str:
     width = int(match.group(1))
     height = int(match.group(2))
     ratio = width / height
-    known = {
+    official = {
         "1:1": 1.0,
-        "16:9": 16 / 9,
-        "9:16": 9 / 16,
-        "4:3": 4 / 3,
+        "1:4": 1 / 4,
+        "4:1": 4.0,
+        "1:8": 1 / 8,
+        "8:1": 8.0,
+        "2:3": 2 / 3,
+        "3:2": 3 / 2,
         "3:4": 3 / 4,
+        "4:3": 4 / 3,
+        "4:5": 4 / 5,
+        "5:4": 5 / 4,
+        "9:16": 9 / 16,
+        "16:9": 16 / 9,
+        "21:9": 21 / 9,
+        "9:21": 9 / 21,
     }
-    return min(known, key=lambda key: abs(known[key] - ratio))
+    return min(official, key=lambda key: abs(official[key] - ratio))
 
 
 def image_size_label(size: str) -> str:
@@ -559,7 +539,9 @@ def image_path_to_data_url(path: Path) -> str:
 
 
 def image_path_to_inline_data(path: Path) -> dict[str, str]:
-    mime = mimetypes.guess_type(path.name)[0] or "image/png"
+    with Image.open(path) as image:
+        mime = Image.MIME.get(image.format or "")
+    mime = mime or mimetypes.guess_type(path.name)[0] or "image/png"
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return {"mimeType": mime, "data": encoded}
 
@@ -573,118 +555,32 @@ def image_reference_to_generate_value(value: str) -> str:
     return image_path_to_data_url(image_path)
 
 
-def nas_reference_cache_path() -> Path:
-    codex_home = Path(os.environ.get("CODEX_HOME") or r"C:\Users\admin\.codex")
-    return codex_home / "dumik-team-plugin" / NAS_REFERENCE_CACHE_NAME
-
-
-def load_nas_reference_cache() -> dict[str, Any]:
-    path = nas_reference_cache_path()
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def save_nas_reference_cache(cache: dict[str, Any]) -> None:
-    path = nas_reference_cache_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(cache, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def nas_reference_cache_key(image_path: Path, public_base_url: str) -> str:
-    stat = image_path.stat()
-    resolved = str(image_path.resolve()).lower()
-    return "|".join(
-        [
-            resolved,
-            str(stat.st_size),
-            str(int(stat.st_mtime_ns)),
-            public_base_url.rstrip("/"),
-        ]
-    )
-
-
-def cached_nas_reference_url(cached: Any, public_base_url: str) -> str | None:
-    if not isinstance(cached, dict) or not isinstance(cached.get("url"), str):
-        return None
-    cached_url = cached["url"]
-    if urlparse(cached_url).netloc != urlparse(public_base_url).netloc:
-        return None
-    cached_at = str(cached.get("cached_at") or "")
-    try:
-        cached_time = datetime.fromisoformat(cached_at)
-    except ValueError:
-        return None
-    if (datetime.now() - cached_time).total_seconds() > NAS_REFERENCE_TRUST_SECONDS:
-        return None
-    return cached_url
-
-
-def image_reference_to_banana2_url(value: str) -> str:
-    if value.startswith(("http://", "https://", "data:image/")):
-        return value
-
-    image_path = Path(value)
-    if not image_path.exists():
-        raise BatchImageError(f"Source image not found: {image_path}")
-
-    publisher = None
-    try:
-        publisher_path = Path(__file__).with_name("publish_nas_reference.py")
-        spec = importlib.util.spec_from_file_location("publish_nas_reference", publisher_path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Cannot load {publisher_path}")
-        publisher = importlib.util.module_from_spec(spec)
-        sys.modules["publish_nas_reference"] = publisher
-        spec.loader.exec_module(publisher)
-
-        nas_root, public_base_url = publisher.resolve_settings(
-            argparse.Namespace(
-                nas_root=None,
-                public_base_url=None,
-                save_config=False,
-                no_verify=False,
-                json=False,
-            )
-        )
-        subdir = f"banana2-submit/{datetime.now().strftime('%Y%m%d')}"
-        cache = load_nas_reference_cache()
-        cache_key = nas_reference_cache_key(image_path, public_base_url)
-        cached = cache.get(cache_key)
-        trusted_url = cached_nas_reference_url(cached, public_base_url)
-        if trusted_url:
-            return trusted_url
-        if isinstance(cached, dict) and isinstance(cached.get("url"), str):
-            verified, status_code, content_type = publisher.verify_url(cached["url"])
-            if verified:
-                return cached["url"]
-            cache.pop(cache_key, None)
-
-        result = publisher.publish_one(image_path, nas_root, public_base_url, subdir, verify=True)
-        if result.verified:
-            cache[cache_key] = {
-                "url": result.url,
-                "nas_path": result.nas_path,
-                "cached_at": datetime.now().isoformat(timespec="seconds"),
-                "status_code": result.status_code,
-                "content_type": result.content_type,
-            }
-            save_nas_reference_cache(cache)
-    except ImportError as exc:
-        raise BatchImageError(f"Banana2 NAS publisher is unavailable: {exc}") from exc
-    except Exception as exc:
-        if publisher is not None and isinstance(exc, publisher.NasPublishError):
-            raise BatchImageError(f"Banana2 NAS URL publish failed: {exc}") from exc
-        raise
-
-    if not result.verified:
-        detail = f"status={result.status_code}, content_type={result.content_type or 'unknown'}"
-        raise BatchImageError(f"Banana2 NAS URL verification failed: {result.url} ({detail})")
-    return result.url
+def image_reference_to_gemini_part(value: str) -> dict[str, dict[str, str]]:
+    if value.startswith("data:image/"):
+        match = re.fullmatch(r"data:([^;,]+);base64,(.+)", value, flags=re.DOTALL)
+        if not match:
+            raise BatchImageError("Invalid image data URL.")
+        inline_data = {
+            "mimeType": match.group(1),
+            "data": re.sub(r"\s+", "", match.group(2)),
+        }
+    elif value.startswith(("http://", "https://")):
+        response = requests.get(value, timeout=120)
+        if response.status_code >= 400:
+            raise BatchImageError(f"Reference image download failed ({response.status_code}): {value}")
+        mime = response.headers.get("Content-Type", "").split(";", 1)[0].strip()
+        if not mime.startswith("image/"):
+            mime = mimetypes.guess_type(value)[0] or "image/png"
+        inline_data = {
+            "mimeType": mime,
+            "data": base64.b64encode(response.content).decode("ascii"),
+        }
+    else:
+        image_path = Path(value)
+        if not image_path.exists():
+            raise BatchImageError(f"Source image not found: {image_path}")
+        inline_data = image_path_to_inline_data(image_path)
+    return {"inlineData": inline_data}
 
 
 def collect_chat_images(value: Any) -> dict[str, list[str]]:
@@ -699,7 +595,11 @@ def collect_chat_images(value: Any) -> dict[str, list[str]]:
             found["b64_json"].append(value["b64_json"])
         inline_data = value.get("inlineData") or value.get("inline_data")
         if isinstance(inline_data, dict) and isinstance(inline_data.get("data"), str):
-            found["b64_json"].append(inline_data["data"])
+            mime = inline_data.get("mimeType") or inline_data.get("mime_type")
+            if isinstance(mime, str) and mime.startswith("image/"):
+                found["b64_json"].append(f"data:{mime};base64,{inline_data['data']}")
+            else:
+                found["b64_json"].append(inline_data["data"])
         image_url = value.get("image_url")
         if isinstance(image_url, dict) and isinstance(image_url.get("url"), str):
             url = image_url["url"]
@@ -756,14 +656,23 @@ def generate_chat_images(
     image_inputs = [source_file] if source_file else []
     image_inputs.extend(reference_files)
 
-    encoded_images: list[str] = []
-    downloaded_urls: list[str] = []
     started = time.perf_counter()
-    images = [image_reference_to_banana2_url(raw_path) for raw_path in image_inputs]
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    parts.extend(image_reference_to_gemini_part(raw_path) for raw_path in image_inputs)
     if timing:
         timing.add("reference_prepare_seconds", time.perf_counter() - started)
-    url = image_api_endpoint(base_url, "/images/generations")
-    for _ in range(count):
+    url = root_api_endpoint(base_url, f"/v1beta/models/{image_model}:generateContent")
+    payload = {
+        "contents": [{"role": "user", "parts": parts}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {
+                "aspectRatio": aspect_ratio_for_size(size),
+                "imageSize": image_size_label(size),
+            },
+        },
+    }
+    def request_one(index: int) -> tuple[int, list[str], float, float]:
         started = time.perf_counter()
         response = requests.post(
             url,
@@ -771,39 +680,29 @@ def generate_chat_images(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": image_model,
-                "prompt": prompt,
-                "images": images,
-                "aspectRatio": aspect_ratio_for_size(size),
-                "imageSize": image_size_label(size),
-                "replyType": "json",
-            },
+            json=payload,
             timeout=900,
         )
-        if timing:
-            timing.add("api_wait_seconds", time.perf_counter() - started)
+        api_wait_seconds = time.perf_counter() - started
         if response.status_code >= 400:
             raise BatchImageError(
-                f"Banana2 generate API request failed ({response.status_code}): {response.text[:1200]}"
+                f"Gemini image API request failed ({response.status_code}): {response.text[:1200]}"
             )
-        response_images = collect_chat_images(response.json())
-        encoded_images.extend(response_images["b64_json"])
-        downloaded_urls.extend(response_images["url"])
+        started = time.perf_counter()
+        saved = save_chat_response_images(response.json(), [output_paths[index]])
+        return index, saved, api_wait_seconds, time.perf_counter() - started
 
-    if encoded_images:
-        started = time.perf_counter()
-        saved = save_b64_images(encoded_images, output_paths)
-        if timing:
-            timing.add("download_save_seconds", time.perf_counter() - started)
-        return saved
-    if downloaded_urls:
-        started = time.perf_counter()
-        saved = save_url_images(downloaded_urls, output_paths)
-        if timing:
-            timing.add("download_save_seconds", time.perf_counter() - started)
-        return saved
-    raise BatchImageError("Banana2 API returned no image data.")
+    results: dict[int, list[str]] = {}
+    with ThreadPoolExecutor(max_workers=min(count, 8)) as executor:
+        futures = [executor.submit(request_one, index) for index in range(count)]
+        for future in as_completed(futures):
+            index, saved, api_wait_seconds, save_seconds = future.result()
+            results[index] = saved
+            if timing:
+                timing.add("api_wait_seconds", api_wait_seconds)
+                timing.add("download_save_seconds", save_seconds)
+
+    return [file for index in range(count) for file in results[index]]
 
 
 def standardize_image_size(
@@ -824,24 +723,14 @@ def standardize_image_size(
             if image.size != target:
                 target_ratio = target[0] / target[1]
                 actual_ratio = image.size[0] / image.size[1]
-                if abs(actual_ratio - target_ratio) / target_ratio > 0.03:
+                if (
+                    not source_ratio_long_edge(item.output_size)
+                    and abs(actual_ratio - target_ratio) / target_ratio > 0.03
+                ):
                     raise BatchImageError(
                         f"Generated image aspect ratio {image.size[0]}x{image.size[1]} is too far from requested "
                         f"{target[0]}x{target[1]}."
                     )
-                if source_ratio_long_edge(item.output_size):
-                    image = image.convert("RGB") if path.suffix.lower() in {".jpg", ".jpeg"} else image
-                    target_width, target_height = target
-                    scale = max(target_width / image.width, target_height / image.height)
-                    resized = image.resize(
-                        (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
-                        Image.Resampling.LANCZOS,
-                    )
-                    left = max(0, round((resized.width - target_width) / 2))
-                    top = max(0, round((resized.height - target_height) / 2))
-                    image = resized.crop((left, top, left + target_width, top + target_height))
-                    image.save(path)
-                    return f"{image.size[0]}x{image.size[1]}"
             return f"{image.size[0]}x{image.size[1]}"
 
         image = image.convert("RGB") if path.suffix.lower() in {".jpg", ".jpeg"} else image
@@ -888,9 +777,18 @@ def build_output_paths(output_dir: Path, output_name: str, count: int) -> list[P
 def save_b64_images(encoded_images: list[str], output_paths: list[Path]) -> list[str]:
     saved_paths: list[str] = []
     for idx, encoded in enumerate(encoded_images[: len(output_paths)]):
+        mime = ""
         if encoded.startswith("data:"):
-            encoded = encoded.split(",", 1)[1]
+            header, encoded = encoded.split(",", 1)
+            mime = header[5:].split(";", 1)[0]
         output_path = output_paths[idx]
+        suffix = {
+            "image/jpeg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+        }.get(mime)
+        if suffix and output_path.suffix.lower() != suffix:
+            output_path = output_path.with_suffix(suffix)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(base64.b64decode(encoded))
         saved_paths.append(str(output_path.resolve()))
@@ -1303,7 +1201,7 @@ def main() -> None:
     parser.add_argument(
         "--image-model",
         default=DEFAULT_IMAGE_MODEL,
-        help="Image model name. Default gpt-image-2. Banana aliases: banana, banana-vip, bananapro, bananapro-vip.",
+        help="Image model name. Default banana2. Banana aliases: banana, banana2, bananapro, banana-pro.",
     )
     parser.add_argument(
         "--api-key",

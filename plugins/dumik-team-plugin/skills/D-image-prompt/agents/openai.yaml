@@ -1,4 +1,4 @@
 interface:
   display_name: "改图提示词优化"
-  short_description: "按 assets/agent-skill-routing.md 承接改图、白底、结构保护和 Banana Pro 指令，不调用生成接口"
-  default_prompt: "按统一路由只做改图提示词优化：先判断比例、目标图、参考图角色和产品保护点，再输出可复制中文改图指令。"
+  short_description: "承接改图、白底、人物设定、结构与身份保护和 Banana Pro 中文指令，不调用生成接口"
+  default_prompt: "按统一路由只做改图提示词优化：先判断比例、目标图和参考图角色，再锁定产品结构或人物身份、服装、身材与神态，输出可复制中文改图指令。"

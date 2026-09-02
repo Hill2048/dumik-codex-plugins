@@ -11,16 +11,16 @@ assets/agent-skill-routing.md
 ## 快速入口
 
 - 工作台初始化：`D-init`
-- 图片主线：`ecom-visual-director`
+- 图片/视频先判断：AGENTS.md 总监职责（不再是独立 skill）
 - 图片策划：`D-detail-plan`
 - 四宫格抽卡：`D-grid-prompt`
 - 详情页自动串跑：`D-detail-auto`
 - 细节修复：`D-image-repair`
 - 改图指令 / 视觉 brief：`D-image-prompt`（双模式）
-- 视频旁路：`tvc-director`
 - 图片执行：`D-image-run`
 - 图片后处理：`D-rh`
 - 视频转化：`D-video-plan`
+- 视频拆解报告：`D-video-report`
 - 视频故事板：`D-storyboard`
 - 视频执行：`D-video-run`
 
@@ -31,7 +31,7 @@ assets/agent-skill-routing.md
 - 图片抠图：RunningHub
 - 详情页流程：策划 / 抽卡 / 修复
 - 视频生成：Seedance 2.0
-- 视频流程：TVC / 故事板 / 逐镜
+- 视频流程：TVC / 拉片报告 / 故事板 / 逐镜
 - 批量执行：图片 / 视频
 
 可视化新版在 `assets/workflow-map.html`，只作展示参考；执行时以 `agent-skill-routing.md` 为准。

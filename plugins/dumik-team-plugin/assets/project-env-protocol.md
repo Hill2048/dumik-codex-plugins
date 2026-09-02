@@ -1,6 +1,6 @@
 # 项目入口与环境协议（唯一来源）
 
-项目入口、项目目录、归档规则、环境部署和工具检查的唯一权威文档。`agent-skill-routing.md`、`ecom-visual-director`、`tvc-director` 都引用这里，不再各写一份。改规则只改本文件。
+项目入口、项目目录、归档规则、环境部署和工具检查的唯一权威文档。`agent-skill-routing.md` 和 AGENTS.md 里的总监职责都引用这里，不再各写一份。改规则只改本文件。
 
 ## 项目入口协议
 
@@ -66,6 +66,7 @@ project\<项目名>\
 - Python 可运行；对应执行 skill 的 `init_project.py` / `generate_batch_images.py` / `generate_batch_videos.py` 存在。
 - 接口配置可读：优先本机 `CODEX_HOME\dumik-team-plugin\api_settings.py`；没有时运行插件根 `scripts\init_api_cache.py` 初始化；仍没有再读 `CODEX_HOME\config.toml`、`CODEX_HOME\auth.json` 和环境变量。
 - Dreamina 路线：`dreamina` CLI 可用，提交前先看对应子命令 help。
+- 视频拆解报告：`ffmpeg`、`ffprobe` 可用；需要生成本地关键帧下载数据时再检查 `node`。
 - 需要本地参考图公网 URL 时：NAS 发布配置或临时 tunnel 脚本可用。
 
 ## 自动修复边界
@@ -76,6 +77,7 @@ project\<项目名>\
 - 缺 API 缓存但本机配置存在：运行 `scripts\init_api_cache.py`。
 - 缺 Python 依赖且有明确依赖文件或脚本报缺模块：当前环境安装后重验。
 - 缺 FFmpeg 且本机包管理器可用：自动安装后重验。
+- `D-video-report` 需要下载数据脚本且缺 Node.js：优先安装 Winget 包 `OpenJS.NodeJS.LTS`，再复查 `node --version`。
 
 不能自动处理才停下说明缺口：
 

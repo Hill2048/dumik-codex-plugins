@@ -1,0 +1,52 @@
+# 逐镜拉片交互报告规范
+
+仅在报告包含原片、较长逐镜时间线或用户明确要求交互回看时读取并执行。
+
+## 页面关系
+
+- 每个镜头使用稳定 ID：`shot-01`、`shot-02`……，并设置 `scroll-margin-top`。
+- 转化结构节点使用普通锚点指向对应镜头，例如 `href="#shot-06"`。节点包含该段第一张代表性关键帧、时间范围和结构名称。
+- 当前锚点目标与当前导航节点应有清晰但克制的高亮。
+- 每张关键帧保存精确秒数。点击图片只更新 `video.currentTime` 并播放，不强制滚动播放器。
+
+## 悬浮播放器
+
+- 桌面端滚过原片后固定在左侧，默认宽度 `920px`，高度按 `16:9` 计算。
+- 提供 `- / +` 图标按钮，每次建议调节 `100px`；范围 `480-1120px`。
+- 用 CSS 变量同步播放器宽高，并用 `localStorage` 保存用户手动设置。
+- 正文左边距应使用播放器宽度变量计算；至少保留可读的正文宽度。
+- 视口较窄时，播放器改为底部悬浮，隐藏尺寸控制与结构导航，避免遮挡正文。
+
+## 关键帧下载
+
+Chrome 系浏览器从 `file://` 打开报告时，通常会忽略本地图片链接的 `download` 属性并直接导航到图片；本地图片绘制到 Canvas 也可能因安全策略成为 tainted canvas。
+
+用附带脚本生成下载数据：
+
+```powershell
+node plugins\dumik-team-plugin\skills\D-video-report\scripts\build_frame_download_data.mjs <report-dir>
+```
+
+默认读取 `<report-dir>/frames` 中以 `pair_` 开头的 JPG、JPEG、PNG、WebP，避免把过程抽帧一并打包；写入 `<report-dir>/assets/frame-downloads.js`。如最终关键帧使用其他前缀，可通过第四个参数指定。页面先加载这个文件：
+
+```html
+<script src="assets/frame-downloads.js"></script>
+```
+
+下载按钮点击时：
+
+1. `preventDefault()` 与 `stopPropagation()`，避免图片播放事件和页面跳转。
+2. 从 `window.frameDownloadData[src]` 取 Base64。
+3. `atob` 转 `Uint8Array`，再创建带正确 MIME 的 Blob。
+4. 创建临时 Blob URL 与带 `download` 文件名的临时链接，触发后移除链接并延迟回收 URL。
+
+最终必须从真实 `file://` 页面点击验证：出现下载事件、文件名正确、下载字节与原静帧一致、页面 URL 未改变。
+
+## 验收清单
+
+- 镜头数、A/B 关键帧数与页面卡片数量一致。
+- 所有视频、缩略图、关键帧、波形和下载数据路径存在。
+- 点击结构节点后，目标镜头停在可读位置并高亮。
+- 点击关键帧后，原片时间准确变化且当前阅读位置不被抢走。
+- 点击下载后得到图片文件，不打开新页面。
+- 在目标桌面尺寸和至少一个窄屏尺寸检查无重叠、溢出和不可点击控件。
