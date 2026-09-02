@@ -1,7 +1,7 @@
 ---
 name: D-video-plan
-version: 0.1.5
-description: "在写分镜前规划中文电商视频的转化逻辑。适用于用户要做商品短视频、投放视频、种草视频、详情页视频或电商脚本，需要先明确人群、痛点、卖点顺序、证据链和转化节奏时使用。"
+version: 0.1.6
+description: "在写分镜前规划中文电商视频的转化逻辑。适用于商品短视频、投放视频、高级广告、TVC、品牌产品片、种草视频、详情页视频或电商脚本，需要先明确人群、痛点、卖点顺序、证据链、可见障碍和转化节奏时使用。"
 ---
 
 # 电商视频转化策划
@@ -96,6 +96,16 @@ Return:
 ## Handoff
 
 If the user later asks for storyboards, keep the conversion order fixed and translate each module into shots rather than redesigning the structure.
+
+当目标是高级广告、TVC、品牌片或电影感产品片时，额外交给 `D-storyboard`：
+
+- 可见障碍或开场观看理由。
+- 每个模块唯一要证明的产品事实。
+- 产品介入前后的因果变化。
+- 观众最终要记住的产品或品牌印象。
+- 允许的精致程度与必须避免的廉价广告模板。
+
+高级商业表达不是反广告。电影调度、真实材质和物理光色必须增强转化证据，不能遮住产品、弱化卖点或把广告改成无目的氛围片。
 
 ## Reference
 

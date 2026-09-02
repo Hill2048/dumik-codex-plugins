@@ -1,4 +1,4 @@
 interface:
   display_name: "视频故事板与分镜提示词"
-  short_description: "按 assets/agent-skill-routing.md 负责产品故事板、连续分镜、关键帧和逐镜视频提示词"
-  default_prompt: "把需求整理成故事板、连续分镜和逐镜视频提示词；不提交生图或生视频。"
+  short_description: "产品故事板、高级商业电影调度、关键帧和逐镜提示词"
+  default_prompt: "使用 $D-storyboard 把需求整理成产品保真、转化清楚且具高级商业电影调度的故事板和逐镜视频提示词；不提交生成任务。"

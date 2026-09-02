@@ -21,7 +21,7 @@ assets/agent-skill-routing.md
 - 图片后处理：`D-rh`
 - 视频转化：`D-video-plan`
 - 视频拆解报告：`D-video-report`
-- 视频故事板：`D-storyboard`
+- 视频故事板 / 高级商业电影调度：`D-storyboard`
 - 视频执行：`D-video-run`
 
 ## 当前能力
@@ -31,7 +31,7 @@ assets/agent-skill-routing.md
 - 图片抠图：RunningHub
 - 详情页流程：策划 / 抽卡 / 修复
 - 视频生成：Seedance 2.0
-- 视频流程：TVC / 拉片报告 / 故事板 / 逐镜
+- 视频流程：TVC / 拉片报告 / 高级商业电影调度 / 故事板 / 逐镜
 - 批量执行：图片 / 视频
 
 可视化新版在 `assets/workflow-map.html`，只作展示参考；执行时以 `agent-skill-routing.md` 为准。
