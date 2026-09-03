@@ -1,4 +1,4 @@
 interface:
   display_name: "视频证据报告"
-  short_description: "把真实视频拆成关键帧、时间线和可交互中文 HTML 报告"
-  default_prompt: "使用 D-video-report 拆解已有视频，按时间点组织关键帧、字幕或口播证据，并生成可交互复查的中文 HTML 报告。"
+  short_description: "拆视频关键帧、复合运镜、非线性速度和证据时间线"
+  default_prompt: "使用 D-video-report 拆解已有视频，按真实切点和加密关键帧分析复合运镜、旋转轴、视差与非线性速度，并生成可交互复查的中文 HTML 报告。"

@@ -20,8 +20,8 @@ assets/agent-skill-routing.md
 - 图片执行：`D-image-run`
 - 图片后处理：`D-rh`
 - 视频转化：`D-video-plan`
-- 视频拆解报告：`D-video-report`
-- 视频故事板 / 高级商业电影调度：`D-storyboard`
+- 视频拆解 / 复合运镜与深度轨迹报告：`D-video-report`
+- 视频故事板 / 高级商业电影调度 / 深度视频转实景：`D-storyboard`
 - 视频执行：`D-video-run`
 
 ## 当前能力

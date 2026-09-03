@@ -1,6 +1,8 @@
 ---
 name: D-api-test
 description: "DUMIK API 基准测试入口。用于新增或更换图片 API 时，用固定双参考改图题测试模型可用性、尺寸、比例、速度和画面保持度；普通生图不走这里。"
+metadata:
+  version: "0.1.0"
 ---
 
 # API 基准测试

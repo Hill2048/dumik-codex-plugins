@@ -1,4 +1,4 @@
 interface:
   display_name: "视频故事板与分镜提示词"
-  short_description: "产品故事板、高级商业电影调度、关键帧和逐镜提示词"
-  default_prompt: "使用 $D-storyboard 把需求整理成产品保真、转化清楚且具高级商业电影调度的故事板和逐镜视频提示词；不提交生成任务。"
+  short_description: "产品故事板、电影调度、复合运镜、深度视频和逐镜提示词"
+  default_prompt: "使用 $D-storyboard 把需求整理成产品保真、电影调度清楚、复合摄影机轨迹连续的故事板和逐镜视频提示词；深度视频只控制空间与运动，不提交生成任务。"
